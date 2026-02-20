@@ -58,9 +58,9 @@ Dispatched from core/go orchestration. Pick up tasks in order.
 
 ## Phase 4: DevKit Expansion
 
-- [ ] **Vulnerability scanning** — Integrate `govulncheck` output parsing into devkit findings.
-- [ ] **Complexity thresholds** — Configurable cyclomatic complexity threshold. Flag functions exceeding it.
-- [ ] **Coverage trending** — Store coverage snapshots, detect regressions between runs.
+- [x] **Vulnerability scanning** — `VulnCheck()` runs `govulncheck -json` and `ParseVulnCheckJSON()` parses newline-delimited JSON into `VulnFinding` structs (ID, aliases, package, called function, description, fixed version, module path). Handles malformed lines, missing OSV entries, empty traces. 13 tests in `vulncheck_test.go`.
+- [x] **Complexity thresholds** — `AnalyseComplexity()` walks Go source via `go/ast` with configurable threshold (default 15). Counts: if, for, range, case, comm, &&, ||, type switch, select. Skips vendor/, test files, hidden dirs. `AnalyseComplexitySource()` for in-memory parsing. 21 tests in `complexity_test.go`.
+- [x] **Coverage trending** — `ParseCoverProfile()` parses coverprofile format, `ParseCoverOutput()` parses human-readable `go test -cover` output. `CoverageStore` with JSON persistence (Append/Load/Latest). `CompareCoverage()` diffs snapshots, flags regressions/improvements/new/removed packages. 19 tests in `coverage_test.go`.
 
 ---
 
