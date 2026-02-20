@@ -15,9 +15,7 @@ go vet ./...                     # Static analysis
 
 | Module | Local Path | Notes |
 |--------|-----------|-------|
-| `forge.lthn.ai/core/go` | `../core` | Framework (core.E, io.Medium, config, i18n, log) |
-
-**Do NOT change the replace directive path.**
+| `forge.lthn.ai/core/go` | `../go` | Framework (core.E, io.Medium, config, i18n, log) |
 
 ## Key Interfaces
 

@@ -59,4 +59,4 @@ require (
 	golang.org/x/term v0.40.0 // indirect
 )
 
-replace forge.lthn.ai/core/go => ../core
+replace forge.lthn.ai/core/go => ../go
