@@ -1,0 +1,485 @@
+package ansible
+
+import (
+	"context"
+	"fmt"
+	"io"
+	"os"
+	"regexp"
+	"strings"
+	"sync"
+)
+
+// --- Mock SSH Client ---
+
+// MockSSHClient simulates an SSHClient for testing module logic
+// without requiring real SSH connections.
+type MockSSHClient struct {
+	mu sync.Mutex
+
+	// Command registry: patterns → pre-configured responses
+	commands []commandExpectation
+
+	// File system simulation: path → content
+	files map[string][]byte
+
+	// Stat results: path → stat info
+	stats map[string]map[string]any
+
+	// Become state tracking
+	become     bool
+	becomeUser string
+	becomePass string
+
+	// Execution log: every command that was executed
+	executed []executedCommand
+
+	// Upload log: every upload that was performed
+	uploads []uploadRecord
+}
+
+// commandExpectation holds a pre-configured response for a command pattern.
+type commandExpectation struct {
+	pattern *regexp.Regexp
+	stdout  string
+	stderr  string
+	rc      int
+	err     error
+}
+
+// executedCommand records a command that was executed.
+type executedCommand struct {
+	Method string // "Run" or "RunScript"
+	Cmd    string
+}
+
+// uploadRecord records an upload that was performed.
+type uploadRecord struct {
+	Content []byte
+	Remote  string
+	Mode    os.FileMode
+}
+
+// NewMockSSHClient creates a new mock SSH client with empty state.
+func NewMockSSHClient() *MockSSHClient {
+	return &MockSSHClient{
+		files: make(map[string][]byte),
+		stats: make(map[string]map[string]any),
+	}
+}
+
+// expectCommand registers a command pattern with a pre-configured response.
+// The pattern is a regular expression matched against the full command string.
+func (m *MockSSHClient) expectCommand(pattern, stdout, stderr string, rc int) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.commands = append(m.commands, commandExpectation{
+		pattern: regexp.MustCompile(pattern),
+		stdout:  stdout,
+		stderr:  stderr,
+		rc:      rc,
+	})
+}
+
+// expectCommandError registers a command pattern that returns an error.
+func (m *MockSSHClient) expectCommandError(pattern string, err error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.commands = append(m.commands, commandExpectation{
+		pattern: regexp.MustCompile(pattern),
+		err:     err,
+	})
+}
+
+// addFile adds a file to the simulated filesystem.
+func (m *MockSSHClient) addFile(path string, content []byte) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.files[path] = content
+}
+
+// addStat adds stat info for a path.
+func (m *MockSSHClient) addStat(path string, info map[string]any) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.stats[path] = info
+}
+
+// Run simulates executing a command. It matches against registered
+// expectations in order (last match wins) and records the execution.
+func (m *MockSSHClient) Run(_ context.Context, cmd string) (string, string, int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.executed = append(m.executed, executedCommand{Method: "Run", Cmd: cmd})
+
+	// Search expectations in reverse order (last registered wins)
+	for i := len(m.commands) - 1; i >= 0; i-- {
+		exp := m.commands[i]
+		if exp.pattern.MatchString(cmd) {
+			return exp.stdout, exp.stderr, exp.rc, exp.err
+		}
+	}
+
+	// Default: success with empty output
+	return "", "", 0, nil
+}
+
+// RunScript simulates executing a script via heredoc.
+func (m *MockSSHClient) RunScript(_ context.Context, script string) (string, string, int, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	m.executed = append(m.executed, executedCommand{Method: "RunScript", Cmd: script})
+
+	// Match against the script content
+	for i := len(m.commands) - 1; i >= 0; i-- {
+		exp := m.commands[i]
+		if exp.pattern.MatchString(script) {
+			return exp.stdout, exp.stderr, exp.rc, exp.err
+		}
+	}
+
+	return "", "", 0, nil
+}
+
+// Upload simulates uploading content to the remote filesystem.
+func (m *MockSSHClient) Upload(_ context.Context, local io.Reader, remote string, mode os.FileMode) error {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	content, err := io.ReadAll(local)
+	if err != nil {
+		return fmt.Errorf("mock upload read: %w", err)
+	}
+
+	m.uploads = append(m.uploads, uploadRecord{
+		Content: content,
+		Remote:  remote,
+		Mode:    mode,
+	})
+	m.files[remote] = content
+	return nil
+}
+
+// Download simulates downloading content from the remote filesystem.
+func (m *MockSSHClient) Download(_ context.Context, remote string) ([]byte, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	content, ok := m.files[remote]
+	if !ok {
+		return nil, fmt.Errorf("file not found: %s", remote)
+	}
+	return content, nil
+}
+
+// FileExists checks if a path exists in the simulated filesystem.
+func (m *MockSSHClient) FileExists(_ context.Context, path string) (bool, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	_, ok := m.files[path]
+	return ok, nil
+}
+
+// Stat returns stat info from the pre-configured map, or constructs
+// a basic result from the file existence in the simulated filesystem.
+func (m *MockSSHClient) Stat(_ context.Context, path string) (map[string]any, error) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+
+	// Check explicit stat results first
+	if info, ok := m.stats[path]; ok {
+		return info, nil
+	}
+
+	// Fall back to file existence
+	if _, ok := m.files[path]; ok {
+		return map[string]any{"exists": true, "isdir": false}, nil
+	}
+	return map[string]any{"exists": false}, nil
+}
+
+// SetBecome records become state changes.
+func (m *MockSSHClient) SetBecome(become bool, user, password string) {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.become = become
+	if user != "" {
+		m.becomeUser = user
+	}
+	if password != "" {
+		m.becomePass = password
+	}
+}
+
+// Close is a no-op for the mock.
+func (m *MockSSHClient) Close() error {
+	return nil
+}
+
+// --- Assertion helpers ---
+
+// executedCommands returns a copy of the execution log.
+func (m *MockSSHClient) executedCommands() []executedCommand {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	cp := make([]executedCommand, len(m.executed))
+	copy(cp, m.executed)
+	return cp
+}
+
+// lastCommand returns the most recent command executed, or empty if none.
+func (m *MockSSHClient) lastCommand() executedCommand {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if len(m.executed) == 0 {
+		return executedCommand{}
+	}
+	return m.executed[len(m.executed)-1]
+}
+
+// commandCount returns the number of commands executed.
+func (m *MockSSHClient) commandCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.executed)
+}
+
+// hasExecuted checks if any command matching the pattern was executed.
+func (m *MockSSHClient) hasExecuted(pattern string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	re := regexp.MustCompile(pattern)
+	for _, cmd := range m.executed {
+		if re.MatchString(cmd.Cmd) {
+			return true
+		}
+	}
+	return false
+}
+
+// hasExecutedMethod checks if a command with the given method and matching
+// pattern was executed.
+func (m *MockSSHClient) hasExecutedMethod(method, pattern string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	re := regexp.MustCompile(pattern)
+	for _, cmd := range m.executed {
+		if cmd.Method == method && re.MatchString(cmd.Cmd) {
+			return true
+		}
+	}
+	return false
+}
+
+// findExecuted returns the first command matching the pattern, or nil.
+func (m *MockSSHClient) findExecuted(pattern string) *executedCommand {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	re := regexp.MustCompile(pattern)
+	for i := range m.executed {
+		if re.MatchString(m.executed[i].Cmd) {
+			cmd := m.executed[i]
+			return &cmd
+		}
+	}
+	return nil
+}
+
+// uploadCount returns the number of uploads performed.
+func (m *MockSSHClient) uploadCount() int {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	return len(m.uploads)
+}
+
+// lastUpload returns the most recent upload, or nil if none.
+func (m *MockSSHClient) lastUpload() *uploadRecord {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	if len(m.uploads) == 0 {
+		return nil
+	}
+	u := m.uploads[len(m.uploads)-1]
+	return &u
+}
+
+// reset clears all execution history (but keeps expectations and files).
+func (m *MockSSHClient) reset() {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	m.executed = nil
+	m.uploads = nil
+}
+
+// --- Test helper: create executor with mock client ---
+
+// newTestExecutorWithMock creates an Executor pre-wired with a MockSSHClient
+// for the given host. The executor has a minimal inventory so that
+// executeModule can be called directly.
+func newTestExecutorWithMock(host string) (*Executor, *MockSSHClient) {
+	e := NewExecutor("/tmp")
+	mock := NewMockSSHClient()
+
+	// Wire mock into executor's client map
+	// We cannot store a *MockSSHClient directly because the executor
+	// expects *SSHClient. Instead, we provide a helper that calls
+	// modules the same way the executor does but with the mock.
+	// Since modules call methods on *SSHClient directly and the mock
+	// has identical method signatures, we use a shim approach.
+
+	// Set up minimal inventory so host resolution works
+	e.SetInventoryDirect(&Inventory{
+		All: &InventoryGroup{
+			Hosts: map[string]*Host{
+				host: {AnsibleHost: "127.0.0.1"},
+			},
+		},
+	})
+
+	return e, mock
+}
+
+// executeModuleWithMock calls a module handler directly using the mock client.
+// This bypasses the normal executor flow (SSH connection, host resolution)
+// and goes straight to module execution.
+func executeModuleWithMock(e *Executor, mock *MockSSHClient, host string, task *Task) (*TaskResult, error) {
+	module := NormalizeModule(task.Module)
+	args := e.templateArgs(task.Args, host, task)
+
+	// Dispatch directly to module handlers using the mock
+	switch module {
+	case "ansible.builtin.shell":
+		return moduleShellWithClient(e, mock, args)
+	case "ansible.builtin.command":
+		return moduleCommandWithClient(e, mock, args)
+	case "ansible.builtin.raw":
+		return moduleRawWithClient(e, mock, args)
+	case "ansible.builtin.script":
+		return moduleScriptWithClient(e, mock, args)
+	default:
+		return nil, fmt.Errorf("mock dispatch: unsupported module %s", module)
+	}
+}
+
+// --- Module shims that accept the mock interface ---
+// These mirror the module methods but accept our mock instead of *SSHClient.
+
+type sshRunner interface {
+	Run(ctx context.Context, cmd string) (string, string, int, error)
+	RunScript(ctx context.Context, script string) (string, string, int, error)
+}
+
+func moduleShellWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	cmd := getStringArg(args, "_raw_params", "")
+	if cmd == "" {
+		cmd = getStringArg(args, "cmd", "")
+	}
+	if cmd == "" {
+		return nil, fmt.Errorf("shell: no command specified")
+	}
+
+	if chdir := getStringArg(args, "chdir", ""); chdir != "" {
+		cmd = fmt.Sprintf("cd %q && %s", chdir, cmd)
+	}
+
+	stdout, stderr, rc, err := client.RunScript(context.Background(), cmd)
+	if err != nil {
+		return &TaskResult{Failed: true, Msg: err.Error(), Stdout: stdout, Stderr: stderr, RC: rc}, nil
+	}
+
+	return &TaskResult{
+		Changed: true,
+		Stdout:  stdout,
+		Stderr:  stderr,
+		RC:      rc,
+		Failed:  rc != 0,
+	}, nil
+}
+
+func moduleCommandWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	cmd := getStringArg(args, "_raw_params", "")
+	if cmd == "" {
+		cmd = getStringArg(args, "cmd", "")
+	}
+	if cmd == "" {
+		return nil, fmt.Errorf("command: no command specified")
+	}
+
+	if chdir := getStringArg(args, "chdir", ""); chdir != "" {
+		cmd = fmt.Sprintf("cd %q && %s", chdir, cmd)
+	}
+
+	stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+	if err != nil {
+		return &TaskResult{Failed: true, Msg: err.Error()}, nil
+	}
+
+	return &TaskResult{
+		Changed: true,
+		Stdout:  stdout,
+		Stderr:  stderr,
+		RC:      rc,
+		Failed:  rc != 0,
+	}, nil
+}
+
+func moduleRawWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	cmd := getStringArg(args, "_raw_params", "")
+	if cmd == "" {
+		return nil, fmt.Errorf("raw: no command specified")
+	}
+
+	stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+	if err != nil {
+		return &TaskResult{Failed: true, Msg: err.Error()}, nil
+	}
+
+	return &TaskResult{
+		Changed: true,
+		Stdout:  stdout,
+		Stderr:  stderr,
+		RC:      rc,
+	}, nil
+}
+
+func moduleScriptWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	script := getStringArg(args, "_raw_params", "")
+	if script == "" {
+		return nil, fmt.Errorf("script: no script specified")
+	}
+
+	content, err := os.ReadFile(script)
+	if err != nil {
+		return nil, fmt.Errorf("read script: %w", err)
+	}
+
+	stdout, stderr, rc, err := client.RunScript(context.Background(), string(content))
+	if err != nil {
+		return &TaskResult{Failed: true, Msg: err.Error()}, nil
+	}
+
+	return &TaskResult{
+		Changed: true,
+		Stdout:  stdout,
+		Stderr:  stderr,
+		RC:      rc,
+		Failed:  rc != 0,
+	}, nil
+}
+
+// --- String helpers for assertions ---
+
+// containsSubstring checks if any executed command contains the given substring.
+func (m *MockSSHClient) containsSubstring(sub string) bool {
+	m.mu.Lock()
+	defer m.mu.Unlock()
+	for _, cmd := range m.executed {
+		if strings.Contains(cmd.Cmd, sub) {
+			return true
+		}
+	}
+	return false
+}
