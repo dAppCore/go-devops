@@ -64,7 +64,7 @@ func newTestManager(t *testing.T) (*LinuxKitManager, *MockHypervisor, string) {
 
 	statePath := filepath.Join(tmpDir, "containers.json")
 
-	state, err := LoadState(io.Local, statePath)
+	state, err := LoadState(statePath)
 	require.NoError(t, err)
 
 	mock := NewMockHypervisor()
@@ -76,7 +76,7 @@ func newTestManager(t *testing.T) (*LinuxKitManager, *MockHypervisor, string) {
 func TestNewLinuxKitManagerWithHypervisor_Good(t *testing.T) {
 	tmpDir := t.TempDir()
 	statePath := filepath.Join(tmpDir, "containers.json")
-	state, _ := LoadState(io.Local, statePath)
+	state, _ := LoadState(statePath)
 	mock := NewMockHypervisor()
 
 	manager := NewLinuxKitManagerWithHypervisor(io.Local, state, mock)
@@ -214,7 +214,7 @@ func TestLinuxKitManager_Stop_Bad_NotFound(t *testing.T) {
 func TestLinuxKitManager_Stop_Bad_NotRunning(t *testing.T) {
 	_, _, tmpDir := newTestManager(t)
 	statePath := filepath.Join(tmpDir, "containers.json")
-	state, err := LoadState(io.Local, statePath)
+	state, err := LoadState(statePath)
 	require.NoError(t, err)
 	manager := NewLinuxKitManagerWithHypervisor(io.Local, state, NewMockHypervisor())
 
@@ -234,7 +234,7 @@ func TestLinuxKitManager_Stop_Bad_NotRunning(t *testing.T) {
 func TestLinuxKitManager_List_Good(t *testing.T) {
 	_, _, tmpDir := newTestManager(t)
 	statePath := filepath.Join(tmpDir, "containers.json")
-	state, err := LoadState(io.Local, statePath)
+	state, err := LoadState(statePath)
 	require.NoError(t, err)
 	manager := NewLinuxKitManagerWithHypervisor(io.Local, state, NewMockHypervisor())
 
@@ -251,7 +251,7 @@ func TestLinuxKitManager_List_Good(t *testing.T) {
 func TestLinuxKitManager_List_Good_VerifiesRunningStatus(t *testing.T) {
 	_, _, tmpDir := newTestManager(t)
 	statePath := filepath.Join(tmpDir, "containers.json")
-	state, err := LoadState(io.Local, statePath)
+	state, err := LoadState(statePath)
 	require.NoError(t, err)
 	manager := NewLinuxKitManagerWithHypervisor(io.Local, state, NewMockHypervisor())
 
