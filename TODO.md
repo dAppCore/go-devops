@@ -29,11 +29,7 @@ Dispatched from core/go orchestration. Pick up tasks in order.
 
 ### Step 1.3: Service & package modules (7 modules, ~180 LOC)
 
-- [ ] **Test service/systemd/apt/apt_key/apt_repository/package/pip** — Verify:
-  - `service`: correct systemctl start/stop/restart/enable/disable commands
-  - `systemd`: daemon_reload + delegation to service
-  - `apt`: correct apt-get install/remove/update commands
-  - `package`: auto-detection of apt vs yum
+- [x] **Test service/systemd/apt/apt_key/apt_repository/package/pip** — 56 new tests: service (12), systemd (4), apt (9), apt_key (6), apt_repository (8), package (3), pip (8), dispatch (7). 7 module shims in mock_ssh_test.go. Commit `9638e77`.
 
 ### Step 1.4: User/group & advanced modules (10 modules, ~385 LOC)
 
