@@ -25,13 +25,7 @@ Dispatched from core/go orchestration. Pick up tasks in order.
 
 ### Step 1.2: File operation modules (6 modules, ~280 LOC)
 
-- [ ] **Test copy/template/file/lineinfile/blockinfile/stat** — Verify:
-  - `copy`: calls `client.Upload()` with content, applies chown/chgrp
-  - `file`: handles state branches (directory/absent/touch/link) with correct mkdir/chmod/chown/ln commands
-  - `lineinfile`: builds correct sed commands for line manipulation
-  - `blockinfile`: marker-based block management with heredoc escaping
-  - `stat`: calls `client.Stat()`, returns file info map
-  - `template`: uses `e.TemplateFile()` then `client.Upload()`
+- [x] **Test copy/template/file/lineinfile/blockinfile/stat** — 54 new tests: copy (8), file (12), lineinfile (8), blockinfile (7), stat (5), template (6), dispatch (6), integration (2). Extended mock with `sshFileRunner` interface and 6 module shims. Fixed unsupported module test (copy→hostname). Total ansible tests: 208. Commit `c7da9ad`.
 
 ### Step 1.3: Service & package modules (7 modules, ~180 LOC)
 
