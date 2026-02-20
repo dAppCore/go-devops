@@ -37,7 +37,7 @@ Extracted from `core/go` on 16 Feb 2026 (commit `392ad68`). Single extraction co
 
 3. **Python 3.13 embedded** — `deploy/python/` embeds a full Python runtime via kluctl/go-embed-python. Used exclusively for Coolify API client (Python Swagger). Consider replacing with native Go HTTP client to remove the 50MB+ Python dependency.
 
-4. **DigitalOcean gap** — Referenced in `infra/config.go` types but no `digitalocean.go` implementation exists. Either implement or remove the dead types.
+4. **DigitalOcean gap** — Was referenced in documentation but no types or implementation existed in code. Removed stale documentation references. No dead types to clean up.
 
 5. **Single-commit repo** — Entire codebase arrived in one `feat: extract` commit. No git history for individual components. This makes blame/bisect impossible for bugs originating before extraction.
 

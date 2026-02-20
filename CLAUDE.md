@@ -9,7 +9,7 @@ Infrastructure management, build automation, and release pipelines. ~29K LOC acr
 - **Ansible engine** — Native Go playbook executor (not shelling out to `ansible-playbook`). SSH, modules, facts, handlers.
 - **Build system** — Plugin-based builders (Go, Wails, Docker, C++, LinuxKit, Taskfile). Cross-compilation, code signing (macOS/GPG/Windows).
 - **Release automation** — Version detection, changelog from git history, multi-target publishing (GitHub, Docker, Homebrew, AUR, Scoop, Chocolatey, npm).
-- **Infrastructure APIs** — Hetzner Cloud, Hetzner Robot (bare metal), CloudNS DNS, DigitalOcean.
+- **Infrastructure APIs** — Hetzner Cloud, Hetzner Robot (bare metal), CloudNS DNS.
 - **Container/VM management** — LinuxKit images on QEMU (Linux) or Hyperkit (macOS).
 - **SDK generation** — OpenAPI spec parsing, TypeScript/Python/Go/PHP client generation, breaking change detection.
 - **Developer toolkit** — Code quality metrics, TODO detection, coverage reports, dependency graphs.

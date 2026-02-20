@@ -45,10 +45,10 @@ Dispatched from core/go orchestration. Pick up tasks in order.
 
 ## Phase 2: Infrastructure API Robustness
 
-- [ ] **Retry logic** — Add configurable retry with exponential backoff for Hetzner Cloud/Robot and CloudNS API calls. Cloud APIs are flaky.
-- [ ] **Rate limiting** — Hetzner Cloud has rate limits. Detect 429 responses, queue and retry.
-- [ ] **DigitalOcean support** — Currently referenced in config but no implementation. Either implement or remove.
-- [ ] **API client abstraction** — Extract common HTTP client pattern from hetzner.go and cloudns.go into shared infra client.
+- [x] **API client abstraction** — Extracted shared `APIClient` struct in `infra/client.go` with `Do()` (JSON) and `DoRaw()` (bytes) methods. `HCloudClient`, `HRobotClient`, and `CloudNSClient` now delegate to `APIClient` via configurable auth functions and error prefixes. Options: `WithHTTPClient`, `WithRetry`, `WithAuth`, `WithPrefix`. 30 new `client_test.go` tests.
+- [x] **Retry logic** — `APIClient` implements configurable exponential backoff with jitter. Retries on 5xx and transport errors; does NOT retry 4xx (except 429). `RetryConfig{MaxRetries, InitialBackoff, MaxBackoff}` with `DefaultRetryConfig()` (3 retries, 100ms, 5s). Context cancellation respected during backoff.
+- [x] **Rate limiting** — Detects 429 responses, parses `Retry-After` header (seconds format, falls back to 1s). Queues subsequent requests behind a shared `blockedUntil` mutex. Rate limit wait is per-`APIClient` instance. Tested with real 1s Retry-After delays.
+- [x] **DigitalOcean support** — Investigated: no types or implementation existed in `infra/` code, only stale documentation references in CLAUDE.md and FINDINGS.md. Removed the dead references. No code changes needed.
 
 ## Phase 3: Release Pipeline Testing
 

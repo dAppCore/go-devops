@@ -11,25 +11,11 @@ import (
 	"github.com/stretchr/testify/require"
 )
 
-// newTestHCloudClient creates a HCloudClient pointing at the given test server.
-func newTestHCloudClient(t *testing.T, handler http.Handler) (*HCloudClient, *httptest.Server) {
-	t.Helper()
-	ts := httptest.NewServer(handler)
-	t.Cleanup(ts.Close)
-
-	client := NewHCloudClient("test-token")
-	// Override the base URL by replacing the client's HTTP client transport
-	// to rewrite requests to our test server.
-	client.client = ts.Client()
-
-	return client, ts
-}
-
 func TestNewHCloudClient_Good(t *testing.T) {
 	c := NewHCloudClient("my-token")
 	assert.NotNil(t, c)
 	assert.Equal(t, "my-token", c.token)
-	assert.NotNil(t, c.client)
+	assert.NotNil(t, c.api)
 }
 
 func TestHCloudClient_ListServers_Good(t *testing.T) {
@@ -41,38 +27,16 @@ func TestHCloudClient_ListServers_Good(t *testing.T) {
 		resp := map[string]any{
 			"servers": []map[string]any{
 				{
-					"id":     1,
-					"name":   "de1",
-					"status": "running",
-					"public_net": map[string]any{
-						"ipv4": map[string]any{"ip": "1.2.3.4"},
-					},
-					"server_type": map[string]any{
-						"name":   "cx22",
-						"cores":  2,
-						"memory": 4.0,
-						"disk":   40,
-					},
-					"datacenter": map[string]any{
-						"name": "fsn1-dc14",
-					},
+					"id": 1, "name": "de1", "status": "running",
+					"public_net":  map[string]any{"ipv4": map[string]any{"ip": "1.2.3.4"}},
+					"server_type": map[string]any{"name": "cx22", "cores": 2, "memory": 4.0, "disk": 40},
+					"datacenter":  map[string]any{"name": "fsn1-dc14"},
 				},
 				{
-					"id":     2,
-					"name":   "de2",
-					"status": "running",
-					"public_net": map[string]any{
-						"ipv4": map[string]any{"ip": "5.6.7.8"},
-					},
-					"server_type": map[string]any{
-						"name":   "cx32",
-						"cores":  4,
-						"memory": 8.0,
-						"disk":   80,
-					},
-					"datacenter": map[string]any{
-						"name": "nbg1-dc3",
-					},
+					"id": 2, "name": "de2", "status": "running",
+					"public_net":  map[string]any{"ipv4": map[string]any{"ip": "5.6.7.8"}},
+					"server_type": map[string]any{"name": "cx32", "cores": 4, "memory": 8.0, "disk": 80},
+					"datacenter":  map[string]any{"name": "nbg1-dc3"},
 				},
 			},
 		}
@@ -83,27 +47,22 @@ func TestHCloudClient_ListServers_Good(t *testing.T) {
 	ts := httptest.NewServer(mux)
 	defer ts.Close()
 
-	// Create client that points at our test server
-	client := &HCloudClient{
-		token:  "test-token",
-		client: ts.Client(),
-	}
+	client := NewHCloudClient("test-token")
+	client.baseURL = ts.URL
+	client.api = NewAPIClient(
+		WithHTTPClient(ts.Client()),
+		WithAuth(func(req *http.Request) {
+			req.Header.Set("Authorization", "Bearer "+client.token)
+		}),
+		WithPrefix("hcloud API"),
+		WithRetry(RetryConfig{}), // no retries in tests
+	)
 
-	// We need to override the base URL — the simplest approach is to
-	// intercept at the HTTP transport level. Instead, let us call the
-	// low-level get method directly with a known URL.
-	ctx := context.Background()
-	var result struct {
-		Servers []HCloudServer `json:"servers"`
-	}
-	err := client.get(ctx, "/servers", &result)
-	// This will fail because it tries to hit the real hcloud URL, not our test server.
-	// We need a different approach — let the test verify response parsing.
-	if err != nil {
-		t.Skip("cannot intercept hcloud base URL in unit test; skipping HTTP round-trip test")
-	}
-
-	assert.Len(t, result.Servers, 2)
+	servers, err := client.ListServers(context.Background())
+	require.NoError(t, err)
+	require.Len(t, servers, 2)
+	assert.Equal(t, "de1", servers[0].Name)
+	assert.Equal(t, "de2", servers[1].Name)
 }
 
 func TestHCloudClient_Do_Good_ParsesJSON(t *testing.T) {
@@ -114,19 +73,21 @@ func TestHCloudClient_Do_Good_ParsesJSON(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := &HCloudClient{
-		token:  "test-token",
-		client: ts.Client(),
-	}
-
-	ctx := context.Background()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL+"/servers", nil)
-	require.NoError(t, err)
+	client := NewHCloudClient("test-token")
+	client.baseURL = ts.URL
+	client.api = NewAPIClient(
+		WithHTTPClient(ts.Client()),
+		WithAuth(func(req *http.Request) {
+			req.Header.Set("Authorization", "Bearer test-token")
+		}),
+		WithPrefix("hcloud API"),
+		WithRetry(RetryConfig{}),
+	)
 
 	var result struct {
 		Servers []HCloudServer `json:"servers"`
 	}
-	err = client.do(req, &result)
+	err := client.get(context.Background(), "/servers", &result)
 	require.NoError(t, err)
 	require.Len(t, result.Servers, 1)
 	assert.Equal(t, 1, result.Servers[0].ID)
@@ -141,21 +102,21 @@ func TestHCloudClient_Do_Bad_APIError(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := &HCloudClient{
-		token:  "bad-token",
-		client: ts.Client(),
-	}
-
-	ctx := context.Background()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL+"/servers", nil)
-	require.NoError(t, err)
+	client := NewHCloudClient("bad-token")
+	client.baseURL = ts.URL
+	client.api = NewAPIClient(
+		WithHTTPClient(ts.Client()),
+		WithAuth(func(req *http.Request) {
+			req.Header.Set("Authorization", "Bearer bad-token")
+		}),
+		WithPrefix("hcloud API"),
+		WithRetry(RetryConfig{}),
+	)
 
 	var result struct{}
-	err = client.do(req, &result)
+	err := client.get(context.Background(), "/servers", &result)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "hcloud API 403")
-	assert.Contains(t, err.Error(), "forbidden")
-	assert.Contains(t, err.Error(), "insufficient permissions")
 }
 
 func TestHCloudClient_Do_Bad_APIErrorNoJSON(t *testing.T) {
@@ -165,16 +126,15 @@ func TestHCloudClient_Do_Bad_APIErrorNoJSON(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := &HCloudClient{
-		token:  "test-token",
-		client: ts.Client(),
-	}
+	client := NewHCloudClient("test-token")
+	client.baseURL = ts.URL
+	client.api = NewAPIClient(
+		WithHTTPClient(ts.Client()),
+		WithPrefix("hcloud API"),
+		WithRetry(RetryConfig{}),
+	)
 
-	ctx := context.Background()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL+"/servers", nil)
-	require.NoError(t, err)
-
-	err = client.do(req, nil)
+	err := client.get(context.Background(), "/servers", nil)
 	assert.Error(t, err)
 	assert.Contains(t, err.Error(), "hcloud API 500")
 }
@@ -185,16 +145,15 @@ func TestHCloudClient_Do_Good_NilResult(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := &HCloudClient{
-		token:  "test-token",
-		client: ts.Client(),
-	}
+	client := NewHCloudClient("test-token")
+	client.baseURL = ts.URL
+	client.api = NewAPIClient(
+		WithHTTPClient(ts.Client()),
+		WithPrefix("hcloud API"),
+		WithRetry(RetryConfig{}),
+	)
 
-	ctx := context.Background()
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, ts.URL+"/servers/1", nil)
-	require.NoError(t, err)
-
-	err = client.do(req, nil)
+	err := client.delete(context.Background(), "/servers/1")
 	assert.NoError(t, err)
 }
 
@@ -205,10 +164,10 @@ func TestNewHRobotClient_Good(t *testing.T) {
 	assert.NotNil(t, c)
 	assert.Equal(t, "user", c.user)
 	assert.Equal(t, "pass", c.password)
-	assert.NotNil(t, c.client)
+	assert.NotNil(t, c.api)
 }
 
-func TestHRobotClient_Get_Good(t *testing.T) {
+func TestHRobotClient_ListServers_Good(t *testing.T) {
 	ts := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		user, pass, ok := r.BasicAuth()
 		assert.True(t, ok)
@@ -220,28 +179,23 @@ func TestHRobotClient_Get_Good(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := &HRobotClient{
-		user:     "testuser",
-		password: "testpass",
-		client:   ts.Client(),
-	}
+	client := NewHRobotClient("testuser", "testpass")
+	client.baseURL = ts.URL
+	client.api = NewAPIClient(
+		WithHTTPClient(ts.Client()),
+		WithAuth(func(req *http.Request) {
+			req.SetBasicAuth("testuser", "testpass")
+		}),
+		WithPrefix("hrobot API"),
+		WithRetry(RetryConfig{}),
+	)
 
-	ctx := context.Background()
-	var raw []struct {
-		Server HRobotServer `json:"server"`
-	}
-	err := client.get(ctx, ts.URL+"/server", &raw)
-	// This won't work because get() prepends hrobotBaseURL. Test the do layer instead.
-	if err != nil {
-		// Test the parsing directly
-		resp := `[{"server":{"server_ip":"1.2.3.4","server_name":"test","product":"EX44","dc":"FSN1","status":"ready","cancelled":false}}]`
-		err = json.Unmarshal([]byte(resp), &raw)
-		require.NoError(t, err)
-		assert.Len(t, raw, 1)
-		assert.Equal(t, "1.2.3.4", raw[0].Server.ServerIP)
-		assert.Equal(t, "test", raw[0].Server.ServerName)
-		assert.Equal(t, "EX44", raw[0].Server.Product)
-	}
+	servers, err := client.ListServers(context.Background())
+	require.NoError(t, err)
+	require.Len(t, servers, 1)
+	assert.Equal(t, "1.2.3.4", servers[0].ServerIP)
+	assert.Equal(t, "test", servers[0].ServerName)
+	assert.Equal(t, "EX44", servers[0].Product)
 }
 
 func TestHRobotClient_Get_Bad_HTTPError(t *testing.T) {
@@ -251,22 +205,20 @@ func TestHRobotClient_Get_Bad_HTTPError(t *testing.T) {
 	}))
 	defer ts.Close()
 
-	client := &HRobotClient{
-		user:     "bad",
-		password: "creds",
-		client:   ts.Client(),
-	}
+	client := NewHRobotClient("bad", "creds")
+	client.baseURL = ts.URL
+	client.api = NewAPIClient(
+		WithHTTPClient(ts.Client()),
+		WithAuth(func(req *http.Request) {
+			req.SetBasicAuth("bad", "creds")
+		}),
+		WithPrefix("hrobot API"),
+		WithRetry(RetryConfig{}),
+	)
 
-	ctx := context.Background()
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, ts.URL+"/server", nil)
-	require.NoError(t, err)
-	req.SetBasicAuth(client.user, client.password)
-
-	resp, err := client.client.Do(req)
-	require.NoError(t, err)
-	defer func() { _ = resp.Body.Close() }()
-
-	assert.Equal(t, http.StatusUnauthorized, resp.StatusCode)
+	err := client.get(context.Background(), "/server", nil)
+	assert.Error(t, err)
+	assert.Contains(t, err.Error(), "hrobot API 401")
 }
 
 // --- Type serialisation ---

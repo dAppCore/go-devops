@@ -4,10 +4,8 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"strings"
-	"time"
 )
 
 const (
@@ -17,18 +15,24 @@ const (
 
 // HCloudClient is an HTTP client for the Hetzner Cloud API.
 type HCloudClient struct {
-	token  string
-	client *http.Client
+	token   string
+	baseURL string
+	api     *APIClient
 }
 
 // NewHCloudClient creates a new Hetzner Cloud API client.
 func NewHCloudClient(token string) *HCloudClient {
-	return &HCloudClient{
-		token: token,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+	c := &HCloudClient{
+		token:   token,
+		baseURL: hcloudBaseURL,
 	}
+	c.api = NewAPIClient(
+		WithAuth(func(req *http.Request) {
+			req.Header.Set("Authorization", "Bearer "+c.token)
+		}),
+		WithPrefix("hcloud API"),
+	)
+	return c
 }
 
 // HCloudServer represents a Hetzner Cloud server.
@@ -233,7 +237,7 @@ func (c *HCloudClient) CreateSnapshot(ctx context.Context, serverID int, descrip
 }
 
 func (c *HCloudClient) get(ctx context.Context, path string, result any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, hcloudBaseURL+path, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
 		return err
 	}
@@ -241,7 +245,7 @@ func (c *HCloudClient) get(ctx context.Context, path string, result any) error {
 }
 
 func (c *HCloudClient) post(ctx context.Context, path string, body []byte, result any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, hcloudBaseURL+path, strings.NewReader(string(body)))
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, strings.NewReader(string(body)))
 	if err != nil {
 		return err
 	}
@@ -250,7 +254,7 @@ func (c *HCloudClient) post(ctx context.Context, path string, body []byte, resul
 }
 
 func (c *HCloudClient) delete(ctx context.Context, path string) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, hcloudBaseURL+path, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodDelete, c.baseURL+path, nil)
 	if err != nil {
 		return err
 	}
@@ -258,38 +262,7 @@ func (c *HCloudClient) delete(ctx context.Context, path string) error {
 }
 
 func (c *HCloudClient) do(req *http.Request, result any) error {
-	req.Header.Set("Authorization", "Bearer "+c.token)
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("hcloud API: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("read response: %w", err)
-	}
-
-	if resp.StatusCode >= 400 {
-		var apiErr struct {
-			Error struct {
-				Code    string `json:"code"`
-				Message string `json:"message"`
-			} `json:"error"`
-		}
-		if json.Unmarshal(data, &apiErr) == nil && apiErr.Error.Message != "" {
-			return fmt.Errorf("hcloud API %d: %s — %s", resp.StatusCode, apiErr.Error.Code, apiErr.Error.Message)
-		}
-		return fmt.Errorf("hcloud API %d: %s", resp.StatusCode, string(data))
-	}
-
-	if result != nil {
-		if err := json.Unmarshal(data, result); err != nil {
-			return fmt.Errorf("decode response: %w", err)
-		}
-	}
-	return nil
+	return c.api.Do(req, result)
 }
 
 // --- Hetzner Robot API ---
@@ -298,18 +271,24 @@ func (c *HCloudClient) do(req *http.Request, result any) error {
 type HRobotClient struct {
 	user     string
 	password string
-	client   *http.Client
+	baseURL  string
+	api      *APIClient
 }
 
 // NewHRobotClient creates a new Hetzner Robot API client.
 func NewHRobotClient(user, password string) *HRobotClient {
-	return &HRobotClient{
+	c := &HRobotClient{
 		user:     user,
 		password: password,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		baseURL:  hrobotBaseURL,
 	}
+	c.api = NewAPIClient(
+		WithAuth(func(req *http.Request) {
+			req.SetBasicAuth(c.user, c.password)
+		}),
+		WithPrefix("hrobot API"),
+	)
+	return c
 }
 
 // HRobotServer represents a Hetzner Robot dedicated server.
@@ -351,31 +330,9 @@ func (c *HRobotClient) GetServer(ctx context.Context, ip string) (*HRobotServer,
 }
 
 func (c *HRobotClient) get(ctx context.Context, path string, result any) error {
-	req, err := http.NewRequestWithContext(ctx, http.MethodGet, hrobotBaseURL+path, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, c.baseURL+path, nil)
 	if err != nil {
 		return err
 	}
-	req.SetBasicAuth(c.user, c.password)
-
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return fmt.Errorf("hrobot API: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return fmt.Errorf("read response: %w", err)
-	}
-
-	if resp.StatusCode >= 400 {
-		return fmt.Errorf("hrobot API %d: %s", resp.StatusCode, string(data))
-	}
-
-	if result != nil {
-		if err := json.Unmarshal(data, result); err != nil {
-			return fmt.Errorf("decode response: %w", err)
-		}
-	}
-	return nil
+	return c.api.Do(req, result)
 }

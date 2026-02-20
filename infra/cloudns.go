@@ -4,11 +4,9 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
-	"io"
 	"net/http"
 	"net/url"
 	"strconv"
-	"time"
 )
 
 const cloudnsBaseURL = "https://api.cloudns.net"
@@ -17,7 +15,8 @@ const cloudnsBaseURL = "https://api.cloudns.net"
 type CloudNSClient struct {
 	authID   string
 	password string
-	client   *http.Client
+	baseURL  string
+	api      *APIClient
 }
 
 // NewCloudNSClient creates a new CloudNS API client.
@@ -26,9 +25,8 @@ func NewCloudNSClient(authID, password string) *CloudNSClient {
 	return &CloudNSClient{
 		authID:   authID,
 		password: password,
-		client: &http.Client{
-			Timeout: 30 * time.Second,
-		},
+		baseURL:  cloudnsBaseURL,
+		api:      NewAPIClient(WithPrefix("cloudns API")),
 	}
 }
 
@@ -235,7 +233,7 @@ func (c *CloudNSClient) authParams() url.Values {
 }
 
 func (c *CloudNSClient) get(ctx context.Context, path string, params url.Values) ([]byte, error) {
-	u := cloudnsBaseURL + path + "?" + params.Encode()
+	u := c.baseURL + path + "?" + params.Encode()
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, u, nil)
 	if err != nil {
 		return nil, err
@@ -244,7 +242,7 @@ func (c *CloudNSClient) get(ctx context.Context, path string, params url.Values)
 }
 
 func (c *CloudNSClient) post(ctx context.Context, path string, params url.Values) ([]byte, error) {
-	req, err := http.NewRequestWithContext(ctx, http.MethodPost, cloudnsBaseURL+path, nil)
+	req, err := http.NewRequestWithContext(ctx, http.MethodPost, c.baseURL+path, nil)
 	if err != nil {
 		return nil, err
 	}
@@ -253,20 +251,5 @@ func (c *CloudNSClient) post(ctx context.Context, path string, params url.Values
 }
 
 func (c *CloudNSClient) doRaw(req *http.Request) ([]byte, error) {
-	resp, err := c.client.Do(req)
-	if err != nil {
-		return nil, fmt.Errorf("cloudns API: %w", err)
-	}
-	defer func() { _ = resp.Body.Close() }()
-
-	data, err := io.ReadAll(resp.Body)
-	if err != nil {
-		return nil, fmt.Errorf("read response: %w", err)
-	}
-
-	if resp.StatusCode >= 400 {
-		return nil, fmt.Errorf("cloudns API %d: %s", resp.StatusCode, string(data))
-	}
-
-	return data, nil
+	return c.api.DoRaw(req)
 }
