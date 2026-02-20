@@ -690,7 +690,7 @@ func TestExecuteModuleWithMock_Bad_UnsupportedModule(t *testing.T) {
 	e, mock := newTestExecutorWithMock("host1")
 
 	task := &Task{
-		Module: "ansible.builtin.copy",
+		Module: "ansible.builtin.hostname",
 		Args:   map[string]any{},
 	}
 
