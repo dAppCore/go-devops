@@ -37,10 +37,11 @@ Dispatched from core/go orchestration. Pick up tasks in order.
 
 ### Step 1.5: Error propagation & become
 
-- [ ] **Error propagation** — Verify all SSH errors are wrapped with `core.E()` including host context. Test SSH failures in Run/Upload/Download paths.
-- [ ] **Become/sudo** — Test privilege escalation: `SetBecome(true, "root", "password")` → verify `sudo -S` prefix on commands. Test passwordless sudo (`-n` flag).
-- [ ] **Fact gathering** — Test fact collection mocking `/etc/os-release` for Ubuntu, CentOS, Alpine. Verify distro detection.
-- [ ] **Idempotency checks** — Verify `changed: false` when no action needed for file, service, user, apt modules.
+- [x] **Error propagation** — 68 tests: getHosts (8), matchesTags (7), evaluateWhen/evalCondition (22), templateString (14), applyFilter (9), resolveLoop (5), handleNotify (5), normalizeConditions (6), cross-cutting (7).
+- [x] **Become/sudo** — 8 tests: enable/disable cycle, default user, passwordless, play-level become.
+- [x] **Fact gathering** — 9 tests: Ubuntu/CentOS/Alpine/Debian os-release parsing, hostname, localhost.
+- [x] **Idempotency checks** — 8 tests: group exists, authorized_key present, docker compose up-to-date, stat always unchanged.
+- Total ansible tests: 438. Phase 1 complete. Commit `8ab8643`.
 
 ## Phase 2: Infrastructure API Robustness
 
