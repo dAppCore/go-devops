@@ -372,6 +372,24 @@ func executeModuleWithMock(e *Executor, mock *MockSSHClient, host string, task *
 		return moduleBlockinfileWithClient(e, mock, args)
 	case "ansible.builtin.stat":
 		return moduleStatWithClient(e, mock, args)
+	// Service management
+	case "ansible.builtin.service":
+		return moduleServiceWithClient(e, mock, args)
+	case "ansible.builtin.systemd":
+		return moduleSystemdWithClient(e, mock, args)
+
+	// Package management
+	case "ansible.builtin.apt":
+		return moduleAptWithClient(e, mock, args)
+	case "ansible.builtin.apt_key":
+		return moduleAptKeyWithClient(e, mock, args)
+	case "ansible.builtin.apt_repository":
+		return moduleAptRepositoryWithClient(e, mock, args)
+	case "ansible.builtin.package":
+		return modulePackageWithClient(e, mock, args)
+	case "ansible.builtin.pip":
+		return modulePipWithClient(e, mock, args)
+
 	default:
 		return nil, fmt.Errorf("mock dispatch: unsupported module %s", module)
 	}
@@ -745,6 +763,194 @@ func moduleStatWithClient(_ *Executor, client sshFileRunner, args map[string]any
 		Changed: false,
 		Data:    map[string]any{"stat": stat},
 	}, nil
+}
+
+// --- Service module shims ---
+
+func moduleServiceWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	name := getStringArg(args, "name", "")
+	state := getStringArg(args, "state", "")
+	enabled := args["enabled"]
+
+	if name == "" {
+		return nil, fmt.Errorf("service: name required")
+	}
+
+	var cmds []string
+
+	if state != "" {
+		switch state {
+		case "started":
+			cmds = append(cmds, fmt.Sprintf("systemctl start %s", name))
+		case "stopped":
+			cmds = append(cmds, fmt.Sprintf("systemctl stop %s", name))
+		case "restarted":
+			cmds = append(cmds, fmt.Sprintf("systemctl restart %s", name))
+		case "reloaded":
+			cmds = append(cmds, fmt.Sprintf("systemctl reload %s", name))
+		}
+	}
+
+	if enabled != nil {
+		if getBoolArg(args, "enabled", false) {
+			cmds = append(cmds, fmt.Sprintf("systemctl enable %s", name))
+		} else {
+			cmds = append(cmds, fmt.Sprintf("systemctl disable %s", name))
+		}
+	}
+
+	for _, cmd := range cmds {
+		stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+		if err != nil || rc != 0 {
+			return &TaskResult{Failed: true, Msg: stderr, Stdout: stdout, RC: rc}, nil
+		}
+	}
+
+	return &TaskResult{Changed: len(cmds) > 0}, nil
+}
+
+func moduleSystemdWithClient(e *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	if getBoolArg(args, "daemon_reload", false) {
+		_, _, _, _ = client.Run(context.Background(), "systemctl daemon-reload")
+	}
+
+	return moduleServiceWithClient(e, client, args)
+}
+
+// --- Package module shims ---
+
+func moduleAptWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	name := getStringArg(args, "name", "")
+	state := getStringArg(args, "state", "present")
+	updateCache := getBoolArg(args, "update_cache", false)
+
+	var cmd string
+
+	if updateCache {
+		_, _, _, _ = client.Run(context.Background(), "apt-get update -qq")
+	}
+
+	switch state {
+	case "present", "installed":
+		if name != "" {
+			cmd = fmt.Sprintf("DEBIAN_FRONTEND=noninteractive apt-get install -y -qq %s", name)
+		}
+	case "absent", "removed":
+		cmd = fmt.Sprintf("DEBIAN_FRONTEND=noninteractive apt-get remove -y -qq %s", name)
+	case "latest":
+		cmd = fmt.Sprintf("DEBIAN_FRONTEND=noninteractive apt-get install -y -qq --only-upgrade %s", name)
+	}
+
+	if cmd == "" {
+		return &TaskResult{Changed: false}, nil
+	}
+
+	stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+	if err != nil || rc != 0 {
+		return &TaskResult{Failed: true, Msg: stderr, Stdout: stdout, RC: rc}, nil
+	}
+
+	return &TaskResult{Changed: true}, nil
+}
+
+func moduleAptKeyWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	url := getStringArg(args, "url", "")
+	keyring := getStringArg(args, "keyring", "")
+	state := getStringArg(args, "state", "present")
+
+	if state == "absent" {
+		if keyring != "" {
+			_, _, _, _ = client.Run(context.Background(), fmt.Sprintf("rm -f %q", keyring))
+		}
+		return &TaskResult{Changed: true}, nil
+	}
+
+	if url == "" {
+		return nil, fmt.Errorf("apt_key: url required")
+	}
+
+	var cmd string
+	if keyring != "" {
+		cmd = fmt.Sprintf("curl -fsSL %q | gpg --dearmor -o %q", url, keyring)
+	} else {
+		cmd = fmt.Sprintf("curl -fsSL %q | apt-key add -", url)
+	}
+
+	stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+	if err != nil || rc != 0 {
+		return &TaskResult{Failed: true, Msg: stderr, Stdout: stdout, RC: rc}, nil
+	}
+
+	return &TaskResult{Changed: true}, nil
+}
+
+func moduleAptRepositoryWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	repo := getStringArg(args, "repo", "")
+	filename := getStringArg(args, "filename", "")
+	state := getStringArg(args, "state", "present")
+
+	if repo == "" {
+		return nil, fmt.Errorf("apt_repository: repo required")
+	}
+
+	if filename == "" {
+		filename = strings.ReplaceAll(repo, " ", "-")
+		filename = strings.ReplaceAll(filename, "/", "-")
+		filename = strings.ReplaceAll(filename, ":", "")
+	}
+
+	path := fmt.Sprintf("/etc/apt/sources.list.d/%s.list", filename)
+
+	if state == "absent" {
+		_, _, _, _ = client.Run(context.Background(), fmt.Sprintf("rm -f %q", path))
+		return &TaskResult{Changed: true}, nil
+	}
+
+	cmd := fmt.Sprintf("echo %q > %q", repo, path)
+	stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+	if err != nil || rc != 0 {
+		return &TaskResult{Failed: true, Msg: stderr, Stdout: stdout, RC: rc}, nil
+	}
+
+	if getBoolArg(args, "update_cache", true) {
+		_, _, _, _ = client.Run(context.Background(), "apt-get update -qq")
+	}
+
+	return &TaskResult{Changed: true}, nil
+}
+
+func modulePackageWithClient(e *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	stdout, _, _, _ := client.Run(context.Background(), "which apt-get yum dnf 2>/dev/null | head -1")
+	stdout = strings.TrimSpace(stdout)
+
+	if strings.Contains(stdout, "apt") {
+		return moduleAptWithClient(e, client, args)
+	}
+
+	return moduleAptWithClient(e, client, args)
+}
+
+func modulePipWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	name := getStringArg(args, "name", "")
+	state := getStringArg(args, "state", "present")
+	executable := getStringArg(args, "executable", "pip3")
+
+	var cmd string
+	switch state {
+	case "present", "installed":
+		cmd = fmt.Sprintf("%s install %s", executable, name)
+	case "absent", "removed":
+		cmd = fmt.Sprintf("%s uninstall -y %s", executable, name)
+	case "latest":
+		cmd = fmt.Sprintf("%s install --upgrade %s", executable, name)
+	}
+
+	stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+	if err != nil || rc != 0 {
+		return &TaskResult{Failed: true, Msg: stderr, Stdout: stdout, RC: rc}, nil
+	}
+
+	return &TaskResult{Changed: true}, nil
 }
 
 // --- String helpers for assertions ---
