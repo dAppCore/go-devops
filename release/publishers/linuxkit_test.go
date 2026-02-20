@@ -457,6 +457,7 @@ func TestLinuxKitPublisher_Publish_NilRelCfg_Good(t *testing.T) {
 		release := &Release{
 			Version:    "v1.0.0",
 			ProjectDir: tmpDir,
+			FS:         io.Local,
 		}
 		pubCfg := PublisherConfig{Type: "linuxkit"}
 
@@ -799,6 +800,28 @@ func TestLinuxKitPublisher_GetArtifactPath_AllFormats_Good(t *testing.T) {
 			assert.Equal(t, tc.expected, path)
 		})
 	}
+}
+
+func TestLinuxKitPublisher_Publish_NilFS_Bad(t *testing.T) {
+	if err := validateLinuxKitCli(); err != nil {
+		t.Skip("skipping test: linuxkit CLI not available")
+	}
+
+	p := NewLinuxKitPublisher()
+
+	t.Run("returns error when release FS is nil", func(t *testing.T) {
+		release := &Release{
+			Version:    "v1.0.0",
+			ProjectDir: "/tmp",
+			FS:         nil, // nil FS should be guarded
+		}
+		pubCfg := PublisherConfig{Type: "linuxkit"}
+		relCfg := &mockReleaseConfig{repository: "owner/repo"}
+
+		err := p.Publish(context.TODO(), release, pubCfg, relCfg, false)
+		assert.Error(t, err)
+		assert.Contains(t, err.Error(), "release filesystem (FS) is nil")
+	})
 }
 
 func TestLinuxKitPublisher_Publish_DryRun_Good(t *testing.T) {

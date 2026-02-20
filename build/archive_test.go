@@ -337,6 +337,255 @@ func TestArchiveFilename_Good(t *testing.T) {
 	})
 }
 
+func TestArchive_RoundTrip_Good(t *testing.T) {
+	fs := io_interface.Local
+
+	t.Run("tar.gz round trip preserves content", func(t *testing.T) {
+		binaryPath, _ := setupArchiveTestFile(t, "roundtrip-app", "linux", "amd64")
+
+		// Read original content
+		originalContent, err := os.ReadFile(binaryPath)
+		require.NoError(t, err)
+
+		artifact := Artifact{
+			Path: binaryPath,
+			OS:   "linux",
+			Arch: "amd64",
+		}
+
+		// Create archive
+		archiveArtifact, err := Archive(fs, artifact)
+		require.NoError(t, err)
+		assert.FileExists(t, archiveArtifact.Path)
+
+		// Extract and verify content matches
+		extractedContent := extractTarGzFile(t, archiveArtifact.Path, "roundtrip-app")
+		assert.Equal(t, originalContent, extractedContent)
+	})
+
+	t.Run("tar.xz round trip preserves content", func(t *testing.T) {
+		binaryPath, _ := setupArchiveTestFile(t, "roundtrip-xz", "linux", "arm64")
+
+		originalContent, err := os.ReadFile(binaryPath)
+		require.NoError(t, err)
+
+		artifact := Artifact{
+			Path: binaryPath,
+			OS:   "linux",
+			Arch: "arm64",
+		}
+
+		archiveArtifact, err := ArchiveXZ(fs, artifact)
+		require.NoError(t, err)
+		assert.FileExists(t, archiveArtifact.Path)
+
+		extractedContent := extractTarXzFile(t, archiveArtifact.Path, "roundtrip-xz")
+		assert.Equal(t, originalContent, extractedContent)
+	})
+
+	t.Run("zip round trip preserves content", func(t *testing.T) {
+		binaryPath, _ := setupArchiveTestFile(t, "roundtrip.exe", "windows", "amd64")
+
+		originalContent, err := os.ReadFile(binaryPath)
+		require.NoError(t, err)
+
+		artifact := Artifact{
+			Path: binaryPath,
+			OS:   "windows",
+			Arch: "amd64",
+		}
+
+		archiveArtifact, err := Archive(fs, artifact)
+		require.NoError(t, err)
+		assert.FileExists(t, archiveArtifact.Path)
+
+		extractedContent := extractZipFile(t, archiveArtifact.Path, "roundtrip.exe")
+		assert.Equal(t, originalContent, extractedContent)
+	})
+
+	t.Run("tar.gz preserves file permissions", func(t *testing.T) {
+		binaryPath, _ := setupArchiveTestFile(t, "perms-app", "linux", "amd64")
+
+		artifact := Artifact{
+			Path: binaryPath,
+			OS:   "linux",
+			Arch: "amd64",
+		}
+
+		archiveArtifact, err := Archive(fs, artifact)
+		require.NoError(t, err)
+
+		// Extract and verify permissions are preserved
+		mode := extractTarGzFileMode(t, archiveArtifact.Path, "perms-app")
+		// The original file was written with 0755
+		assert.Equal(t, os.FileMode(0755), mode&os.ModePerm)
+	})
+
+	t.Run("round trip with large binary content", func(t *testing.T) {
+		outputDir := t.TempDir()
+		platformDir := filepath.Join(outputDir, "linux_amd64")
+		require.NoError(t, os.MkdirAll(platformDir, 0755))
+
+		// Create a larger file (64KB)
+		largeContent := make([]byte, 64*1024)
+		for i := range largeContent {
+			largeContent[i] = byte(i % 256)
+		}
+		binaryPath := filepath.Join(platformDir, "large-app")
+		require.NoError(t, os.WriteFile(binaryPath, largeContent, 0755))
+
+		artifact := Artifact{
+			Path: binaryPath,
+			OS:   "linux",
+			Arch: "amd64",
+		}
+
+		archiveArtifact, err := Archive(fs, artifact)
+		require.NoError(t, err)
+
+		extractedContent := extractTarGzFile(t, archiveArtifact.Path, "large-app")
+		assert.Equal(t, largeContent, extractedContent)
+	})
+
+	t.Run("archive is smaller than original for tar.gz", func(t *testing.T) {
+		outputDir := t.TempDir()
+		platformDir := filepath.Join(outputDir, "linux_amd64")
+		require.NoError(t, os.MkdirAll(platformDir, 0755))
+
+		// Create a compressible file (repeated pattern)
+		compressibleContent := make([]byte, 4096)
+		for i := range compressibleContent {
+			compressibleContent[i] = 'A'
+		}
+		binaryPath := filepath.Join(platformDir, "compressible-app")
+		require.NoError(t, os.WriteFile(binaryPath, compressibleContent, 0755))
+
+		artifact := Artifact{
+			Path: binaryPath,
+			OS:   "linux",
+			Arch: "amd64",
+		}
+
+		archiveArtifact, err := Archive(fs, artifact)
+		require.NoError(t, err)
+
+		originalInfo, err := os.Stat(binaryPath)
+		require.NoError(t, err)
+		archiveInfo, err := os.Stat(archiveArtifact.Path)
+		require.NoError(t, err)
+
+		// Compressed archive should be smaller than original
+		assert.Less(t, archiveInfo.Size(), originalInfo.Size())
+	})
+}
+
+// extractTarGzFile extracts a named file from a tar.gz archive and returns its content.
+func extractTarGzFile(t *testing.T, archivePath, fileName string) []byte {
+	t.Helper()
+
+	file, err := os.Open(archivePath)
+	require.NoError(t, err)
+	defer func() { _ = file.Close() }()
+
+	gzReader, err := gzip.NewReader(file)
+	require.NoError(t, err)
+	defer func() { _ = gzReader.Close() }()
+
+	tarReader := tar.NewReader(gzReader)
+
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			t.Fatalf("file %q not found in archive", fileName)
+		}
+		require.NoError(t, err)
+
+		if header.Name == fileName {
+			content, err := io.ReadAll(tarReader)
+			require.NoError(t, err)
+			return content
+		}
+	}
+}
+
+// extractTarGzFileMode extracts the file mode of a named file from a tar.gz archive.
+func extractTarGzFileMode(t *testing.T, archivePath, fileName string) os.FileMode {
+	t.Helper()
+
+	file, err := os.Open(archivePath)
+	require.NoError(t, err)
+	defer func() { _ = file.Close() }()
+
+	gzReader, err := gzip.NewReader(file)
+	require.NoError(t, err)
+	defer func() { _ = gzReader.Close() }()
+
+	tarReader := tar.NewReader(gzReader)
+
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			t.Fatalf("file %q not found in archive", fileName)
+		}
+		require.NoError(t, err)
+
+		if header.Name == fileName {
+			return header.FileInfo().Mode()
+		}
+	}
+}
+
+// extractTarXzFile extracts a named file from a tar.xz archive and returns its content.
+func extractTarXzFile(t *testing.T, archivePath, fileName string) []byte {
+	t.Helper()
+
+	xzData, err := os.ReadFile(archivePath)
+	require.NoError(t, err)
+
+	tarData, err := compress.Decompress(xzData)
+	require.NoError(t, err)
+
+	tarReader := tar.NewReader(bytes.NewReader(tarData))
+
+	for {
+		header, err := tarReader.Next()
+		if err == io.EOF {
+			t.Fatalf("file %q not found in archive", fileName)
+		}
+		require.NoError(t, err)
+
+		if header.Name == fileName {
+			content, err := io.ReadAll(tarReader)
+			require.NoError(t, err)
+			return content
+		}
+	}
+}
+
+// extractZipFile extracts a named file from a zip archive and returns its content.
+func extractZipFile(t *testing.T, archivePath, fileName string) []byte {
+	t.Helper()
+
+	reader, err := zip.OpenReader(archivePath)
+	require.NoError(t, err)
+	defer func() { _ = reader.Close() }()
+
+	for _, f := range reader.File {
+		if f.Name == fileName {
+			rc, err := f.Open()
+			require.NoError(t, err)
+			defer func() { _ = rc.Close() }()
+
+			content, err := io.ReadAll(rc)
+			require.NoError(t, err)
+			return content
+		}
+	}
+
+	t.Fatalf("file %q not found in zip archive", fileName)
+	return nil
+}
+
 // verifyTarGzContent opens a tar.gz file and verifies it contains the expected file.
 func verifyTarGzContent(t *testing.T, archivePath, expectedName string) {
 	t.Helper()

@@ -47,6 +47,9 @@ func (p *LinuxKitPublisher) Publish(ctx context.Context, release *Release, pubCf
 	lkCfg := p.parseConfig(pubCfg, release.ProjectDir)
 
 	// Validate config file exists
+	if release.FS == nil {
+		return fmt.Errorf("linuxkit.Publish: release filesystem (FS) is nil")
+	}
 	if !release.FS.Exists(lkCfg.Config) {
 		return fmt.Errorf("linuxkit.Publish: config file not found: %s", lkCfg.Config)
 	}
