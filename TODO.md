@@ -17,19 +17,11 @@ Dispatched from core/go orchestration. Pick up tasks in order.
 
 ### Step 1.0: SSH mock infrastructure
 
-- [ ] **Create `ansible/mock_ssh_test.go`** — `modules.go` has 40 modules with ZERO tests. All modules call `SSHClient` methods: `Run()`, `RunScript()`, `Upload()`, `Download()`, `FileExists()`, `Stat()`, `SetBecome()`. The mock needs:
-  - Command registry pattern: record commands executed, return pre-configured responses
-  - File system simulation: in-memory map for Upload/Download/FileExists/Stat
-  - Become state tracking: verify privilege escalation commands
-  - Helper: `expectCommand(pattern, stdout, stderr, rc)` for concise test setup
+- [x] **Create `ansible/mock_ssh_test.go`** — MockSSHClient with command registry (`expectCommand`), file system simulation (in-memory map), become state tracking, execution/upload logs, and assertion helpers (`hasExecuted`, `hasExecutedMethod`, `findExecuted`). Module shims via `sshRunner` interface for testability. 12 mock infrastructure tests. Commit `3330e55`.
 
 ### Step 1.1: Command execution modules (4 modules, ~100 LOC)
 
-- [ ] **Test command/shell/raw/script** — Simplest modules. Verify:
-  - `command`: calls `client.Run()` with exact command string
-  - `shell`: calls `client.RunScript()` wrapping in bash heredoc
-  - `raw`: calls `client.Run()` without shell wrapping
-  - `script`: reads local file content, passes to `client.RunScript()`
+- [x] **Test command/shell/raw/script** — 36 module tests + 12 mock tests = 48 new tests. Verifies: command uses `Run()`, shell uses `RunScript()`, raw passes through without wrapping, script reads local file. Cross-module differentiation tests, dispatch routing, template variable resolution. Commit `3330e55`.
 
 ### Step 1.2: File operation modules (6 modules, ~280 LOC)
 
