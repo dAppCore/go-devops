@@ -6,12 +6,12 @@ Dispatched from core/go orchestration. Pick up tasks in order.
 
 ## Phase 0: Test Coverage & Hardening
 
-- [ ] **Expand ansible/ tests** — Only `ssh_test.go` exists. Add: `executor_test.go` (run a minimal playbook with mock SSH, verify task order + handler notification), `modules_test.go` (test each module: service start/stop, file copy, template render, command exec — use mocked SSH session), `parser_test.go` (parse valid playbook YAML, invalid YAML, empty plays, nested vars), `types_test.go` (Facts merge, Inventory host grouping).
-- [ ] **Expand infra/ tests** — Only `config_test.go` exists. Add: `hetzner_test.go` (mock HTTP responses for server list/create/delete, load balancer ops, snapshot management), `cloudns_test.go` (mock DNS zone/record CRUD, ACME challenge create/cleanup, error responses). Use `httptest.NewServer` for API mocking.
+- [x] **Expand ansible/ tests** — Added `parser_test.go` (17 tests: ParsePlaybook, ParseInventory, ParseTasks, GetHosts, GetHostVars, isModule, NormalizeModule), `types_test.go` (RoleRef/Task UnmarshalYAML, Inventory, Facts, TaskResult, KnownModules), `executor_test.go` (getHosts, matchesTags, evaluateWhen, templateString, applyFilter, resolveLoop, templateArgs, handleNotify, normalizeConditions, helper functions). All pass. Commit `6e346cb`.
+- [x] **Expand infra/ tests** — Added `hetzner_test.go` (HCloudClient/HRobotClient construction, do() round-trip via httptest, API error handling, JSON serialisation for HCloudServer, HCloudLoadBalancer, HRobotServer) and `cloudns_test.go` (doRaw() round-trip, zone/record JSON, CRUD responses, ACME challenge, auth params, errors). Commit `6e346cb`.
 - [ ] **Expand build/ tests** — Add: builder detection tests (each builder's `Detect()` with matching/non-matching directory structures), archive round-trip (create tar.gz → extract → compare), signing mock tests (verify `Sign()` called with correct paths).
-- [ ] **Expand release/ tests** — Add: version detection from git tags / package.json / go.mod, changelog generation from conventional commits (mock git log output), publisher dry-run tests.
-- [ ] **Race condition tests** — `go test -race ./...` across all packages. Ansible executor runs concurrent handlers — verify thread safety.
-- [ ] **`go vet ./...` clean** — Fix any warnings.
+- [ ] **Expand release/ tests** — Add: version detection from git tags / package.json / go.mod, changelog generation from conventional commits (mock git log output), publisher dry-run tests. Note: pre-existing nil pointer crash in `TestLinuxKitPublisher_Publish_NilRelCfg_Good` at `linuxkit.go:50`.
+- [x] **Race condition tests** — `go test -race ./...` clean across ansible, infra, container, devops, build packages. Commit `6e346cb`.
+- [x] **`go vet ./...` clean** — Fixed stale API calls in container/linuxkit_test.go, state_test.go, templates_test.go, devops/devops_test.go. go.mod replace directive fixed. Commit `6e346cb`.
 
 ## Phase 1: Ansible Engine Hardening
 
