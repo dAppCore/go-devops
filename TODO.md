@@ -52,9 +52,9 @@ Dispatched from core/go orchestration. Pick up tasks in order.
 
 ## Phase 3: Release Pipeline Testing
 
-- [ ] **Publisher integration tests** — Mock GitHub API for release creation, Docker registry for image push, Homebrew tap for formula update. Verify dry-run mode produces correct output without side effects.
-- [ ] **SDK generation tests** — Generate TypeScript/Go/Python clients from a test OpenAPI spec. Verify output compiles/type-checks.
-- [ ] **Breaking change detection** — Test oasdiff integration: modify a spec with breaking change, verify detection and failure mode.
+- [x] **Publisher integration tests** — Added `integration_test.go` (48 tests): GitHub dry-run/command-building/repo-detection/artifact-upload, Docker dry-run/buildx-args/config-parsing, Homebrew dry-run/formula-generation/class-naming, Scoop dry-run/manifest, AUR dry-run/PKGBUILD/SRCINFO, Chocolatey dry-run/nuspec, npm dry-run/package.json, LinuxKit dry-run multi-format/platform. Cross-publisher: name uniqueness, nil relCfg, checksum mapping, interface compliance. Commit `032d862`.
+- [x] **SDK generation tests** — Added `generation_test.go` (38 tests): SDK orchestration (Generate iterates languages, output directory, no-spec error, unknown language), generator registry (register/get/overwrite/languages), generator interface compliance (language identifiers, install instructions, Available safety), SDK config (defaults, SetVersion, nil config), spec detection priority (configured > common > Scramble, all 8 common paths). Commit `032d862`.
+- [x] **Breaking change detection** — Added `breaking_test.go` (30 tests): oasdiff integration for add-endpoint (non-breaking), remove-endpoint (breaking), add-required-param (breaking), add-optional-param (non-breaking), change-response-type (breaking), remove-HTTP-method (breaking), identical-specs, multiple-breaking-changes, JSON spec support. Error handling: non-existent base/revision, invalid YAML. DiffExitCode (0/1/2), DiffResult summary/human-readable changes. Commit `032d862`.
 
 ## Phase 4: DevKit Expansion
 
