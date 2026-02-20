@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"io"
 	"os"
+	"path/filepath"
 	"regexp"
 	"strconv"
 	"strings"
@@ -389,6 +390,40 @@ func executeModuleWithMock(e *Executor, mock *MockSSHClient, host string, task *
 		return modulePackageWithClient(e, mock, args)
 	case "ansible.builtin.pip":
 		return modulePipWithClient(e, mock, args)
+
+	// User/group management
+	case "ansible.builtin.user":
+		return moduleUserWithClient(e, mock, args)
+	case "ansible.builtin.group":
+		return moduleGroupWithClient(e, mock, args)
+
+	// Cron
+	case "ansible.builtin.cron":
+		return moduleCronWithClient(e, mock, args)
+
+	// SSH keys
+	case "ansible.posix.authorized_key", "ansible.builtin.authorized_key":
+		return moduleAuthorizedKeyWithClient(e, mock, args)
+
+	// Git
+	case "ansible.builtin.git":
+		return moduleGitWithClient(e, mock, args)
+
+	// Archive
+	case "ansible.builtin.unarchive":
+		return moduleUnarchiveWithClient(e, mock, args)
+
+	// HTTP
+	case "ansible.builtin.uri":
+		return moduleURIWithClient(e, mock, args)
+
+	// Firewall
+	case "community.general.ufw", "ansible.builtin.ufw":
+		return moduleUFWWithClient(e, mock, args)
+
+	// Docker
+	case "community.docker.docker_compose_v2", "ansible.builtin.docker_compose":
+		return moduleDockerComposeWithClient(e, mock, args)
 
 	default:
 		return nil, fmt.Errorf("mock dispatch: unsupported module %s", module)
@@ -951,6 +986,419 @@ func modulePipWithClient(_ *Executor, client sshRunner, args map[string]any) (*T
 	}
 
 	return &TaskResult{Changed: true}, nil
+}
+
+// --- User/Group module shims ---
+
+func moduleUserWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	name := getStringArg(args, "name", "")
+	state := getStringArg(args, "state", "present")
+
+	if name == "" {
+		return nil, fmt.Errorf("user: name required")
+	}
+
+	if state == "absent" {
+		cmd := fmt.Sprintf("userdel -r %s 2>/dev/null || true", name)
+		_, _, _, _ = client.Run(context.Background(), cmd)
+		return &TaskResult{Changed: true}, nil
+	}
+
+	// Build useradd/usermod command
+	var opts []string
+
+	if uid := getStringArg(args, "uid", ""); uid != "" {
+		opts = append(opts, "-u", uid)
+	}
+	if group := getStringArg(args, "group", ""); group != "" {
+		opts = append(opts, "-g", group)
+	}
+	if groups := getStringArg(args, "groups", ""); groups != "" {
+		opts = append(opts, "-G", groups)
+	}
+	if home := getStringArg(args, "home", ""); home != "" {
+		opts = append(opts, "-d", home)
+	}
+	if shell := getStringArg(args, "shell", ""); shell != "" {
+		opts = append(opts, "-s", shell)
+	}
+	if getBoolArg(args, "system", false) {
+		opts = append(opts, "-r")
+	}
+	if getBoolArg(args, "create_home", true) {
+		opts = append(opts, "-m")
+	}
+
+	// Try usermod first, then useradd
+	optsStr := strings.Join(opts, " ")
+	var cmd string
+	if optsStr == "" {
+		cmd = fmt.Sprintf("id %s >/dev/null 2>&1 || useradd %s", name, name)
+	} else {
+		cmd = fmt.Sprintf("id %s >/dev/null 2>&1 && usermod %s %s || useradd %s %s",
+			name, optsStr, name, optsStr, name)
+	}
+
+	stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+	if err != nil || rc != 0 {
+		return &TaskResult{Failed: true, Msg: stderr, Stdout: stdout, RC: rc}, nil
+	}
+
+	return &TaskResult{Changed: true}, nil
+}
+
+func moduleGroupWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	name := getStringArg(args, "name", "")
+	state := getStringArg(args, "state", "present")
+
+	if name == "" {
+		return nil, fmt.Errorf("group: name required")
+	}
+
+	if state == "absent" {
+		cmd := fmt.Sprintf("groupdel %s 2>/dev/null || true", name)
+		_, _, _, _ = client.Run(context.Background(), cmd)
+		return &TaskResult{Changed: true}, nil
+	}
+
+	var opts []string
+	if gid := getStringArg(args, "gid", ""); gid != "" {
+		opts = append(opts, "-g", gid)
+	}
+	if getBoolArg(args, "system", false) {
+		opts = append(opts, "-r")
+	}
+
+	cmd := fmt.Sprintf("getent group %s >/dev/null 2>&1 || groupadd %s %s",
+		name, strings.Join(opts, " "), name)
+
+	stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+	if err != nil || rc != 0 {
+		return &TaskResult{Failed: true, Msg: stderr, Stdout: stdout, RC: rc}, nil
+	}
+
+	return &TaskResult{Changed: true}, nil
+}
+
+// --- Cron module shim ---
+
+func moduleCronWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	name := getStringArg(args, "name", "")
+	job := getStringArg(args, "job", "")
+	state := getStringArg(args, "state", "present")
+	user := getStringArg(args, "user", "root")
+
+	minute := getStringArg(args, "minute", "*")
+	hour := getStringArg(args, "hour", "*")
+	day := getStringArg(args, "day", "*")
+	month := getStringArg(args, "month", "*")
+	weekday := getStringArg(args, "weekday", "*")
+
+	if state == "absent" {
+		if name != "" {
+			// Remove by name (comment marker)
+			cmd := fmt.Sprintf("crontab -u %s -l 2>/dev/null | grep -v '# %s' | grep -v '%s' | crontab -u %s -",
+				user, name, job, user)
+			_, _, _, _ = client.Run(context.Background(), cmd)
+		}
+		return &TaskResult{Changed: true}, nil
+	}
+
+	// Build cron entry
+	schedule := fmt.Sprintf("%s %s %s %s %s", minute, hour, day, month, weekday)
+	entry := fmt.Sprintf("%s %s # %s", schedule, job, name)
+
+	// Add to crontab
+	cmd := fmt.Sprintf("(crontab -u %s -l 2>/dev/null | grep -v '# %s' ; echo %q) | crontab -u %s -",
+		user, name, entry, user)
+	stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+	if err != nil || rc != 0 {
+		return &TaskResult{Failed: true, Msg: stderr, Stdout: stdout, RC: rc}, nil
+	}
+
+	return &TaskResult{Changed: true}, nil
+}
+
+// --- Authorized key module shim ---
+
+func moduleAuthorizedKeyWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	user := getStringArg(args, "user", "")
+	key := getStringArg(args, "key", "")
+	state := getStringArg(args, "state", "present")
+
+	if user == "" || key == "" {
+		return nil, fmt.Errorf("authorized_key: user and key required")
+	}
+
+	// Get user's home directory
+	stdout, _, _, err := client.Run(context.Background(), fmt.Sprintf("getent passwd %s | cut -d: -f6", user))
+	if err != nil {
+		return nil, fmt.Errorf("get home dir: %w", err)
+	}
+	home := strings.TrimSpace(stdout)
+	if home == "" {
+		home = "/root"
+		if user != "root" {
+			home = "/home/" + user
+		}
+	}
+
+	authKeysPath := filepath.Join(home, ".ssh", "authorized_keys")
+
+	if state == "absent" {
+		// Remove key
+		escapedKey := strings.ReplaceAll(key, "/", "\\/")
+		cmd := fmt.Sprintf("sed -i '/%s/d' %q 2>/dev/null || true", escapedKey[:40], authKeysPath)
+		_, _, _, _ = client.Run(context.Background(), cmd)
+		return &TaskResult{Changed: true}, nil
+	}
+
+	// Ensure .ssh directory exists (best-effort)
+	_, _, _, _ = client.Run(context.Background(), fmt.Sprintf("mkdir -p %q && chmod 700 %q && chown %s:%s %q",
+		filepath.Dir(authKeysPath), filepath.Dir(authKeysPath), user, user, filepath.Dir(authKeysPath)))
+
+	// Add key if not present
+	cmd := fmt.Sprintf("grep -qF %q %q 2>/dev/null || echo %q >> %q",
+		key[:40], authKeysPath, key, authKeysPath)
+	stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+	if err != nil || rc != 0 {
+		return &TaskResult{Failed: true, Msg: stderr, Stdout: stdout, RC: rc}, nil
+	}
+
+	// Fix permissions (best-effort)
+	_, _, _, _ = client.Run(context.Background(), fmt.Sprintf("chmod 600 %q && chown %s:%s %q",
+		authKeysPath, user, user, authKeysPath))
+
+	return &TaskResult{Changed: true}, nil
+}
+
+// --- Git module shim ---
+
+func moduleGitWithClient(_ *Executor, client sshFileRunner, args map[string]any) (*TaskResult, error) {
+	repo := getStringArg(args, "repo", "")
+	dest := getStringArg(args, "dest", "")
+	version := getStringArg(args, "version", "HEAD")
+
+	if repo == "" || dest == "" {
+		return nil, fmt.Errorf("git: repo and dest required")
+	}
+
+	// Check if dest exists
+	exists, _ := client.FileExists(context.Background(), dest+"/.git")
+
+	var cmd string
+	if exists {
+		cmd = fmt.Sprintf("cd %q && git fetch --all && git checkout --force %q", dest, version)
+	} else {
+		cmd = fmt.Sprintf("git clone %q %q && cd %q && git checkout %q",
+			repo, dest, dest, version)
+	}
+
+	stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+	if err != nil || rc != 0 {
+		return &TaskResult{Failed: true, Msg: stderr, Stdout: stdout, RC: rc}, nil
+	}
+
+	return &TaskResult{Changed: true}, nil
+}
+
+// --- Unarchive module shim ---
+
+func moduleUnarchiveWithClient(_ *Executor, client sshFileRunner, args map[string]any) (*TaskResult, error) {
+	src := getStringArg(args, "src", "")
+	dest := getStringArg(args, "dest", "")
+	remote := getBoolArg(args, "remote_src", false)
+
+	if src == "" || dest == "" {
+		return nil, fmt.Errorf("unarchive: src and dest required")
+	}
+
+	// Create dest directory (best-effort)
+	_, _, _, _ = client.Run(context.Background(), fmt.Sprintf("mkdir -p %q", dest))
+
+	var cmd string
+	if !remote {
+		// Upload local file first
+		content, err := os.ReadFile(src)
+		if err != nil {
+			return nil, fmt.Errorf("read src: %w", err)
+		}
+		tmpPath := "/tmp/ansible_unarchive_" + filepath.Base(src)
+		err = client.Upload(context.Background(), strings.NewReader(string(content)), tmpPath, 0644)
+		if err != nil {
+			return nil, err
+		}
+		src = tmpPath
+		defer func() { _, _, _, _ = client.Run(context.Background(), fmt.Sprintf("rm -f %q", tmpPath)) }()
+	}
+
+	// Detect archive type and extract
+	if strings.HasSuffix(src, ".tar.gz") || strings.HasSuffix(src, ".tgz") {
+		cmd = fmt.Sprintf("tar -xzf %q -C %q", src, dest)
+	} else if strings.HasSuffix(src, ".tar.xz") {
+		cmd = fmt.Sprintf("tar -xJf %q -C %q", src, dest)
+	} else if strings.HasSuffix(src, ".tar.bz2") {
+		cmd = fmt.Sprintf("tar -xjf %q -C %q", src, dest)
+	} else if strings.HasSuffix(src, ".tar") {
+		cmd = fmt.Sprintf("tar -xf %q -C %q", src, dest)
+	} else if strings.HasSuffix(src, ".zip") {
+		cmd = fmt.Sprintf("unzip -o %q -d %q", src, dest)
+	} else {
+		cmd = fmt.Sprintf("tar -xf %q -C %q", src, dest) // Guess tar
+	}
+
+	stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+	if err != nil || rc != 0 {
+		return &TaskResult{Failed: true, Msg: stderr, Stdout: stdout, RC: rc}, nil
+	}
+
+	return &TaskResult{Changed: true}, nil
+}
+
+// --- URI module shim ---
+
+func moduleURIWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	url := getStringArg(args, "url", "")
+	method := getStringArg(args, "method", "GET")
+
+	if url == "" {
+		return nil, fmt.Errorf("uri: url required")
+	}
+
+	var curlOpts []string
+	curlOpts = append(curlOpts, "-s", "-S")
+	curlOpts = append(curlOpts, "-X", method)
+
+	// Headers
+	if headers, ok := args["headers"].(map[string]any); ok {
+		for k, v := range headers {
+			curlOpts = append(curlOpts, "-H", fmt.Sprintf("%s: %v", k, v))
+		}
+	}
+
+	// Body
+	if body := getStringArg(args, "body", ""); body != "" {
+		curlOpts = append(curlOpts, "-d", body)
+	}
+
+	// Status code
+	curlOpts = append(curlOpts, "-w", "\\n%{http_code}")
+
+	cmd := fmt.Sprintf("curl %s %q", strings.Join(curlOpts, " "), url)
+	stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+	if err != nil {
+		return &TaskResult{Failed: true, Msg: err.Error()}, nil
+	}
+
+	// Parse status code from last line
+	lines := strings.Split(strings.TrimSpace(stdout), "\n")
+	statusCode := 0
+	if len(lines) > 0 {
+		statusCode, _ = strconv.Atoi(lines[len(lines)-1])
+	}
+
+	// Check expected status
+	expectedStatus := 200
+	if s, ok := args["status_code"].(int); ok {
+		expectedStatus = s
+	}
+
+	failed := rc != 0 || statusCode != expectedStatus
+
+	return &TaskResult{
+		Changed: false,
+		Failed:  failed,
+		Stdout:  stdout,
+		Stderr:  stderr,
+		RC:      statusCode,
+		Data:    map[string]any{"status": statusCode},
+	}, nil
+}
+
+// --- UFW module shim ---
+
+func moduleUFWWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	rule := getStringArg(args, "rule", "")
+	port := getStringArg(args, "port", "")
+	proto := getStringArg(args, "proto", "tcp")
+	state := getStringArg(args, "state", "")
+
+	var cmd string
+
+	// Handle state (enable/disable)
+	if state != "" {
+		switch state {
+		case "enabled":
+			cmd = "ufw --force enable"
+		case "disabled":
+			cmd = "ufw disable"
+		case "reloaded":
+			cmd = "ufw reload"
+		case "reset":
+			cmd = "ufw --force reset"
+		}
+		if cmd != "" {
+			stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+			if err != nil || rc != 0 {
+				return &TaskResult{Failed: true, Msg: stderr, Stdout: stdout, RC: rc}, nil
+			}
+			return &TaskResult{Changed: true}, nil
+		}
+	}
+
+	// Handle rule
+	if rule != "" && port != "" {
+		switch rule {
+		case "allow":
+			cmd = fmt.Sprintf("ufw allow %s/%s", port, proto)
+		case "deny":
+			cmd = fmt.Sprintf("ufw deny %s/%s", port, proto)
+		case "reject":
+			cmd = fmt.Sprintf("ufw reject %s/%s", port, proto)
+		case "limit":
+			cmd = fmt.Sprintf("ufw limit %s/%s", port, proto)
+		}
+
+		stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+		if err != nil || rc != 0 {
+			return &TaskResult{Failed: true, Msg: stderr, Stdout: stdout, RC: rc}, nil
+		}
+	}
+
+	return &TaskResult{Changed: true}, nil
+}
+
+// --- Docker Compose module shim ---
+
+func moduleDockerComposeWithClient(_ *Executor, client sshRunner, args map[string]any) (*TaskResult, error) {
+	projectSrc := getStringArg(args, "project_src", "")
+	state := getStringArg(args, "state", "present")
+
+	if projectSrc == "" {
+		return nil, fmt.Errorf("docker_compose: project_src required")
+	}
+
+	var cmd string
+	switch state {
+	case "present":
+		cmd = fmt.Sprintf("cd %q && docker compose up -d", projectSrc)
+	case "absent":
+		cmd = fmt.Sprintf("cd %q && docker compose down", projectSrc)
+	case "restarted":
+		cmd = fmt.Sprintf("cd %q && docker compose restart", projectSrc)
+	default:
+		cmd = fmt.Sprintf("cd %q && docker compose up -d", projectSrc)
+	}
+
+	stdout, stderr, rc, err := client.Run(context.Background(), cmd)
+	if err != nil || rc != 0 {
+		return &TaskResult{Failed: true, Msg: stderr, Stdout: stdout, RC: rc}, nil
+	}
+
+	// Heuristic for changed
+	changed := !strings.Contains(stdout, "Up to date") && !strings.Contains(stderr, "Up to date")
+
+	return &TaskResult{Changed: changed, Stdout: stdout}, nil
 }
 
 // --- String helpers for assertions ---
