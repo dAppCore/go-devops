@@ -33,12 +33,7 @@ Dispatched from core/go orchestration. Pick up tasks in order.
 
 ### Step 1.4: User/group & advanced modules (10 modules, ~385 LOC)
 
-- [ ] **Test user/group/cron/authorized_key/git/unarchive/uri/ufw/docker_compose** — Verify:
-  - `user`: conditional useradd vs usermod based on `id` check
-  - `cron`: crontab list/edit/delete with comment markers
-  - `authorized_key`: SSH key management, grep-based idempotency
-  - `git`: clone vs fetch+checkout logic based on FileExists
-  - `unarchive`: Upload + tar/zip extraction
+- [x] **Test user/group/cron/authorized_key/git/unarchive/uri/ufw/docker_compose** — 69 new tests: user (7), group (7), cron (5), authorized_key (7), git (8), unarchive (8), uri (6), ufw (8), docker_compose (7), dispatch (6). 9 module shims. Total ansible tests: 334. Commit `427929f`.
 
 ### Step 1.5: Error propagation & become
 
