@@ -15,11 +15,55 @@ Dispatched from core/go orchestration. Pick up tasks in order.
 
 ## Phase 1: Ansible Engine Hardening
 
-- [ ] **Module test coverage** — `modules.go` is 1,434 LOC with zero tests. Each module (service, file, template, command, copy, apt, yum) needs unit tests with mocked SSH sessions.
-- [ ] **Error propagation** — Verify all SSH errors are wrapped with `core.E()` including host context. Currently some errors may lose the host identifier.
-- [ ] **Fact gathering** — Test fact collection from different Linux distros (Ubuntu, CentOS, Alpine). Mock `/etc/os-release` parsing.
-- [ ] **Become/sudo** — Test privilege escalation paths. Verify password prompt handling.
-- [ ] **Idempotency checks** — Modules should report `changed: false` when no action needed. Verify for file, service, template modules.
+### Step 1.0: SSH mock infrastructure
+
+- [ ] **Create `ansible/mock_ssh_test.go`** — `modules.go` has 40 modules with ZERO tests. All modules call `SSHClient` methods: `Run()`, `RunScript()`, `Upload()`, `Download()`, `FileExists()`, `Stat()`, `SetBecome()`. The mock needs:
+  - Command registry pattern: record commands executed, return pre-configured responses
+  - File system simulation: in-memory map for Upload/Download/FileExists/Stat
+  - Become state tracking: verify privilege escalation commands
+  - Helper: `expectCommand(pattern, stdout, stderr, rc)` for concise test setup
+
+### Step 1.1: Command execution modules (4 modules, ~100 LOC)
+
+- [ ] **Test command/shell/raw/script** — Simplest modules. Verify:
+  - `command`: calls `client.Run()` with exact command string
+  - `shell`: calls `client.RunScript()` wrapping in bash heredoc
+  - `raw`: calls `client.Run()` without shell wrapping
+  - `script`: reads local file content, passes to `client.RunScript()`
+
+### Step 1.2: File operation modules (6 modules, ~280 LOC)
+
+- [ ] **Test copy/template/file/lineinfile/blockinfile/stat** — Verify:
+  - `copy`: calls `client.Upload()` with content, applies chown/chgrp
+  - `file`: handles state branches (directory/absent/touch/link) with correct mkdir/chmod/chown/ln commands
+  - `lineinfile`: builds correct sed commands for line manipulation
+  - `blockinfile`: marker-based block management with heredoc escaping
+  - `stat`: calls `client.Stat()`, returns file info map
+  - `template`: uses `e.TemplateFile()` then `client.Upload()`
+
+### Step 1.3: Service & package modules (7 modules, ~180 LOC)
+
+- [ ] **Test service/systemd/apt/apt_key/apt_repository/package/pip** — Verify:
+  - `service`: correct systemctl start/stop/restart/enable/disable commands
+  - `systemd`: daemon_reload + delegation to service
+  - `apt`: correct apt-get install/remove/update commands
+  - `package`: auto-detection of apt vs yum
+
+### Step 1.4: User/group & advanced modules (10 modules, ~385 LOC)
+
+- [ ] **Test user/group/cron/authorized_key/git/unarchive/uri/ufw/docker_compose** — Verify:
+  - `user`: conditional useradd vs usermod based on `id` check
+  - `cron`: crontab list/edit/delete with comment markers
+  - `authorized_key`: SSH key management, grep-based idempotency
+  - `git`: clone vs fetch+checkout logic based on FileExists
+  - `unarchive`: Upload + tar/zip extraction
+
+### Step 1.5: Error propagation & become
+
+- [ ] **Error propagation** — Verify all SSH errors are wrapped with `core.E()` including host context. Test SSH failures in Run/Upload/Download paths.
+- [ ] **Become/sudo** — Test privilege escalation: `SetBecome(true, "root", "password")` → verify `sudo -S` prefix on commands. Test passwordless sudo (`-n` flag).
+- [ ] **Fact gathering** — Test fact collection mocking `/etc/os-release` for Ubuntu, CentOS, Alpine. Verify distro detection.
+- [ ] **Idempotency checks** — Verify `changed: false` when no action needed for file, service, user, apt modules.
 
 ## Phase 2: Infrastructure API Robustness
 
