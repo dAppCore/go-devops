@@ -1,0 +1,45 @@
+# Reusable Go test workflow
+# Usage: uses: core/go-devops/.forgejo/workflows/go-test.yml@main
+
+name: Go Test
+
+on:
+  workflow_call:
+    inputs:
+      go-version:
+        description: Go version to use
+        type: string
+        default: '1.26'
+      race:
+        description: Enable race detector
+        type: boolean
+        default: false
+      coverage:
+        description: Generate coverage report
+        type: boolean
+        default: false
+
+jobs:
+  test:
+    name: Test
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-go@v5
+        with:
+          go-version: ${{ inputs.go-version }}
+
+      - name: Run tests
+        run: |
+          FLAGS="-v"
+          if [ "${{ inputs.race }}" = "true" ]; then
+            FLAGS="$FLAGS -race"
+          fi
+          if [ "${{ inputs.coverage }}" = "true" ]; then
+            FLAGS="$FLAGS -coverprofile=coverage.out"
+          fi
+          go test $FLAGS ./...
+
+      - name: Coverage summary
+        if: inputs.coverage
+        run: go tool cover -func=coverage.out | tail -1
