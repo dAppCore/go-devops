@@ -11,7 +11,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"github.com/Snider/Borg/pkg/compress"
+	"forge.lthn.ai/Snider/Borg/pkg/compress"
 	io_interface "forge.lthn.ai/core/go/pkg/io"
 )
 
