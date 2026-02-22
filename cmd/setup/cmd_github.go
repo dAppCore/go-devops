@@ -22,7 +22,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"forge.lthn.ai/core/go/pkg/cli"
+	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go/pkg/i18n"
 	coreio "forge.lthn.ai/core/go/pkg/io"
 	"forge.lthn.ai/core/go/pkg/repos"

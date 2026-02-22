@@ -6,7 +6,7 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/go-agentic"
-	"forge.lthn.ai/core/go/pkg/cli"
+	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go/pkg/framework"
 	"forge.lthn.ai/core/go-scm/git"
 )

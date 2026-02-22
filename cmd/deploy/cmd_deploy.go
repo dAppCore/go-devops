@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"forge.lthn.ai/core/go/pkg/cli"
+	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-devops/deploy/coolify"
 	"forge.lthn.ai/core/go/pkg/i18n"
 	"github.com/spf13/cobra"

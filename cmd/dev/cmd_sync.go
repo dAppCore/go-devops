@@ -8,7 +8,7 @@ import (
 	"path/filepath"
 	"text/template"
 
-	"forge.lthn.ai/core/go/pkg/cli"  // Added
+	"forge.lthn.ai/core/cli/pkg/cli"  // Added
 	"forge.lthn.ai/core/go/pkg/i18n" // Added
 	coreio "forge.lthn.ai/core/go/pkg/io"
 	// Added

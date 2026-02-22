@@ -1,7 +1,7 @@
 package deploy
 
 import (
-	"forge.lthn.ai/core/go/pkg/cli"
+	"forge.lthn.ai/core/cli/pkg/cli"
 	"github.com/spf13/cobra"
 )
 

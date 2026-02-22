@@ -14,7 +14,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"forge.lthn.ai/core/go/pkg/cli"
+	"forge.lthn.ai/core/cli/pkg/cli"
 )
 
 // GitHubSecurityStatus represents the security settings status of a repository.

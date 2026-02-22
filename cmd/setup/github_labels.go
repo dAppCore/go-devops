@@ -12,7 +12,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"forge.lthn.ai/core/go/pkg/cli"
+	"forge.lthn.ai/core/cli/pkg/cli"
 )
 
 // GitHubLabel represents a label as returned by the GitHub API.
