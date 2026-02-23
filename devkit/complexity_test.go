@@ -55,7 +55,7 @@ func loopy(items []int) int {
 	for _, v := range items {
 		total += v
 	}
-	for i := 0; i < 10; i++ {
+	for i := range 10 {
 		total += i
 	}
 	return total
@@ -146,8 +146,8 @@ func monster(x, y, z int) int {
 	} else if x < -10 {
 		result = 4
 	}
-	for i := 0; i < x; i++ {
-		for j := 0; j < y; j++ {
+	for i := range x {
+		for j := range y {
 			if i > j && j > 0 {
 				result += i
 			} else if i == j || i < 0 {

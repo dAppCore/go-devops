@@ -49,8 +49,8 @@ type govulncheckOSV struct {
 }
 
 type govulncheckAffect struct {
-	Package  *govulncheckPkg      `json:"package,omitempty"`
-	Ranges   []govulncheckRange   `json:"ranges,omitempty"`
+	Package  *govulncheckPkg       `json:"package,omitempty"`
+	Ranges   []govulncheckRange    `json:"ranges,omitempty"`
 	Severity []govulncheckSeverity `json:"database_specific,omitempty"`
 }
 
@@ -72,8 +72,8 @@ type govulncheckSeverity struct {
 }
 
 type govulncheckFind struct {
-	OSV   string               `json:"osv"`
-	Trace []govulncheckTrace   `json:"trace"`
+	OSV   string             `json:"osv"`
+	Trace []govulncheckTrace `json:"trace"`
 }
 
 type govulncheckTrace struct {
@@ -108,7 +108,7 @@ func ParseVulnCheckJSON(stdout, stderr string) (*VulnResult, error) {
 
 	// Parse line-by-line to gracefully skip malformed entries.
 	// json.Decoder.More() hangs on non-JSON input, so we split first.
-	for _, line := range strings.Split(stdout, "\n") {
+	for line := range strings.SplitSeq(stdout, "\n") {
 		line = strings.TrimSpace(line)
 		if line == "" {
 			continue

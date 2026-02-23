@@ -1,9 +1,10 @@
 package dev
 
 import (
+	"cmp"
 	"context"
 	"fmt"
-	"sort"
+	"slices"
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
@@ -66,8 +67,8 @@ func runHealth(registryPath string, verbose bool) error {
 	})
 
 	// Sort for consistent verbose output
-	sort.Slice(statuses, func(i, j int) bool {
-		return statuses[i].Name < statuses[j].Name
+	slices.SortFunc(statuses, func(a, b git.RepoStatus) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	// Aggregate stats
@@ -162,14 +163,7 @@ func formatRepoList(reposList []string) string {
 }
 
 func joinRepos(reposList []string) string {
-	result := ""
-	for i, r := range reposList {
-		if i > 0 {
-			result += ", "
-		}
-		result += r
-	}
-	return result
+	return strings.Join(reposList, ", ")
 }
 
 func statusPart(count int, label string, style *cli.AnsiStyle) string {

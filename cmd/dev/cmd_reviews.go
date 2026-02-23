@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os/exec"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -111,14 +111,17 @@ func runReviews(registryPath string, author string, showAll bool) error {
 	cli.Print("\033[2K\r") // Clear progress line
 
 	// Sort: pending review first, then by date
-	sort.Slice(allPRs, func(i, j int) bool {
+	slices.SortFunc(allPRs, func(a, b GitHubPR) int {
 		// Pending reviews come first
-		iPending := allPRs[i].ReviewDecision == "" || allPRs[i].ReviewDecision == "REVIEW_REQUIRED"
-		jPending := allPRs[j].ReviewDecision == "" || allPRs[j].ReviewDecision == "REVIEW_REQUIRED"
-		if iPending != jPending {
-			return iPending
+		aPending := a.ReviewDecision == "" || a.ReviewDecision == "REVIEW_REQUIRED"
+		bPending := b.ReviewDecision == "" || b.ReviewDecision == "REVIEW_REQUIRED"
+		if aPending != bPending {
+			if aPending {
+				return -1
+			}
+			return 1
 		}
-		return allPRs[i].CreatedAt.After(allPRs[j].CreatedAt)
+		return b.CreatedAt.Compare(a.CreatedAt)
 	})
 
 	// Print PRs

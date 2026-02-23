@@ -3,6 +3,7 @@ package release
 
 import (
 	"fmt"
+	"iter"
 	"os"
 	"path/filepath"
 
@@ -164,6 +165,17 @@ type ChangelogConfig struct {
 	Include []string `yaml:"include"`
 	// Exclude specifies commit types to exclude from the changelog.
 	Exclude []string `yaml:"exclude"`
+}
+
+// PublishersIter returns an iterator for the publishers.
+func (c *Config) PublishersIter() iter.Seq[PublisherConfig] {
+	return func(yield func(PublisherConfig) bool) {
+		for _, p := range c.Publishers {
+			if !yield(p) {
+				return
+			}
+		}
+	}
 }
 
 // LoadConfig loads release configuration from the .core/release.yaml file in the given directory.

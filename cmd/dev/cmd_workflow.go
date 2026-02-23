@@ -1,13 +1,16 @@
 package dev
 
 import (
+	"cmp"
+	"maps"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go/pkg/i18n"
 	"forge.lthn.ai/core/go/pkg/io"
+	"forge.lthn.ai/core/go/pkg/repos"
 )
 
 // Workflow command flags
@@ -79,8 +82,8 @@ func runWorkflowList(registryPath string) error {
 	}
 
 	// Sort repos by name for consistent output
-	sort.Slice(repoList, func(i, j int) bool {
-		return repoList[i].Name < repoList[j].Name
+	slices.SortFunc(repoList, func(a, b *repos.Repo) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	// Collect all unique workflow files across all repos
@@ -97,11 +100,7 @@ func runWorkflowList(registryPath string) error {
 	}
 
 	// Sort workflow names
-	var workflowNames []string
-	for wf := range workflowSet {
-		workflowNames = append(workflowNames, wf)
-	}
-	sort.Strings(workflowNames)
+	workflowNames := slices.Sorted(maps.Keys(workflowSet))
 
 	if len(workflowNames) == 0 {
 		cli.Text(i18n.T("cmd.dev.workflow.no_workflows"))
@@ -168,8 +167,8 @@ func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) erro
 	}
 
 	// Sort repos by name for consistent output
-	sort.Slice(repoList, func(i, j int) bool {
-		return repoList[i].Name < repoList[j].Name
+	slices.SortFunc(repoList, func(a, b *repos.Repo) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	if dryRun {

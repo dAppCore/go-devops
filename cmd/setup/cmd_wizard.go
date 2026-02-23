@@ -2,9 +2,10 @@
 package setup
 
 import (
+	"cmp"
 	"fmt"
 	"os"
-	"sort"
+	"slices"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go/pkg/i18n"
@@ -43,8 +44,8 @@ func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string,
 	var options []string
 
 	// Sort by name
-	sort.Slice(allRepos, func(i, j int) bool {
-		return allRepos[i].Name < allRepos[j].Name
+	slices.SortFunc(allRepos, func(a, b *repos.Repo) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	for _, repo := range allRepos {

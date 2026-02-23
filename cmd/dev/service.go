@@ -1,14 +1,15 @@
 package dev
 
 import (
+	"cmp"
 	"context"
-	"sort"
+	"slices"
 	"strings"
 
-	"forge.lthn.ai/core/go-agentic"
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go/pkg/framework"
+	"forge.lthn.ai/core/go-agentic"
 	"forge.lthn.ai/core/go-scm/git"
+	"forge.lthn.ai/core/go/pkg/framework"
 )
 
 // Tasks for dev service
@@ -90,8 +91,8 @@ func (s *Service) runWork(task TaskWork) error {
 	statuses := result.([]git.RepoStatus)
 
 	// Sort by name
-	sort.Slice(statuses, func(i, j int) bool {
-		return statuses[i].Name < statuses[j].Name
+	slices.SortFunc(statuses, func(a, b git.RepoStatus) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	// Display status table
@@ -234,8 +235,8 @@ func (s *Service) runStatus(task TaskStatus) error {
 	}
 
 	statuses := result.([]git.RepoStatus)
-	sort.Slice(statuses, func(i, j int) bool {
-		return statuses[i].Name < statuses[j].Name
+	slices.SortFunc(statuses, func(a, b git.RepoStatus) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	s.printStatusTable(statuses)

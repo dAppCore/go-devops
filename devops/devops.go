@@ -154,7 +154,7 @@ func (d *DevOps) Boot(ctx context.Context, opts BootOptions) error {
 	// Wait for SSH to be ready and scan host key
 	// We try for up to 60 seconds as the VM takes a moment to boot
 	var lastErr error
-	for i := 0; i < 30; i++ {
+	for range 30 {
 		select {
 		case <-ctx.Done():
 			return ctx.Err()

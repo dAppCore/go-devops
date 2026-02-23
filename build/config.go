@@ -4,6 +4,7 @@ package build
 
 import (
 	"fmt"
+	"iter"
 	"os"
 	"path/filepath"
 
@@ -159,11 +160,22 @@ func ConfigExists(fs io.Medium, dir string) bool {
 	return fileExists(fs, ConfigPath(dir))
 }
 
+// TargetsIter returns an iterator for the build targets.
+func (cfg *BuildConfig) TargetsIter() iter.Seq[TargetConfig] {
+	return func(yield func(TargetConfig) bool) {
+		for _, t := range cfg.Targets {
+			if !yield(t) {
+				return
+			}
+		}
+	}
+}
+
 // ToTargets converts TargetConfig slice to Target slice for use with builders.
 func (cfg *BuildConfig) ToTargets() []Target {
 	targets := make([]Target, len(cfg.Targets))
 	for i, t := range cfg.Targets {
-		targets[i] = Target(t)
+		targets[i] = Target{OS: t.OS, Arch: t.Arch}
 	}
 	return targets
 }

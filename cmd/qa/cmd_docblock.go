@@ -8,6 +8,7 @@
 package qa
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
 	"go/ast"
@@ -15,7 +16,7 @@ import (
 	"go/token"
 	"os"
 	"path/filepath"
-	"sort"
+	"slices"
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
@@ -92,11 +93,11 @@ func RunDocblockCheck(paths []string, threshold float64, verbose, jsonOutput boo
 	}
 
 	// Sort missing by file then line
-	sort.Slice(result.Missing, func(i, j int) bool {
-		if result.Missing[i].File != result.Missing[j].File {
-			return result.Missing[i].File < result.Missing[j].File
-		}
-		return result.Missing[i].Line < result.Missing[j].Line
+	slices.SortFunc(result.Missing, func(a, b MissingDocblock) int {
+		return cmp.Or(
+			cmp.Compare(a.File, b.File),
+			cmp.Compare(a.Line, b.Line),
+		)
 	})
 
 	// Print result

@@ -970,7 +970,7 @@ func ctxSleep(ctx context.Context, seconds int) <-chan struct{} {
 func sleepChan(seconds int) <-chan struct{} {
 	ch := make(chan struct{})
 	go func() {
-		for i := 0; i < seconds; i++ {
+		for range seconds {
 			select {
 			case <-ch:
 				return

@@ -590,7 +590,7 @@ func (e *Executor) gatherFacts(ctx context.Context, host string, play *Play) err
 
 	// OS info
 	stdout, _, _, _ = client.Run(ctx, "cat /etc/os-release 2>/dev/null | grep -E '^(ID|VERSION_ID)=' | head -2")
-	for _, line := range strings.Split(stdout, "\n") {
+	for line := range strings.SplitSeq(stdout, "\n") {
 		if strings.HasPrefix(line, "ID=") {
 			facts.Distribution = strings.Trim(strings.TrimPrefix(line, "ID="), "\"")
 		}

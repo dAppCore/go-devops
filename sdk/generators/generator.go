@@ -4,8 +4,11 @@ package generators
 import (
 	"context"
 	"fmt"
+	"iter"
+	"maps"
 	"os"
 	"runtime"
+	"slices"
 )
 
 // Options holds common generation options.
@@ -62,11 +65,19 @@ func (r *Registry) Register(g Generator) {
 
 // Languages returns all registered language identifiers.
 func (r *Registry) Languages() []string {
-	langs := make([]string, 0, len(r.generators))
-	for lang := range r.generators {
-		langs = append(langs, lang)
+	return slices.Collect(r.LanguagesIter())
+}
+
+// LanguagesIter returns an iterator for all registered language identifiers.
+func (r *Registry) LanguagesIter() iter.Seq[string] {
+	return func(yield func(string) bool) {
+		// Sort keys for deterministic iteration
+		for _, lang := range slices.Sorted(maps.Keys(r.generators)) {
+			if !yield(lang) {
+				return
+			}
+		}
 	}
-	return langs
 }
 
 // dockerUserArgs returns Docker --user args for the current user on Unix systems.

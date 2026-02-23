@@ -4,7 +4,7 @@ import (
 	"encoding/json"
 	"errors"
 	"os/exec"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -107,8 +107,8 @@ func runIssues(registryPath string, limit int, assignee string) error {
 	cli.Print("\033[2K\r") // Clear progress line
 
 	// Sort by created date (newest first)
-	sort.Slice(allIssues, func(i, j int) bool {
-		return allIssues[i].CreatedAt.After(allIssues[j].CreatedAt)
+	slices.SortFunc(allIssues, func(a, b GitHubIssue) int {
+		return b.CreatedAt.Compare(a.CreatedAt)
 	})
 
 	// Print issues

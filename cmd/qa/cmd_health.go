@@ -7,9 +7,10 @@
 package qa
 
 import (
+	"cmp"
 	"encoding/json"
 	"os/exec"
-	"sort"
+	"slices"
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
@@ -99,8 +100,8 @@ func runHealth() error {
 	cli.Print("\033[2K\r") // Clear progress
 
 	// Sort: problems first, then passing
-	sort.Slice(healthResults, func(i, j int) bool {
-		return healthPriority(healthResults[i].Status) < healthPriority(healthResults[j].Status)
+	slices.SortFunc(healthResults, func(a, b RepoHealth) int {
+		return cmp.Compare(healthPriority(a.Status), healthPriority(b.Status))
 	})
 
 	// Filter if --problems flag

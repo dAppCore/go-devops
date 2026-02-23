@@ -2,8 +2,11 @@ package ansible
 
 import (
 	"fmt"
+	"iter"
+	"maps"
 	"os"
 	"path/filepath"
+	"slices"
 	"strings"
 
 	"forge.lthn.ai/core/go/pkg/log"
@@ -46,6 +49,21 @@ func (p *Parser) ParsePlaybook(path string) ([]Play, error) {
 	return plays, nil
 }
 
+// ParsePlaybookIter returns an iterator for plays in an Ansible playbook file.
+func (p *Parser) ParsePlaybookIter(path string) (iter.Seq[Play], error) {
+	plays, err := p.ParsePlaybook(path)
+	if err != nil {
+		return nil, err
+	}
+	return func(yield func(Play) bool) {
+		for _, play := range plays {
+			if !yield(play) {
+				return
+			}
+		}
+	}, nil
+}
+
 // ParseInventory parses an Ansible inventory file.
 func (p *Parser) ParseInventory(path string) (*Inventory, error) {
 	data, err := os.ReadFile(path)
@@ -80,6 +98,21 @@ func (p *Parser) ParseTasks(path string) ([]Task, error) {
 	}
 
 	return tasks, nil
+}
+
+// ParseTasksIter returns an iterator for tasks in a tasks file.
+func (p *Parser) ParseTasksIter(path string) (iter.Seq[Task], error) {
+	tasks, err := p.ParseTasks(path)
+	if err != nil {
+		return nil, err
+	}
+	return func(yield func(Task) bool) {
+		for _, task := range tasks {
+			if !yield(task) {
+				return
+			}
+		}
+	}, nil
 }
 
 // ParseRole parses a role and returns its tasks.
@@ -319,6 +352,18 @@ func GetHosts(inv *Inventory, pattern string) []string {
 	return nil
 }
 
+// GetHostsIter returns an iterator for hosts matching a pattern from inventory.
+func GetHostsIter(inv *Inventory, pattern string) iter.Seq[string] {
+	hosts := GetHosts(inv, pattern)
+	return func(yield func(string) bool) {
+		for _, host := range hosts {
+			if !yield(host) {
+				return
+			}
+		}
+	}
+}
+
 func getAllHosts(group *InventoryGroup) []string {
 	if group == nil {
 		return nil
@@ -332,6 +377,33 @@ func getAllHosts(group *InventoryGroup) []string {
 		hosts = append(hosts, getAllHosts(child)...)
 	}
 	return hosts
+}
+
+// AllHostsIter returns an iterator for all hosts in an inventory group.
+func AllHostsIter(group *InventoryGroup) iter.Seq[string] {
+	return func(yield func(string) bool) {
+		if group == nil {
+			return
+		}
+		// Sort keys for deterministic iteration
+		keys := slices.Sorted(maps.Keys(group.Hosts))
+		for _, name := range keys {
+			if !yield(name) {
+				return
+			}
+		}
+
+		// Sort children keys for deterministic iteration
+		childKeys := slices.Sorted(maps.Keys(group.Children))
+		for _, name := range childKeys {
+			child := group.Children[name]
+			for host := range AllHostsIter(child) {
+				if !yield(host) {
+					return
+				}
+			}
+		}
+	}
 }
 
 func getGroupHosts(group *InventoryGroup, name string) []string {

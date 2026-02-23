@@ -9,9 +9,10 @@
 package qa
 
 import (
+	"cmp"
 	"encoding/json"
 	"os/exec"
-	"sort"
+	"slices"
 	"strings"
 	"time"
 
@@ -203,8 +204,8 @@ func categoriseIssues(issues []Issue) map[string][]Issue {
 
 	// Sort each category by priority
 	for cat := range result {
-		sort.Slice(result[cat], func(i, j int) bool {
-			return result[cat][i].Priority < result[cat][j].Priority
+		slices.SortFunc(result[cat], func(a, b Issue) int {
+			return cmp.Compare(a.Priority, b.Priority)
 		})
 	}
 
@@ -391,11 +392,4 @@ func printTriagedIssue(issue Issue) {
 	if issue.ActionHint != "" {
 		cli.Print("      %s %s\n", dimStyle.Render("->"), issue.ActionHint)
 	}
-}
-
-func min(a, b int) int {
-	if a < b {
-		return a
-	}
-	return b
 }

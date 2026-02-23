@@ -10,10 +10,12 @@
 package monitor
 
 import (
+	"cmp"
 	"encoding/json"
 	"fmt"
+	"maps"
 	"os/exec"
-	"sort"
+	"slices"
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
@@ -434,13 +436,11 @@ func sortBySeverity(findings []Finding) {
 		"low":      3,
 	}
 
-	sort.Slice(findings, func(i, j int) bool {
-		oi := severityOrder[findings[i].Severity]
-		oj := severityOrder[findings[j].Severity]
-		if oi != oj {
-			return oi < oj
-		}
-		return findings[i].RepoName < findings[j].RepoName
+	slices.SortFunc(findings, func(a, b Finding) int {
+		return cmp.Or(
+			cmp.Compare(severityOrder[a.Severity], severityOrder[b.Severity]),
+			cmp.Compare(a.RepoName, b.RepoName),
+		)
 	})
 }
 
@@ -491,11 +491,7 @@ func outputTable(findings []Finding) error {
 	}
 
 	// Sort repos for consistent output
-	repoNames := make([]string, 0, len(byRepo))
-	for repo := range byRepo {
-		repoNames = append(repoNames, repo)
-	}
-	sort.Strings(repoNames)
+	repoNames := slices.Sorted(maps.Keys(byRepo))
 
 	// Print by repo
 	for _, repo := range repoNames {

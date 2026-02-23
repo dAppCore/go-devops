@@ -161,7 +161,7 @@ func (t *Toolkit) FindTODOs(dir string) ([]TODO, error) {
 	var todos []TODO
 	re := regexp.MustCompile(pattern)
 
-	for _, line := range strings.Split(strings.TrimSpace(stdout), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(stdout), "\n") {
 		if line == "" {
 			continue
 		}
@@ -276,7 +276,7 @@ func (t *Toolkit) UncommittedFiles() ([]string, error) {
 		return nil, fmt.Errorf("git status failed: %s\n%s", err, stderr)
 	}
 	var files []string
-	for _, line := range strings.Split(strings.TrimSpace(stdout), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(stdout), "\n") {
 		if len(line) > 3 {
 			files = append(files, strings.TrimSpace(line[3:]))
 		}
@@ -295,7 +295,7 @@ func (t *Toolkit) Lint(pkg string) ([]Finding, error) {
 	}
 
 	var findings []Finding
-	for _, line := range strings.Split(strings.TrimSpace(stderr), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(stderr), "\n") {
 		if line == "" {
 			continue
 		}
@@ -325,7 +325,7 @@ func (t *Toolkit) ScanSecrets(dir string) ([]SecretLeak, error) {
 	}
 
 	var leaks []SecretLeak
-	for _, line := range strings.Split(strings.TrimSpace(stdout), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(stdout), "\n") {
 		if line == "" || strings.HasPrefix(line, "RuleID") {
 			continue
 		}
@@ -374,7 +374,7 @@ func (t *Toolkit) TestCount(pkg string) (int, error) {
 		return 0, fmt.Errorf("go test -list failed: %s\n%s", err, stderr)
 	}
 	count := 0
-	for _, line := range strings.Split(strings.TrimSpace(stdout), "\n") {
+	for line := range strings.SplitSeq(strings.TrimSpace(stdout), "\n") {
 		if strings.HasPrefix(line, "Test") || strings.HasPrefix(line, "Benchmark") {
 			count++
 		}

@@ -1,14 +1,15 @@
 package dev
 
 import (
+	"cmp"
 	"context"
 	"os"
 	"os/exec"
-	"sort"
+	"slices"
 	"strings"
 
-	"forge.lthn.ai/core/go-agentic"
 	"forge.lthn.ai/core/cli/pkg/cli"
+	"forge.lthn.ai/core/go-agentic"
 	"forge.lthn.ai/core/go-scm/git"
 	"forge.lthn.ai/core/go/pkg/i18n"
 )
@@ -94,8 +95,8 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 	statuses := result.([]git.RepoStatus)
 
 	// Sort by repo name for consistent output
-	sort.Slice(statuses, func(i, j int) bool {
-		return statuses[i].Name < statuses[j].Name
+	slices.SortFunc(statuses, func(a, b git.RepoStatus) int {
+		return cmp.Compare(a.Name, b.Name)
 	})
 
 	// Display status table

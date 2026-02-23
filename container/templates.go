@@ -3,9 +3,12 @@ package container
 import (
 	"embed"
 	"fmt"
+	"iter"
+	"maps"
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 
 	"forge.lthn.ai/core/go/pkg/io"
@@ -42,17 +45,29 @@ var builtinTemplates = []Template{
 // It combines embedded templates with any templates found in the user's
 // .core/linuxkit directory.
 func ListTemplates() []Template {
-	templates := make([]Template, len(builtinTemplates))
-	copy(templates, builtinTemplates)
+	return slices.Collect(ListTemplatesIter())
+}
 
-	// Check for user templates in .core/linuxkit/
-	userTemplatesDir := getUserTemplatesDir()
-	if userTemplatesDir != "" {
-		userTemplates := scanUserTemplates(userTemplatesDir)
-		templates = append(templates, userTemplates...)
+// ListTemplatesIter returns an iterator for all available LinuxKit templates.
+func ListTemplatesIter() iter.Seq[Template] {
+	return func(yield func(Template) bool) {
+		// Yield builtin templates
+		for _, t := range builtinTemplates {
+			if !yield(t) {
+				return
+			}
+		}
+
+		// Check for user templates in .core/linuxkit/
+		userTemplatesDir := getUserTemplatesDir()
+		if userTemplatesDir != "" {
+			for _, t := range scanUserTemplates(userTemplatesDir) {
+				if !yield(t) {
+					return
+				}
+			}
+		}
 	}
-
-	return templates
 }
 
 // GetTemplate returns the content of a template by name.
@@ -182,9 +197,7 @@ func ExtractVariables(content string) (required []string, optional map[string]st
 	}
 
 	// Convert set to slice
-	for v := range requiredSet {
-		required = append(required, v)
-	}
+	required = slices.Sorted(maps.Keys(requiredSet))
 
 	return required, optional
 }
