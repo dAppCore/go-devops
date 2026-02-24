@@ -2,7 +2,7 @@ package dev
 
 import (
 	"errors"
-	"sort"
+	"slices"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go/pkg/i18n"
@@ -86,8 +86,8 @@ func runImpact(registryPath string, repoName string) error {
 	}
 
 	// Sort for consistent output
-	sort.Strings(direct)
-	sort.Strings(indirect)
+	slices.Sort(direct)
+	slices.Sort(indirect)
 
 	// Print results
 	cli.Blank()

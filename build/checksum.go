@@ -8,8 +8,8 @@ import (
 	"fmt"
 	"io"
 	"path/filepath"
+	"slices"
 
-	"sort"
 	"strings"
 
 	io_interface "forge.lthn.ai/core/go/pkg/io"
@@ -86,7 +86,7 @@ func WriteChecksumFile(fs io_interface.Medium, artifacts []Artifact, path string
 	}
 
 	// Sort lines for consistent output
-	sort.Strings(lines)
+	slices.Sort(lines)
 
 	content := strings.Join(lines, "\n") + "\n"
 

@@ -8,7 +8,6 @@ import (
 	"os/exec"
 	"regexp"
 	"slices"
-	"sort"
 	"strings"
 
 	"golang.org/x/text/cases"
@@ -274,7 +273,7 @@ func formatChangelog(commits []ConventionalCommit, version string) string {
 			remainingTypes = append(remainingTypes, commitType)
 		}
 	}
-	sort.Strings(remainingTypes)
+	slices.Sort(remainingTypes)
 
 	for _, commitType := range remainingTypes {
 		commits := grouped[commitType]
