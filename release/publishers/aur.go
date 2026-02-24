@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -47,7 +48,7 @@ func (p *AURPublisher) Publish(ctx context.Context, release *Release, pubCfg Pub
 	cfg := p.parseConfig(pubCfg, relCfg)
 
 	if cfg.Maintainer == "" {
-		return fmt.Errorf("aur.Publish: maintainer is required (set publish.aur.maintainer in config)")
+		return errors.New("aur.Publish: maintainer is required (set publish.aur.maintainer in config)")
 	}
 
 	repo := ""

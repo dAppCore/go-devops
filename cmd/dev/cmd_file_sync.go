@@ -82,7 +82,7 @@ func runFileSync(source string) error {
 	// Let's stick to os.Stat for source properties finding as typically allowed for CLI args.
 
 	if err != nil {
-		return log.E("dev.sync", i18n.T("cmd.dev.file_sync.error.source_not_found", map[string]interface{}{"Path": source}), err)
+		return log.E("dev.sync", i18n.T("cmd.dev.file_sync.error.source_not_found", map[string]any{"Path": source}), err)
 	}
 
 	// Find target repos
@@ -185,19 +185,19 @@ func runFileSync(source string) error {
 	cli.Blank()
 	cli.Print("%s: ", i18n.T("cmd.dev.file_sync.summary"))
 	if succeeded > 0 {
-		cli.Print("%s", successStyle.Render(i18n.T("common.count.succeeded", map[string]interface{}{"Count": succeeded})))
+		cli.Print("%s", successStyle.Render(i18n.T("common.count.succeeded", map[string]any{"Count": succeeded})))
 	}
 	if skipped > 0 {
 		if succeeded > 0 {
 			cli.Print(", ")
 		}
-		cli.Print("%s", dimStyle.Render(i18n.T("common.count.skipped", map[string]interface{}{"Count": skipped})))
+		cli.Print("%s", dimStyle.Render(i18n.T("common.count.skipped", map[string]any{"Count": skipped})))
 	}
 	if failed > 0 {
 		if succeeded > 0 || skipped > 0 {
 			cli.Print(", ")
 		}
-		cli.Print("%s", errorStyle.Render(i18n.T("common.count.failed", map[string]interface{}{"Count": failed})))
+		cli.Print("%s", errorStyle.Render(i18n.T("common.count.failed", map[string]any{"Count": failed})))
 	}
 	cli.Blank()
 

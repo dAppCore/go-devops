@@ -3,6 +3,7 @@ package publishers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -48,7 +49,7 @@ func (p *LinuxKitPublisher) Publish(ctx context.Context, release *Release, pubCf
 
 	// Validate config file exists
 	if release.FS == nil {
-		return fmt.Errorf("linuxkit.Publish: release filesystem (FS) is nil")
+		return errors.New("linuxkit.Publish: release filesystem (FS) is nil")
 	}
 	if !release.FS.Exists(lkCfg.Config) {
 		return fmt.Errorf("linuxkit.Publish: config file not found: %s", lkCfg.Config)
@@ -297,7 +298,7 @@ func (p *LinuxKitPublisher) getFormatExtension(format string) string {
 func validateLinuxKitCli() error {
 	cmd := exec.Command("linuxkit", "version")
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("linuxkit: linuxkit CLI not found. Install it from https://github.com/linuxkit/linuxkit")
+		return errors.New("linuxkit: linuxkit CLI not found. Install it from https://github.com/linuxkit/linuxkit")
 	}
 	return nil
 }

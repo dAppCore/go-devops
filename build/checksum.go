@@ -4,19 +4,21 @@ package build
 import (
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
+	"slices"
+
+	"strings"
 
 	io_interface "forge.lthn.ai/core/go/pkg/io"
-	"sort"
-	"strings"
 )
 
 // Checksum computes SHA256 for an artifact and returns the artifact with the Checksum field filled.
 func Checksum(fs io_interface.Medium, artifact Artifact) (Artifact, error) {
 	if artifact.Path == "" {
-		return Artifact{}, fmt.Errorf("build.Checksum: artifact path is empty")
+		return Artifact{}, errors.New("build.Checksum: artifact path is empty")
 	}
 
 	// Open the file
@@ -84,7 +86,7 @@ func WriteChecksumFile(fs io_interface.Medium, artifacts []Artifact, path string
 	}
 
 	// Sort lines for consistent output
-	sort.Strings(lines)
+	slices.Sort(lines)
 
 	content := strings.Join(lines, "\n") + "\n"
 

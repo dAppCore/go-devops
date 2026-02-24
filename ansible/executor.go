@@ -5,6 +5,7 @@ import (
 	"fmt"
 	"os"
 	"regexp"
+	"slices"
 	"strings"
 	"sync"
 	"text/template"
@@ -920,20 +921,16 @@ func (e *Executor) matchesTags(taskTags []string) bool {
 
 	// Check skip tags
 	for _, skip := range e.SkipTags {
-		for _, tt := range taskTags {
-			if skip == tt {
-				return false
-			}
+		if slices.Contains(taskTags, skip) {
+			return false
 		}
 	}
 
 	// Check include tags
 	if len(e.Tags) > 0 {
 		for _, tag := range e.Tags {
-			for _, tt := range taskTags {
-				if tag == tt || tag == "all" {
-					return true
-				}
+			if tag == "all" || slices.Contains(taskTags, tag) {
+				return true
 			}
 		}
 		return false

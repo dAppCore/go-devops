@@ -117,7 +117,7 @@ func runIssues(registryPath string, limit int, assignee string) error {
 		return nil
 	}
 
-	cli.Print("\n%s\n\n", i18n.T("cmd.dev.issues.open_issues", map[string]interface{}{"Count": len(allIssues)}))
+	cli.Print("\n%s\n\n", i18n.T("cmd.dev.issues.open_issues", map[string]any{"Count": len(allIssues)}))
 
 	for _, issue := range allIssues {
 		printIssue(issue)

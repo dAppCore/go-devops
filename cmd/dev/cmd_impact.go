@@ -2,7 +2,7 @@ package dev
 
 import (
 	"errors"
-	"sort"
+	"slices"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go/pkg/i18n"
@@ -62,7 +62,7 @@ func runImpact(registryPath string, repoName string) error {
 	// Check repo exists
 	repo, exists := reg.Get(repoName)
 	if !exists {
-		return errors.New(i18n.T("error.repo_not_found", map[string]interface{}{"Name": repoName}))
+		return errors.New(i18n.T("error.repo_not_found", map[string]any{"Name": repoName}))
 	}
 
 	// Build reverse dependency graph
@@ -86,8 +86,8 @@ func runImpact(registryPath string, repoName string) error {
 	}
 
 	// Sort for consistent output
-	sort.Strings(direct)
-	sort.Strings(indirect)
+	slices.Sort(direct)
+	slices.Sort(indirect)
 
 	// Print results
 	cli.Blank()
@@ -98,7 +98,7 @@ func runImpact(registryPath string, repoName string) error {
 	cli.Blank()
 
 	if len(allAffected) == 0 {
-		cli.Print("%s %s\n", impactSafeStyle.Render("v"), i18n.T("cmd.dev.impact.no_dependents", map[string]interface{}{"Name": repoName}))
+		cli.Print("%s %s\n", impactSafeStyle.Render("v"), i18n.T("cmd.dev.impact.no_dependents", map[string]any{"Name": repoName}))
 		return nil
 	}
 
@@ -106,7 +106,7 @@ func runImpact(registryPath string, repoName string) error {
 	if len(direct) > 0 {
 		cli.Print("%s %s\n",
 			impactDirectStyle.Render("*"),
-			i18n.T("cmd.dev.impact.direct_dependents", map[string]interface{}{"Count": len(direct)}),
+			i18n.T("cmd.dev.impact.direct_dependents", map[string]any{"Count": len(direct)}),
 		)
 		for _, d := range direct {
 			r, _ := reg.Get(d)
@@ -123,7 +123,7 @@ func runImpact(registryPath string, repoName string) error {
 	if len(indirect) > 0 {
 		cli.Print("%s %s\n",
 			impactIndirectStyle.Render("o"),
-			i18n.T("cmd.dev.impact.transitive_dependents", map[string]interface{}{"Count": len(indirect)}),
+			i18n.T("cmd.dev.impact.transitive_dependents", map[string]any{"Count": len(indirect)}),
 		)
 		for _, d := range indirect {
 			r, _ := reg.Get(d)
@@ -139,7 +139,7 @@ func runImpact(registryPath string, repoName string) error {
 	// Summary
 	cli.Print("%s %s\n",
 		dimStyle.Render(i18n.Label("summary")),
-		i18n.T("cmd.dev.impact.changes_affect", map[string]interface{}{
+		i18n.T("cmd.dev.impact.changes_affect", map[string]any{
 			"Repo":     repoNameStyle.Render(repoName),
 			"Affected": len(allAffected),
 			"Total":    len(reg.Repos) - 1,

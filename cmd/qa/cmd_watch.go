@@ -115,7 +115,7 @@ func runWatch() error {
 		// Check if context deadline exceeded
 		if ctx.Err() != nil {
 			cli.Blank()
-			return log.E("qa.watch", i18n.T("cmd.qa.watch.timeout", map[string]interface{}{"Duration": watchTimeout}), nil)
+			return log.E("qa.watch", i18n.T("cmd.qa.watch.timeout", map[string]any{"Duration": watchTimeout}), nil)
 		}
 
 		runs, err := fetchWorkflowRunsForCommit(ctx, repoFullName, commitSha)
@@ -335,7 +335,7 @@ func printResults(ctx context.Context, repoFullName string, runs []WorkflowRun) 
 	// Exit with error if any failures
 	if len(failures) > 0 {
 		cli.Blank()
-		return cli.Err("%s", i18n.T("cmd.qa.watch.workflows_failed", map[string]interface{}{"Count": len(failures)}))
+		return cli.Err("%s", i18n.T("cmd.qa.watch.workflows_failed", map[string]any{"Count": len(failures)}))
 	}
 
 	cli.Blank()

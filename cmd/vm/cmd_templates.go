@@ -204,8 +204,8 @@ func RunFromTemplate(templateName string, vars map[string]string, runOpts contai
 		fmt.Printf("%s %s\n", successStyle.Render(i18n.T("common.label.started")), c.ID)
 		fmt.Printf("%s %d\n", dimStyle.Render(i18n.T("cmd.vm.label.pid")), c.PID)
 		fmt.Println()
-		fmt.Println(i18n.T("cmd.vm.hint.view_logs", map[string]interface{}{"ID": c.ID[:8]}))
-		fmt.Println(i18n.T("cmd.vm.hint.stop", map[string]interface{}{"ID": c.ID[:8]}))
+		fmt.Println(i18n.T("cmd.vm.hint.view_logs", map[string]any{"ID": c.ID[:8]}))
+		fmt.Println(i18n.T("cmd.vm.hint.stop", map[string]any{"ID": c.ID[:8]}))
 	} else {
 		fmt.Printf("\n%s %s\n", dimStyle.Render(i18n.T("cmd.vm.label.container_stopped")), c.ID)
 	}

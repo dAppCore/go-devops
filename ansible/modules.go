@@ -3,6 +3,7 @@ package ansible
 import (
 	"context"
 	"encoding/base64"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -178,7 +179,7 @@ func (e *Executor) moduleShell(ctx context.Context, client *SSHClient, args map[
 		cmd = getStringArg(args, "cmd", "")
 	}
 	if cmd == "" {
-		return nil, fmt.Errorf("shell: no command specified")
+		return nil, errors.New("shell: no command specified")
 	}
 
 	// Handle chdir
@@ -206,7 +207,7 @@ func (e *Executor) moduleCommand(ctx context.Context, client *SSHClient, args ma
 		cmd = getStringArg(args, "cmd", "")
 	}
 	if cmd == "" {
-		return nil, fmt.Errorf("command: no command specified")
+		return nil, errors.New("command: no command specified")
 	}
 
 	// Handle chdir
@@ -231,7 +232,7 @@ func (e *Executor) moduleCommand(ctx context.Context, client *SSHClient, args ma
 func (e *Executor) moduleRaw(ctx context.Context, client *SSHClient, args map[string]any) (*TaskResult, error) {
 	cmd := getStringArg(args, "_raw_params", "")
 	if cmd == "" {
-		return nil, fmt.Errorf("raw: no command specified")
+		return nil, errors.New("raw: no command specified")
 	}
 
 	stdout, stderr, rc, err := client.Run(ctx, cmd)
@@ -250,7 +251,7 @@ func (e *Executor) moduleRaw(ctx context.Context, client *SSHClient, args map[st
 func (e *Executor) moduleScript(ctx context.Context, client *SSHClient, args map[string]any) (*TaskResult, error) {
 	script := getStringArg(args, "_raw_params", "")
 	if script == "" {
-		return nil, fmt.Errorf("script: no script specified")
+		return nil, errors.New("script: no script specified")
 	}
 
 	// Read local script
@@ -278,7 +279,7 @@ func (e *Executor) moduleScript(ctx context.Context, client *SSHClient, args map
 func (e *Executor) moduleCopy(ctx context.Context, client *SSHClient, args map[string]any, host string, task *Task) (*TaskResult, error) {
 	dest := getStringArg(args, "dest", "")
 	if dest == "" {
-		return nil, fmt.Errorf("copy: dest required")
+		return nil, errors.New("copy: dest required")
 	}
 
 	var content []byte
@@ -292,7 +293,7 @@ func (e *Executor) moduleCopy(ctx context.Context, client *SSHClient, args map[s
 	} else if c := getStringArg(args, "content", ""); c != "" {
 		content = []byte(c)
 	} else {
-		return nil, fmt.Errorf("copy: src or content required")
+		return nil, errors.New("copy: src or content required")
 	}
 
 	mode := os.FileMode(0644)
@@ -322,7 +323,7 @@ func (e *Executor) moduleTemplate(ctx context.Context, client *SSHClient, args m
 	src := getStringArg(args, "src", "")
 	dest := getStringArg(args, "dest", "")
 	if src == "" || dest == "" {
-		return nil, fmt.Errorf("template: src and dest required")
+		return nil, errors.New("template: src and dest required")
 	}
 
 	// Process template
@@ -352,7 +353,7 @@ func (e *Executor) moduleFile(ctx context.Context, client *SSHClient, args map[s
 		path = getStringArg(args, "dest", "")
 	}
 	if path == "" {
-		return nil, fmt.Errorf("file: path required")
+		return nil, errors.New("file: path required")
 	}
 
 	state := getStringArg(args, "state", "file")
@@ -383,7 +384,7 @@ func (e *Executor) moduleFile(ctx context.Context, client *SSHClient, args map[s
 	case "link":
 		src := getStringArg(args, "src", "")
 		if src == "" {
-			return nil, fmt.Errorf("file: src required for link state")
+			return nil, errors.New("file: src required for link state")
 		}
 		cmd := fmt.Sprintf("ln -sf %q %q", src, path)
 		_, stderr, rc, err := client.Run(ctx, cmd)
@@ -420,7 +421,7 @@ func (e *Executor) moduleLineinfile(ctx context.Context, client *SSHClient, args
 		path = getStringArg(args, "dest", "")
 	}
 	if path == "" {
-		return nil, fmt.Errorf("lineinfile: path required")
+		return nil, errors.New("lineinfile: path required")
 	}
 
 	line := getStringArg(args, "line", "")
@@ -460,7 +461,7 @@ func (e *Executor) moduleLineinfile(ctx context.Context, client *SSHClient, args
 func (e *Executor) moduleStat(ctx context.Context, client *SSHClient, args map[string]any) (*TaskResult, error) {
 	path := getStringArg(args, "path", "")
 	if path == "" {
-		return nil, fmt.Errorf("stat: path required")
+		return nil, errors.New("stat: path required")
 	}
 
 	stat, err := client.Stat(ctx, path)
@@ -480,7 +481,7 @@ func (e *Executor) moduleSlurp(ctx context.Context, client *SSHClient, args map[
 		path = getStringArg(args, "src", "")
 	}
 	if path == "" {
-		return nil, fmt.Errorf("slurp: path required")
+		return nil, errors.New("slurp: path required")
 	}
 
 	content, err := client.Download(ctx, path)
@@ -500,7 +501,7 @@ func (e *Executor) moduleFetch(ctx context.Context, client *SSHClient, args map[
 	src := getStringArg(args, "src", "")
 	dest := getStringArg(args, "dest", "")
 	if src == "" || dest == "" {
-		return nil, fmt.Errorf("fetch: src and dest required")
+		return nil, errors.New("fetch: src and dest required")
 	}
 
 	content, err := client.Download(ctx, src)
@@ -524,7 +525,7 @@ func (e *Executor) moduleGetURL(ctx context.Context, client *SSHClient, args map
 	url := getStringArg(args, "url", "")
 	dest := getStringArg(args, "dest", "")
 	if url == "" || dest == "" {
-		return nil, fmt.Errorf("get_url: url and dest required")
+		return nil, errors.New("get_url: url and dest required")
 	}
 
 	// Use curl or wget
@@ -591,7 +592,7 @@ func (e *Executor) moduleAptKey(ctx context.Context, client *SSHClient, args map
 	}
 
 	if url == "" {
-		return nil, fmt.Errorf("apt_key: url required")
+		return nil, errors.New("apt_key: url required")
 	}
 
 	var cmd string
@@ -615,7 +616,7 @@ func (e *Executor) moduleAptRepository(ctx context.Context, client *SSHClient, a
 	state := getStringArg(args, "state", "present")
 
 	if repo == "" {
-		return nil, fmt.Errorf("apt_repository: repo required")
+		return nil, errors.New("apt_repository: repo required")
 	}
 
 	if filename == "" {
@@ -690,7 +691,7 @@ func (e *Executor) moduleService(ctx context.Context, client *SSHClient, args ma
 	enabled := args["enabled"]
 
 	if name == "" {
-		return nil, fmt.Errorf("service: name required")
+		return nil, errors.New("service: name required")
 	}
 
 	var cmds []string
@@ -742,7 +743,7 @@ func (e *Executor) moduleUser(ctx context.Context, client *SSHClient, args map[s
 	state := getStringArg(args, "state", "present")
 
 	if name == "" {
-		return nil, fmt.Errorf("user: name required")
+		return nil, errors.New("user: name required")
 	}
 
 	if state == "absent" {
@@ -799,7 +800,7 @@ func (e *Executor) moduleGroup(ctx context.Context, client *SSHClient, args map[
 	state := getStringArg(args, "state", "present")
 
 	if name == "" {
-		return nil, fmt.Errorf("group: name required")
+		return nil, errors.New("group: name required")
 	}
 
 	if state == "absent" {
@@ -834,7 +835,7 @@ func (e *Executor) moduleURI(ctx context.Context, client *SSHClient, args map[st
 	method := getStringArg(args, "method", "GET")
 
 	if url == "" {
-		return nil, fmt.Errorf("uri: url required")
+		return nil, errors.New("uri: url required")
 	}
 
 	var curlOpts []string
@@ -912,7 +913,7 @@ func (e *Executor) moduleFail(args map[string]any) (*TaskResult, error) {
 func (e *Executor) moduleAssert(args map[string]any, host string) (*TaskResult, error) {
 	that, ok := args["that"]
 	if !ok {
-		return nil, fmt.Errorf("assert: 'that' required")
+		return nil, errors.New("assert: 'that' required")
 	}
 
 	conditions := normalizeConditions(that)
@@ -1013,7 +1014,7 @@ func (e *Executor) moduleGit(ctx context.Context, client *SSHClient, args map[st
 	version := getStringArg(args, "version", "HEAD")
 
 	if repo == "" || dest == "" {
-		return nil, fmt.Errorf("git: repo and dest required")
+		return nil, errors.New("git: repo and dest required")
 	}
 
 	// Check if dest exists
@@ -1042,7 +1043,7 @@ func (e *Executor) moduleUnarchive(ctx context.Context, client *SSHClient, args 
 	remote := getBoolArg(args, "remote_src", false)
 
 	if src == "" || dest == "" {
-		return nil, fmt.Errorf("unarchive: src and dest required")
+		return nil, errors.New("unarchive: src and dest required")
 	}
 
 	// Create dest directory (best-effort)
@@ -1117,7 +1118,7 @@ func getBoolArg(args map[string]any, key string, def bool) bool {
 func (e *Executor) moduleHostname(ctx context.Context, client *SSHClient, args map[string]any) (*TaskResult, error) {
 	name := getStringArg(args, "name", "")
 	if name == "" {
-		return nil, fmt.Errorf("hostname: name required")
+		return nil, errors.New("hostname: name required")
 	}
 
 	// Set hostname
@@ -1139,7 +1140,7 @@ func (e *Executor) moduleSysctl(ctx context.Context, client *SSHClient, args map
 	state := getStringArg(args, "state", "present")
 
 	if name == "" {
-		return nil, fmt.Errorf("sysctl: name required")
+		return nil, errors.New("sysctl: name required")
 	}
 
 	if state == "absent" {
@@ -1209,7 +1210,7 @@ func (e *Executor) moduleBlockinfile(ctx context.Context, client *SSHClient, arg
 		path = getStringArg(args, "dest", "")
 	}
 	if path == "" {
-		return nil, fmt.Errorf("blockinfile: path required")
+		return nil, errors.New("blockinfile: path required")
 	}
 
 	block := getStringArg(args, "block", "")
@@ -1357,7 +1358,7 @@ func (e *Executor) moduleAuthorizedKey(ctx context.Context, client *SSHClient, a
 	state := getStringArg(args, "state", "present")
 
 	if user == "" || key == "" {
-		return nil, fmt.Errorf("authorized_key: user and key required")
+		return nil, errors.New("authorized_key: user and key required")
 	}
 
 	// Get user's home directory
@@ -1407,7 +1408,7 @@ func (e *Executor) moduleDockerCompose(ctx context.Context, client *SSHClient, a
 	state := getStringArg(args, "state", "present")
 
 	if projectSrc == "" {
-		return nil, fmt.Errorf("docker_compose: project_src required")
+		return nil, errors.New("docker_compose: project_src required")
 	}
 
 	var cmd string

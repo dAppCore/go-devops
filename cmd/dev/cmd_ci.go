@@ -146,18 +146,18 @@ func runCI(registryPath string, branch string, failedOnly bool) error {
 
 	// Print summary
 	cli.Blank()
-	cli.Print("%s", i18n.T("cmd.dev.ci.repos_checked", map[string]interface{}{"Count": len(repoList)}))
+	cli.Print("%s", i18n.T("cmd.dev.ci.repos_checked", map[string]any{"Count": len(repoList)}))
 	if success > 0 {
-		cli.Print(" * %s", ciSuccessStyle.Render(i18n.T("cmd.dev.ci.passing", map[string]interface{}{"Count": success})))
+		cli.Print(" * %s", ciSuccessStyle.Render(i18n.T("cmd.dev.ci.passing", map[string]any{"Count": success})))
 	}
 	if failed > 0 {
-		cli.Print(" * %s", ciFailureStyle.Render(i18n.T("cmd.dev.ci.failing", map[string]interface{}{"Count": failed})))
+		cli.Print(" * %s", ciFailureStyle.Render(i18n.T("cmd.dev.ci.failing", map[string]any{"Count": failed})))
 	}
 	if pending > 0 {
-		cli.Print(" * %s", ciPendingStyle.Render(i18n.T("common.count.pending", map[string]interface{}{"Count": pending})))
+		cli.Print(" * %s", ciPendingStyle.Render(i18n.T("common.count.pending", map[string]any{"Count": pending})))
 	}
 	if len(noCI) > 0 {
-		cli.Print(" * %s", ciSkippedStyle.Render(i18n.T("cmd.dev.ci.no_ci", map[string]interface{}{"Count": len(noCI)})))
+		cli.Print(" * %s", ciSkippedStyle.Render(i18n.T("cmd.dev.ci.no_ci", map[string]any{"Count": len(noCI)})))
 	}
 	cli.Blank()
 	cli.Blank()

@@ -69,11 +69,11 @@ func CreateWebhook(repoFullName string, name string, config WebhookConfig) error
 	}
 
 	// Build the webhook payload
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"name":   "web",
 		"active": true,
 		"events": config.Events,
-		"config": map[string]interface{}{
+		"config": map[string]any{
 			"url":          config.URL,
 			"content_type": config.ContentType,
 			"insecure_ssl": "0",
@@ -85,7 +85,7 @@ func CreateWebhook(repoFullName string, name string, config WebhookConfig) error
 	}
 
 	if config.Secret != "" {
-		configMap := payload["config"].(map[string]interface{})
+		configMap := payload["config"].(map[string]any)
 		configMap["secret"] = config.Secret
 	}
 
@@ -111,10 +111,10 @@ func UpdateWebhook(repoFullName string, hookID int, config WebhookConfig) error 
 		return fmt.Errorf("invalid repo format: %s", repoFullName)
 	}
 
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"active": true,
 		"events": config.Events,
-		"config": map[string]interface{}{
+		"config": map[string]any{
 			"url":          config.URL,
 			"content_type": config.ContentType,
 			"insecure_ssl": "0",
@@ -126,7 +126,7 @@ func UpdateWebhook(repoFullName string, hookID int, config WebhookConfig) error 
 	}
 
 	if config.Secret != "" {
-		configMap := payload["config"].(map[string]interface{})
+		configMap := payload["config"].(map[string]any)
 		configMap["secret"] = config.Secret
 	}
 

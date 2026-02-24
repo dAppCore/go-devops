@@ -155,7 +155,7 @@ func (t *Toolkit) FindTODOs(dir string) ([]TODO, error) {
 		return nil, nil
 	}
 	if err != nil && exitCode != 1 {
-		return nil, fmt.Errorf("git grep failed (exit %d): %s\n%s", exitCode, err, stderr)
+		return nil, fmt.Errorf("git grep failed (exit %d): %w\n%s", exitCode, err, stderr)
 	}
 
 	var todos []TODO
@@ -191,7 +191,7 @@ func (t *Toolkit) FindTODOs(dir string) ([]TODO, error) {
 func (t *Toolkit) AuditDeps() ([]Vulnerability, error) {
 	stdout, stderr, exitCode, err := t.Run("govulncheck", "./...")
 	if err != nil && exitCode != 0 && !strings.Contains(stdout, "Vulnerability") {
-		return nil, fmt.Errorf("govulncheck failed (exit %d): %s\n%s", exitCode, err, stderr)
+		return nil, fmt.Errorf("govulncheck failed (exit %d): %w\n%s", exitCode, err, stderr)
 	}
 
 	var vulns []Vulnerability
@@ -240,7 +240,7 @@ func (t *Toolkit) AuditDeps() ([]Vulnerability, error) {
 func (t *Toolkit) DiffStat() (DiffSummary, error) {
 	stdout, stderr, exitCode, err := t.Run("git", "diff", "--stat")
 	if err != nil && exitCode != 0 {
-		return DiffSummary{}, fmt.Errorf("git diff failed (exit %d): %s\n%s", exitCode, err, stderr)
+		return DiffSummary{}, fmt.Errorf("git diff failed (exit %d): %w\n%s", exitCode, err, stderr)
 	}
 
 	var s DiffSummary
@@ -273,7 +273,7 @@ func (t *Toolkit) DiffStat() (DiffSummary, error) {
 func (t *Toolkit) UncommittedFiles() ([]string, error) {
 	stdout, stderr, exitCode, err := t.Run("git", "status", "--porcelain")
 	if err != nil && exitCode != 0 {
-		return nil, fmt.Errorf("git status failed: %s\n%s", err, stderr)
+		return nil, fmt.Errorf("git status failed: %w\n%s", err, stderr)
 	}
 	var files []string
 	for line := range strings.SplitSeq(strings.TrimSpace(stdout), "\n") {
@@ -371,7 +371,7 @@ func (t *Toolkit) Build(targets ...string) ([]BuildResult, error) {
 func (t *Toolkit) TestCount(pkg string) (int, error) {
 	stdout, stderr, exitCode, err := t.Run("go", "test", "-list", ".*", pkg)
 	if err != nil && exitCode != 0 {
-		return 0, fmt.Errorf("go test -list failed: %s\n%s", err, stderr)
+		return 0, fmt.Errorf("go test -list failed: %w\n%s", err, stderr)
 	}
 	count := 0
 	for line := range strings.SplitSeq(strings.TrimSpace(stdout), "\n") {
@@ -389,7 +389,7 @@ func (t *Toolkit) Coverage(pkg string) ([]CoverageReport, error) {
 	}
 	stdout, stderr, exitCode, err := t.Run("go", "test", "-cover", pkg)
 	if err != nil && exitCode != 0 && !strings.Contains(stdout, "coverage:") {
-		return nil, fmt.Errorf("go test -cover failed (exit %d): %s\n%s", exitCode, err, stderr)
+		return nil, fmt.Errorf("go test -cover failed (exit %d): %w\n%s", exitCode, err, stderr)
 	}
 
 	var reports []CoverageReport
@@ -443,7 +443,7 @@ func (t *Toolkit) RaceDetect(pkg string) ([]RaceCondition, error) {
 func (t *Toolkit) Complexity(threshold int) ([]ComplexFunc, error) {
 	stdout, stderr, exitCode, err := t.Run("gocyclo", "-over", strconv.Itoa(threshold), ".")
 	if err != nil && exitCode == -1 {
-		return nil, fmt.Errorf("gocyclo not available: %s\n%s", err, stderr)
+		return nil, fmt.Errorf("gocyclo not available: %w\n%s", err, stderr)
 	}
 
 	var funcs []ComplexFunc
@@ -476,7 +476,7 @@ func (t *Toolkit) Complexity(threshold int) ([]ComplexFunc, error) {
 func (t *Toolkit) DepGraph(pkg string) (*Graph, error) {
 	stdout, stderr, exitCode, err := t.Run("go", "mod", "graph")
 	if err != nil && exitCode != 0 {
-		return nil, fmt.Errorf("go mod graph failed (exit %d): %s\n%s", exitCode, err, stderr)
+		return nil, fmt.Errorf("go mod graph failed (exit %d): %w\n%s", exitCode, err, stderr)
 	}
 
 	graph := &Graph{Edges: make(map[string][]string)}
@@ -503,7 +503,7 @@ func (t *Toolkit) DepGraph(pkg string) (*Graph, error) {
 func (t *Toolkit) GitLog(n int) ([]Commit, error) {
 	stdout, stderr, exitCode, err := t.Run("git", "log", fmt.Sprintf("-n%d", n), "--format=%H|%an|%aI|%s")
 	if err != nil && exitCode != 0 {
-		return nil, fmt.Errorf("git log failed (exit %d): %s\n%s", exitCode, err, stderr)
+		return nil, fmt.Errorf("git log failed (exit %d): %w\n%s", exitCode, err, stderr)
 	}
 
 	var commits []Commit

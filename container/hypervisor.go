@@ -2,6 +2,7 @@ package container
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -249,7 +250,7 @@ func DetectHypervisor() (Hypervisor, error) {
 		return qemu, nil
 	}
 
-	return nil, fmt.Errorf("no hypervisor available: install qemu or hyperkit (macOS)")
+	return nil, errors.New("no hypervisor available: install qemu or hyperkit (macOS)")
 }
 
 // GetHypervisor returns a specific hypervisor by name.
@@ -258,13 +259,13 @@ func GetHypervisor(name string) (Hypervisor, error) {
 	case "qemu":
 		h := NewQemuHypervisor()
 		if !h.Available() {
-			return nil, fmt.Errorf("qemu is not available")
+			return nil, errors.New("qemu is not available")
 		}
 		return h, nil
 	case "hyperkit":
 		h := NewHyperkitHypervisor()
 		if !h.Available() {
-			return nil, fmt.Errorf("hyperkit is not available (requires macOS)")
+			return nil, errors.New("hyperkit is not available (requires macOS)")
 		}
 		return h, nil
 	default:

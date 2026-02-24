@@ -48,7 +48,7 @@ func runProjectBuild(ctx context.Context, buildType string, ciMode bool, targets
 			return fmt.Errorf("%s: %w", i18n.T("common.error.failed", map[string]any{"Action": "detect project type"}), err)
 		}
 		if projectType == "" {
-			return fmt.Errorf("%s", i18n.T("cmd.build.error.no_project_type", map[string]interface{}{"Dir": projectDir}))
+			return fmt.Errorf("%s", i18n.T("cmd.build.error.no_project_type", map[string]any{"Dir": projectDir}))
 		}
 	}
 
@@ -139,7 +139,7 @@ func runProjectBuild(ctx context.Context, buildType string, ciMode bool, targets
 	}
 
 	if verbose && !ciMode {
-		fmt.Printf("%s %s\n", buildSuccessStyle.Render(i18n.T("common.label.success")), i18n.T("cmd.build.built_artifacts", map[string]interface{}{"Count": len(artifacts)}))
+		fmt.Printf("%s %s\n", buildSuccessStyle.Render(i18n.T("common.label.success")), i18n.T("cmd.build.built_artifacts", map[string]any{"Count": len(artifacts)}))
 		fmt.Println()
 		for _, artifact := range artifacts {
 			relPath, err := filepath.Rel(projectDir, artifact.Path)
@@ -260,7 +260,7 @@ func runProjectBuild(ctx context.Context, buildType string, ciMode bool, targets
 		// Minimal output: just success with artifact count
 		fmt.Printf("%s %s %s\n",
 			buildSuccessStyle.Render(i18n.T("common.label.success")),
-			i18n.T("cmd.build.built_artifacts", map[string]interface{}{"Count": len(artifacts)}),
+			i18n.T("cmd.build.built_artifacts", map[string]any{"Count": len(artifacts)}),
 			buildDimStyle.Render(fmt.Sprintf("(%s)", outputDir)),
 		)
 	}
@@ -342,7 +342,7 @@ func parseTargets(targetsFlag string) ([]build.Target, error) {
 
 		osArch := strings.Split(part, "/")
 		if len(osArch) != 2 {
-			return nil, fmt.Errorf("%s", i18n.T("cmd.build.error.invalid_target", map[string]interface{}{"Target": part}))
+			return nil, fmt.Errorf("%s", i18n.T("cmd.build.error.invalid_target", map[string]any{"Target": part}))
 		}
 
 		targets = append(targets, build.Target{

@@ -99,7 +99,7 @@ func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun b
 		return nil
 	}
 
-	cli.Print("\n%s %s\n\n", dimStyle.Render(i18n.T("cmd.docs.sync.found_label")), i18n.T("cmd.docs.sync.repos_with_docs", map[string]interface{}{"Count": len(docsInfo)}))
+	cli.Print("\n%s %s\n\n", dimStyle.Render(i18n.T("cmd.docs.sync.found_label")), i18n.T("cmd.docs.sync.repos_with_docs", map[string]any{"Count": len(docsInfo)}))
 
 	// Show what will be synced
 	var totalFiles int
@@ -109,7 +109,7 @@ func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun b
 		cli.Print("  %s → %s %s\n",
 			repoNameStyle.Render(info.Name),
 			docsFileStyle.Render("packages/"+outName+"/"),
-			dimStyle.Render(i18n.T("cmd.docs.sync.files_count", map[string]interface{}{"Count": len(info.DocsFiles)})))
+			dimStyle.Render(i18n.T("cmd.docs.sync.files_count", map[string]any{"Count": len(info.DocsFiles)})))
 
 		for _, f := range info.DocsFiles {
 			cli.Print("    %s\n", dimStyle.Render(f))
@@ -118,7 +118,7 @@ func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun b
 
 	cli.Print("\n%s %s\n",
 		dimStyle.Render(i18n.Label("total")),
-		i18n.T("cmd.docs.sync.total_summary", map[string]interface{}{"Files": totalFiles, "Repos": len(docsInfo), "Output": outputDir}))
+		i18n.T("cmd.docs.sync.total_summary", map[string]any{"Files": totalFiles, "Repos": len(docsInfo), "Output": outputDir}))
 
 	if dryRun {
 		cli.Print("\n%s\n", dimStyle.Render(i18n.T("cmd.docs.sync.dry_run_notice")))
@@ -167,7 +167,7 @@ func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun b
 		synced++
 	}
 
-	cli.Print("\n%s %s\n", successStyle.Render(i18n.T("i18n.done.sync")), i18n.T("cmd.docs.sync.synced_packages", map[string]interface{}{"Count": synced}))
+	cli.Print("\n%s %s\n", successStyle.Render(i18n.T("i18n.done.sync")), i18n.T("cmd.docs.sync.synced_packages", map[string]any{"Count": synced}))
 
 	return nil
 }

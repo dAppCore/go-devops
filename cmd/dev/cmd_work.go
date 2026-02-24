@@ -174,9 +174,9 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 	}
 
 	cli.Blank()
-	cli.Print("%s\n", i18n.T("common.count.repos_unpushed", map[string]interface{}{"Count": len(aheadRepos)}))
+	cli.Print("%s\n", i18n.T("common.count.repos_unpushed", map[string]any{"Count": len(aheadRepos)}))
 	for _, s := range aheadRepos {
-		cli.Print("  %s: %s\n", s.Name, i18n.T("common.count.commits", map[string]interface{}{"Count": s.Ahead}))
+		cli.Print("  %s: %s\n", s.Name, i18n.T("common.count.commits", map[string]any{"Count": s.Ahead}))
 	}
 
 	cli.Blank()

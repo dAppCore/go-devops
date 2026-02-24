@@ -2,6 +2,7 @@ package devops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -23,7 +24,7 @@ func (d *DevOps) Serve(ctx context.Context, projectDir string, opts ServeOptions
 		return err
 	}
 	if !running {
-		return fmt.Errorf("dev environment not running (run 'core dev boot' first)")
+		return errors.New("dev environment not running (run 'core dev boot' first)")
 	}
 
 	if opts.Port == 0 {

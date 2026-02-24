@@ -105,7 +105,7 @@ func SetBranchProtection(repoFullName, branch string, config BranchProtectionCon
 	}
 
 	// Build the protection payload
-	payload := map[string]interface{}{
+	payload := map[string]any{
 		"enforce_admins":                   config.EnforceAdmins,
 		"required_linear_history":          config.RequireLinearHistory,
 		"allow_force_pushes":               config.AllowForcePushes,
@@ -115,7 +115,7 @@ func SetBranchProtection(repoFullName, branch string, config BranchProtectionCon
 
 	// Required pull request reviews
 	if config.RequiredReviews > 0 {
-		payload["required_pull_request_reviews"] = map[string]interface{}{
+		payload["required_pull_request_reviews"] = map[string]any{
 			"dismiss_stale_reviews":           config.DismissStale,
 			"require_code_owner_reviews":      config.RequireCodeOwnerReviews,
 			"required_approving_review_count": config.RequiredReviews,
@@ -126,7 +126,7 @@ func SetBranchProtection(repoFullName, branch string, config BranchProtectionCon
 
 	// Required status checks
 	if len(config.RequiredStatusChecks) > 0 {
-		payload["required_status_checks"] = map[string]interface{}{
+		payload["required_status_checks"] = map[string]any{
 			"strict":   true,
 			"contexts": config.RequiredStatusChecks,
 		}

@@ -203,19 +203,19 @@ func runApply() error {
 	cli.Blank()
 	cli.Print("%s: ", i18n.T("cmd.dev.apply.summary"))
 	if succeeded > 0 {
-		cli.Print("%s", successStyle.Render(i18n.T("common.count.succeeded", map[string]interface{}{"Count": succeeded})))
+		cli.Print("%s", successStyle.Render(i18n.T("common.count.succeeded", map[string]any{"Count": succeeded})))
 	}
 	if skipped > 0 {
 		if succeeded > 0 {
 			cli.Print(", ")
 		}
-		cli.Print("%s", dimStyle.Render(i18n.T("common.count.skipped", map[string]interface{}{"Count": skipped})))
+		cli.Print("%s", dimStyle.Render(i18n.T("common.count.skipped", map[string]any{"Count": skipped})))
 	}
 	if failed > 0 {
 		if succeeded > 0 || skipped > 0 {
 			cli.Print(", ")
 		}
-		cli.Print("%s", errorStyle.Render(i18n.T("common.count.failed", map[string]interface{}{"Count": failed})))
+		cli.Print("%s", errorStyle.Render(i18n.T("common.count.failed", map[string]any{"Count": failed})))
 	}
 	cli.Blank()
 

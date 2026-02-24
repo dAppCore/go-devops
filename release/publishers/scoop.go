@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -45,7 +46,7 @@ func (p *ScoopPublisher) Publish(ctx context.Context, release *Release, pubCfg P
 	cfg := p.parseConfig(pubCfg, relCfg)
 
 	if cfg.Bucket == "" && (cfg.Official == nil || !cfg.Official.Enabled) {
-		return fmt.Errorf("scoop.Publish: bucket is required (set publish.scoop.bucket in config)")
+		return errors.New("scoop.Publish: bucket is required (set publish.scoop.bucket in config)")
 	}
 
 	repo := ""

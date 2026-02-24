@@ -2,6 +2,7 @@ package prod
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -56,7 +57,7 @@ func getDNSClient() (*infra.CloudNSClient, error) {
 	authID := os.Getenv("CLOUDNS_AUTH_ID")
 	authPass := os.Getenv("CLOUDNS_AUTH_PASSWORD")
 	if authID == "" || authPass == "" {
-		return nil, fmt.Errorf("CLOUDNS_AUTH_ID and CLOUDNS_AUTH_PASSWORD required")
+		return nil, errors.New("CLOUDNS_AUTH_ID and CLOUDNS_AUTH_PASSWORD required")
 	}
 	return infra.NewCloudNSClient(authID, authPass), nil
 }

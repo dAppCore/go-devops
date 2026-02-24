@@ -7,7 +7,7 @@ import (
 	"fmt"
 	"os/exec"
 	"regexp"
-	"sort"
+	"slices"
 	"strings"
 
 	"golang.org/x/text/cases"
@@ -269,18 +269,11 @@ func formatChangelog(commits []ConventionalCommit, version string) string {
 	// Any remaining types not in the order list
 	var remainingTypes []string
 	for commitType := range grouped {
-		found := false
-		for _, t := range commitTypeOrder {
-			if t == commitType {
-				found = true
-				break
-			}
-		}
-		if !found {
+		if !slices.Contains(commitTypeOrder, commitType) {
 			remainingTypes = append(remainingTypes, commitType)
 		}
 	}
-	sort.Strings(remainingTypes)
+	slices.Sort(remainingTypes)
 
 	for _, commitType := range remainingTypes {
 		commits := grouped[commitType]

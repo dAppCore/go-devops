@@ -2,6 +2,7 @@ package signing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"runtime"
@@ -42,7 +43,7 @@ func (s *MacOSSigner) Available() bool {
 // Sign codesigns a binary with hardened runtime.
 func (s *MacOSSigner) Sign(ctx context.Context, fs io.Medium, binary string) error {
 	if !s.Available() {
-		return fmt.Errorf("codesign.Sign: codesign not available")
+		return errors.New("codesign.Sign: codesign not available")
 	}
 
 	cmd := exec.CommandContext(ctx, "codesign",
@@ -65,7 +66,7 @@ func (s *MacOSSigner) Sign(ctx context.Context, fs io.Medium, binary string) err
 // This blocks until Apple responds (typically 1-5 minutes).
 func (s *MacOSSigner) Notarize(ctx context.Context, fs io.Medium, binary string) error {
 	if s.config.AppleID == "" || s.config.TeamID == "" || s.config.AppPassword == "" {
-		return fmt.Errorf("codesign.Notarize: missing Apple credentials (apple_id, team_id, app_password)")
+		return errors.New("codesign.Notarize: missing Apple credentials (apple_id, team_id, app_password)")
 	}
 
 	// Create ZIP for submission

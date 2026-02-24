@@ -159,7 +159,7 @@ func formatRepoList(reposList []string) string {
 	if len(reposList) <= 5 {
 		return joinRepos(reposList)
 	}
-	return joinRepos(reposList[:5]) + " " + i18n.T("cmd.dev.health.more", map[string]interface{}{"Count": len(reposList) - 5})
+	return joinRepos(reposList[:5]) + " " + i18n.T("cmd.dev.health.more", map[string]any{"Count": len(reposList) - 5})
 }
 
 func joinRepos(reposList []string) string {

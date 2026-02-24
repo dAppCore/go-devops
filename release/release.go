@@ -5,14 +5,15 @@ package release
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
 
 	"forge.lthn.ai/core/go-devops/build"
 	"forge.lthn.ai/core/go-devops/build/builders"
-	"forge.lthn.ai/core/go/pkg/io"
 	"forge.lthn.ai/core/go-devops/release/publishers"
+	"forge.lthn.ai/core/go/pkg/io"
 )
 
 // Release represents a release with its version, artifacts, and changelog.
@@ -34,7 +35,7 @@ type Release struct {
 // If dryRun is true, it will show what would be done without actually publishing.
 func Publish(ctx context.Context, cfg *Config, dryRun bool) (*Release, error) {
 	if cfg == nil {
-		return nil, fmt.Errorf("release.Publish: config is nil")
+		return nil, errors.New("release.Publish: config is nil")
 	}
 
 	m := io.Local
@@ -67,7 +68,7 @@ func Publish(ctx context.Context, cfg *Config, dryRun bool) (*Release, error) {
 	}
 
 	if len(artifacts) == 0 {
-		return nil, fmt.Errorf("release.Publish: no artifacts found in dist/\nRun 'core build' first to create artifacts")
+		return nil, errors.New("release.Publish: no artifacts found in dist/\nRun 'core build' first to create artifacts")
 	}
 
 	// Step 3: Generate changelog
@@ -109,7 +110,7 @@ func Publish(ctx context.Context, cfg *Config, dryRun bool) (*Release, error) {
 // findArtifacts discovers pre-built artifacts in the dist directory.
 func findArtifacts(m io.Medium, distDir string) ([]build.Artifact, error) {
 	if !m.IsDir(distDir) {
-		return nil, fmt.Errorf("dist/ directory not found")
+		return nil, errors.New("dist/ directory not found")
 	}
 
 	var artifacts []build.Artifact
@@ -145,7 +146,7 @@ func findArtifacts(m io.Medium, distDir string) ([]build.Artifact, error) {
 // If dryRun is true, it will show what would be done without actually publishing.
 func Run(ctx context.Context, cfg *Config, dryRun bool) (*Release, error) {
 	if cfg == nil {
-		return nil, fmt.Errorf("release.Run: config is nil")
+		return nil, errors.New("release.Run: config is nil")
 	}
 
 	m := io.Local
@@ -317,9 +318,9 @@ func getBuilder(projectType build.ProjectType) (build.Builder, error) {
 	case build.ProjectTypeGo:
 		return builders.NewGoBuilder(), nil
 	case build.ProjectTypeNode:
-		return nil, fmt.Errorf("node.js builder not yet implemented")
+		return nil, errors.New("node.js builder not yet implemented")
 	case build.ProjectTypePHP:
-		return nil, fmt.Errorf("PHP builder not yet implemented")
+		return nil, errors.New("PHP builder not yet implemented")
 	default:
 		return nil, fmt.Errorf("unsupported project type: %s", projectType)
 	}

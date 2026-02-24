@@ -2,6 +2,7 @@ package prod
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -39,7 +40,7 @@ func init() {
 func getHCloudClient() (*infra.HCloudClient, error) {
 	token := os.Getenv("HCLOUD_TOKEN")
 	if token == "" {
-		return nil, fmt.Errorf("HCLOUD_TOKEN environment variable required")
+		return nil, errors.New("HCLOUD_TOKEN environment variable required")
 	}
 	return infra.NewHCloudClient(token), nil
 }

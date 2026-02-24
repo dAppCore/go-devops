@@ -2,6 +2,7 @@ package signing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 
@@ -39,7 +40,7 @@ func (s *GPGSigner) Available() bool {
 // For file.txt, creates file.txt.asc
 func (s *GPGSigner) Sign(ctx context.Context, fs io.Medium, file string) error {
 	if !s.Available() {
-		return fmt.Errorf("gpg.Sign: gpg not available or key not configured")
+		return errors.New("gpg.Sign: gpg not available or key not configured")
 	}
 
 	cmd := exec.CommandContext(ctx, "gpg",

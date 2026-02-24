@@ -3,6 +3,7 @@ package publishers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -146,18 +147,18 @@ func validateGhCli() error {
 	// Check if gh is installed
 	cmd := exec.Command("gh", "--version")
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("github: gh CLI not found. Install it from https://cli.github.com")
+		return errors.New("github: gh CLI not found. Install it from https://cli.github.com")
 	}
 
 	// Check if authenticated
 	cmd = exec.Command("gh", "auth", "status")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("github: not authenticated with gh CLI. Run 'gh auth login' first")
+		return errors.New("github: not authenticated with gh CLI. Run 'gh auth login' first")
 	}
 
 	if !strings.Contains(string(output), "Logged in") {
-		return fmt.Errorf("github: not authenticated with gh CLI. Run 'gh auth login' first")
+		return errors.New("github: not authenticated with gh CLI. Run 'gh auth login' first")
 	}
 
 	return nil

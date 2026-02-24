@@ -3,6 +3,7 @@ package release
 
 import (
 	"context"
+	"errors"
 	"fmt"
 
 	"forge.lthn.ai/core/go-devops/sdk"
@@ -22,10 +23,10 @@ type SDKRelease struct {
 // If dryRun is true, it shows what would be done without generating.
 func RunSDK(ctx context.Context, cfg *Config, dryRun bool) (*SDKRelease, error) {
 	if cfg == nil {
-		return nil, fmt.Errorf("release.RunSDK: config is nil")
+		return nil, errors.New("release.RunSDK: config is nil")
 	}
 	if cfg.SDK == nil {
-		return nil, fmt.Errorf("release.RunSDK: sdk not configured in .core/release.yaml")
+		return nil, errors.New("release.RunSDK: sdk not configured in .core/release.yaml")
 	}
 
 	projectDir := cfg.projectDir
@@ -51,7 +52,7 @@ func RunSDK(ctx context.Context, cfg *Config, dryRun bool) (*SDKRelease, error) 
 			fmt.Printf("Warning: diff check failed: %v\n", err)
 		} else if breaking {
 			if cfg.SDK.Diff.FailOnBreaking {
-				return nil, fmt.Errorf("release.RunSDK: breaking API changes detected")
+				return nil, errors.New("release.RunSDK: breaking API changes detected")
 			}
 			fmt.Printf("Warning: breaking API changes detected\n")
 		}

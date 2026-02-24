@@ -6,13 +6,14 @@ import (
 	"archive/zip"
 	"bytes"
 	"compress/gzip"
+	"errors"
 	"fmt"
 	"io"
 	"path/filepath"
 	"strings"
 
-	"github.com/Snider/Borg/pkg/compress"
 	io_interface "forge.lthn.ai/core/go/pkg/io"
+	"github.com/Snider/Borg/pkg/compress"
 )
 
 // ArchiveFormat specifies the compression format for archives.
@@ -48,7 +49,7 @@ func ArchiveXZ(fs io_interface.Medium, artifact Artifact) (Artifact, error) {
 // Returns a new Artifact with Path pointing to the archive.
 func ArchiveWithFormat(fs io_interface.Medium, artifact Artifact, format ArchiveFormat) (Artifact, error) {
 	if artifact.Path == "" {
-		return Artifact{}, fmt.Errorf("build.Archive: artifact path is empty")
+		return Artifact{}, errors.New("build.Archive: artifact path is empty")
 	}
 
 	// Verify the source file exists
@@ -57,7 +58,7 @@ func ArchiveWithFormat(fs io_interface.Medium, artifact Artifact, format Archive
 		return Artifact{}, fmt.Errorf("build.Archive: source file not found: %w", err)
 	}
 	if info.IsDir() {
-		return Artifact{}, fmt.Errorf("build.Archive: source path is a directory, expected file")
+		return Artifact{}, errors.New("build.Archive: source path is a directory, expected file")
 	}
 
 	// Determine archive type based on OS and format

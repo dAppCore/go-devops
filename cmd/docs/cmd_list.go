@@ -48,7 +48,7 @@ func runDocsList(registryPath string) error {
 
 		docsDir := checkMark(false)
 		if len(info.DocsFiles) > 0 {
-			docsDir = docsFoundStyle.Render(i18n.T("common.count.files", map[string]interface{}{"Count": len(info.DocsFiles)}))
+			docsDir = docsFoundStyle.Render(i18n.T("common.count.files", map[string]any{"Count": len(info.DocsFiles)}))
 		}
 
 		cli.Print("%-20s  %-8s  %-8s  %-10s  %s\n",
@@ -69,7 +69,7 @@ func runDocsList(registryPath string) error {
 	cli.Blank()
 	cli.Print("%s %s\n",
 		cli.KeyStyle.Render(i18n.Label("coverage")),
-		i18n.T("cmd.docs.list.coverage_summary", map[string]interface{}{"WithDocs": withDocs, "WithoutDocs": withoutDocs}),
+		i18n.T("cmd.docs.list.coverage_summary", map[string]any{"WithDocs": withDocs, "WithoutDocs": withoutDocs}),
 	)
 
 	return nil

@@ -2,6 +2,7 @@ package prod
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"time"
@@ -141,7 +142,7 @@ func stepDiscover(ctx context.Context, cfg *infra.Config) error {
 func stepLoadBalancer(ctx context.Context, cfg *infra.Config) error {
 	hcloudToken := os.Getenv("HCLOUD_TOKEN")
 	if hcloudToken == "" {
-		return fmt.Errorf("HCLOUD_TOKEN required for load balancer management")
+		return errors.New("HCLOUD_TOKEN required for load balancer management")
 	}
 
 	hc := infra.NewHCloudClient(hcloudToken)
@@ -237,7 +238,7 @@ func stepDNS(ctx context.Context, cfg *infra.Config) error {
 	authID := os.Getenv("CLOUDNS_AUTH_ID")
 	authPass := os.Getenv("CLOUDNS_AUTH_PASSWORD")
 	if authID == "" || authPass == "" {
-		return fmt.Errorf("CLOUDNS_AUTH_ID and CLOUDNS_AUTH_PASSWORD required")
+		return errors.New("CLOUDNS_AUTH_ID and CLOUDNS_AUTH_PASSWORD required")
 	}
 
 	dns := infra.NewCloudNSClient(authID, authPass)

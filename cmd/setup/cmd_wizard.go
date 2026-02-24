@@ -89,6 +89,6 @@ func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string,
 
 // confirmClone asks for confirmation before cloning.
 func confirmClone(count int, target string) (bool, error) {
-	confirmed := cli.Confirm(i18n.T("cmd.setup.wizard.confirm_clone", map[string]interface{}{"Count": count, "Target": target}))
+	confirmed := cli.Confirm(i18n.T("cmd.setup.wizard.confirm_clone", map[string]any{"Count": count, "Target": target}))
 	return confirmed, nil
 }

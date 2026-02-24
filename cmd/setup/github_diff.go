@@ -4,7 +4,8 @@ package setup
 
 import (
 	"fmt"
-	"sort"
+	"maps"
+	"slices"
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
@@ -184,12 +185,7 @@ func (cs *ChangeSet) printByCategory(category ChangeCategory, title string) {
 		fmt.Println()
 
 		// Print details (sorted for deterministic output)
-		keys := make([]string, 0, len(c.Details))
-		for k := range c.Details {
-			keys = append(keys, k)
-		}
-		sort.Strings(keys)
-		for _, k := range keys {
+		for _, k := range slices.Sorted(maps.Keys(c.Details)) {
 			fmt.Printf("      %s: %s\n", dimStyle.Render(k), c.Details[k])
 		}
 	}

@@ -1,6 +1,7 @@
 package sdk
 
 import (
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -46,14 +47,14 @@ func (s *SDK) DetectSpec() (string, error) {
 		return specPath, nil
 	}
 
-	return "", fmt.Errorf("sdk.DetectSpec: no OpenAPI spec found (checked config, common paths, Scramble)")
+	return "", errors.New("sdk.DetectSpec: no OpenAPI spec found (checked config, common paths, Scramble)")
 }
 
 // detectScramble checks for Laravel Scramble and exports the spec.
 func (s *SDK) detectScramble() (string, error) {
 	composerPath := filepath.Join(s.projectDir, "composer.json")
 	if !coreio.Local.IsFile(composerPath) {
-		return "", fmt.Errorf("no composer.json")
+		return "", errors.New("no composer.json")
 	}
 
 	// Check for scramble in composer.json
@@ -64,11 +65,11 @@ func (s *SDK) detectScramble() (string, error) {
 
 	// Simple check for scramble package
 	if !containsScramble(data) {
-		return "", fmt.Errorf("scramble not found in composer.json")
+		return "", errors.New("scramble not found in composer.json")
 	}
 
 	// TODO: Run php artisan scramble:export
-	return "", fmt.Errorf("scramble export not implemented")
+	return "", errors.New("scramble export not implemented")
 }
 
 // containsScramble checks if composer.json includes scramble.

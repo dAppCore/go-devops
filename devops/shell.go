@@ -2,6 +2,7 @@ package devops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -20,7 +21,7 @@ func (d *DevOps) Shell(ctx context.Context, opts ShellOptions) error {
 		return err
 	}
 	if !running {
-		return fmt.Errorf("dev environment not running (run 'core dev boot' first)")
+		return errors.New("dev environment not running (run 'core dev boot' first)")
 	}
 
 	if opts.Console {
@@ -61,7 +62,7 @@ func (d *DevOps) serialConsole(ctx context.Context) error {
 		return err
 	}
 	if c == nil {
-		return fmt.Errorf("console not available: container not found")
+		return errors.New("console not available: container not found")
 	}
 
 	// Use socat to connect to the console socket
