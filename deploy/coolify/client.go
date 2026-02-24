@@ -3,6 +3,7 @@ package coolify
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"sync"
@@ -41,10 +42,10 @@ func DefaultConfig() Config {
 // NewClient creates a new Coolify client.
 func NewClient(cfg Config) (*Client, error) {
 	if cfg.BaseURL == "" {
-		return nil, fmt.Errorf("COOLIFY_URL not set")
+		return nil, errors.New("COOLIFY_URL not set")
 	}
 	if cfg.APIToken == "" {
-		return nil, fmt.Errorf("COOLIFY_TOKEN not set")
+		return nil, errors.New("COOLIFY_TOKEN not set")
 	}
 
 	// Initialize Python runtime

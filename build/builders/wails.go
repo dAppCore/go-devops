@@ -3,6 +3,7 @@ package builders
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os/exec"
 	"path/filepath"
@@ -37,11 +38,11 @@ func (b *WailsBuilder) Detect(fs io.Medium, dir string) (bool, error) {
 // - Wails v2: Uses 'wails build' command
 func (b *WailsBuilder) Build(ctx context.Context, cfg *build.Config, targets []build.Target) ([]build.Artifact, error) {
 	if cfg == nil {
-		return nil, fmt.Errorf("builders.WailsBuilder.Build: config is nil")
+		return nil, errors.New("builders.WailsBuilder.Build: config is nil")
 	}
 
 	if len(targets) == 0 {
-		return nil, fmt.Errorf("builders.WailsBuilder.Build: no targets specified")
+		return nil, errors.New("builders.WailsBuilder.Build: no targets specified")
 	}
 
 	// Detect Wails version
@@ -53,7 +54,7 @@ func (b *WailsBuilder) Build(ctx context.Context, cfg *build.Config, targets []b
 		if detected, _ := taskBuilder.Detect(cfg.FS, cfg.ProjectDir); detected {
 			return taskBuilder.Build(ctx, cfg, targets)
 		}
-		return nil, fmt.Errorf("wails v3 projects require a Taskfile for building")
+		return nil, errors.New("wails v3 projects require a Taskfile for building")
 	}
 
 	// Wails v2 strategy: Use 'wails build'

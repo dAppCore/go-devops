@@ -3,6 +3,7 @@ package devops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -116,14 +117,14 @@ func DefaultBootOptions() BootOptions {
 // Boot starts the dev environment.
 func (d *DevOps) Boot(ctx context.Context, opts BootOptions) error {
 	if !d.images.IsInstalled() {
-		return fmt.Errorf("dev image not installed (run 'core dev install' first)")
+		return errors.New("dev image not installed (run 'core dev install' first)")
 	}
 
 	// Check if already running
 	if !opts.Fresh {
 		running, err := d.IsRunning(ctx)
 		if err == nil && running {
-			return fmt.Errorf("dev environment already running (use 'core dev stop' first or --fresh)")
+			return errors.New("dev environment already running (use 'core dev stop' first or --fresh)")
 		}
 	}
 
@@ -177,7 +178,7 @@ func (d *DevOps) Stop(ctx context.Context) error {
 		return err
 	}
 	if c == nil {
-		return fmt.Errorf("dev environment not found")
+		return errors.New("dev environment not found")
 	}
 	return d.container.Stop(ctx, c.ID)
 }

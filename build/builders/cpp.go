@@ -3,6 +3,7 @@ package builders
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -38,7 +39,7 @@ func (b *CPPBuilder) Detect(fs io.Medium, dir string) (bool, error) {
 // Cross-compilation is handled via Conan profiles specified in .core/build.yaml.
 func (b *CPPBuilder) Build(ctx context.Context, cfg *build.Config, targets []build.Target) ([]build.Artifact, error) {
 	if cfg == nil {
-		return nil, fmt.Errorf("builders.CPPBuilder.Build: config is nil")
+		return nil, errors.New("builders.CPPBuilder.Build: config is nil")
 	}
 
 	// Validate make is available
@@ -244,7 +245,7 @@ func (b *CPPBuilder) targetToProfile(target build.Target) string {
 // validateMake checks if make is available.
 func (b *CPPBuilder) validateMake() error {
 	if _, err := exec.LookPath("make"); err != nil {
-		return fmt.Errorf("cpp: make not found. Install build-essential (Linux) or Xcode Command Line Tools (macOS)")
+		return errors.New("cpp: make not found. Install build-essential (Linux) or Xcode Command Line Tools (macOS)")
 	}
 	return nil
 }

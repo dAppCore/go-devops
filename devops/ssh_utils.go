@@ -2,6 +2,7 @@ package devops
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -37,7 +38,7 @@ func ensureHostKey(ctx context.Context, port int) error {
 	}
 
 	if len(out) == 0 {
-		return fmt.Errorf("ssh-keyscan returned no keys")
+		return errors.New("ssh-keyscan returned no keys")
 	}
 
 	// Read existing known_hosts to avoid duplicates

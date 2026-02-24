@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -231,7 +232,7 @@ func (p *ChocolateyPublisher) pushToChocolatey(ctx context.Context, packageDir s
 	// Check for CHOCOLATEY_API_KEY
 	apiKey := os.Getenv("CHOCOLATEY_API_KEY")
 	if apiKey == "" {
-		return fmt.Errorf("chocolatey.Publish: CHOCOLATEY_API_KEY environment variable is required for push")
+		return errors.New("chocolatey.Publish: CHOCOLATEY_API_KEY environment variable is required for push")
 	}
 
 	// Pack the package

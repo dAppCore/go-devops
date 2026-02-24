@@ -3,6 +3,7 @@ package devops
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"path/filepath"
 	"strings"
@@ -38,7 +39,7 @@ func (d *DevOps) Test(ctx context.Context, projectDir string, opts TestOptions) 
 		return err
 	}
 	if !running {
-		return fmt.Errorf("dev environment not running (run 'core dev boot' first)")
+		return errors.New("dev environment not running (run 'core dev boot' first)")
 	}
 
 	var cmd string
@@ -63,7 +64,7 @@ func (d *DevOps) Test(ctx context.Context, projectDir string, opts TestOptions) 
 	} else {
 		cmd = DetectTestCommand(d.medium, projectDir)
 		if cmd == "" {
-			return fmt.Errorf("could not detect test command (create .core/test.yaml)")
+			return errors.New("could not detect test command (create .core/test.yaml)")
 		}
 	}
 

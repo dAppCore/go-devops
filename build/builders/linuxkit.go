@@ -3,6 +3,7 @@ package builders
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -78,7 +79,7 @@ func (b *LinuxKitBuilder) Build(ctx context.Context, cfg *build.Config, targets 
 	}
 
 	if configPath == "" {
-		return nil, fmt.Errorf("linuxkit.Build: no LinuxKit config file found. Specify with --config or create linuxkit.yml")
+		return nil, errors.New("linuxkit.Build: no LinuxKit config file found. Specify with --config or create linuxkit.yml")
 	}
 
 	// Validate config file exists
@@ -266,5 +267,5 @@ func (b *LinuxKitBuilder) validateLinuxKitCli() error {
 		}
 	}
 
-	return fmt.Errorf("linuxkit: linuxkit CLI not found. Install with: brew install linuxkit (macOS) or see https://github.com/linuxkit/linuxkit")
+	return errors.New("linuxkit: linuxkit CLI not found. Install with: brew install linuxkit (macOS) or see https://github.com/linuxkit/linuxkit")
 }

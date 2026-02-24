@@ -2,6 +2,7 @@ package signing
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"runtime"
 
@@ -59,7 +60,7 @@ func NotarizeBinaries(ctx context.Context, fs io.Medium, cfg SignConfig, artifac
 
 	signer := NewMacOSSigner(cfg.MacOS)
 	if !signer.Available() {
-		return fmt.Errorf("notarization requested but codesign not available")
+		return errors.New("notarization requested but codesign not available")
 	}
 
 	for _, artifact := range artifacts {

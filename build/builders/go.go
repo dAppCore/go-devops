@@ -3,6 +3,7 @@ package builders
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -37,11 +38,11 @@ func (b *GoBuilder) Detect(fs io.Medium, dir string) (bool, error) {
 // applies ldflags and trimpath, and runs go build.
 func (b *GoBuilder) Build(ctx context.Context, cfg *build.Config, targets []build.Target) ([]build.Artifact, error) {
 	if cfg == nil {
-		return nil, fmt.Errorf("builders.GoBuilder.Build: config is nil")
+		return nil, errors.New("builders.GoBuilder.Build: config is nil")
 	}
 
 	if len(targets) == 0 {
-		return nil, fmt.Errorf("builders.GoBuilder.Build: no targets specified")
+		return nil, errors.New("builders.GoBuilder.Build: no targets specified")
 	}
 
 	// Ensure output directory exists

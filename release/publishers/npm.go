@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -47,7 +48,7 @@ func (p *NpmPublisher) Publish(ctx context.Context, release *Release, pubCfg Pub
 
 	// Validate configuration
 	if npmCfg.Package == "" {
-		return fmt.Errorf("npm.Publish: package name is required (set publish.npm.package in config)")
+		return errors.New("npm.Publish: package name is required (set publish.npm.package in config)")
 	}
 
 	// Get repository
@@ -162,7 +163,7 @@ func (p *NpmPublisher) dryRunPublish(m io.Medium, data npmTemplateData, cfg *Npm
 func (p *NpmPublisher) executePublish(ctx context.Context, m io.Medium, data npmTemplateData, cfg *NpmConfig) error {
 	// Check for NPM_TOKEN
 	if os.Getenv("NPM_TOKEN") == "" {
-		return fmt.Errorf("npm.Publish: NPM_TOKEN environment variable is required")
+		return errors.New("npm.Publish: NPM_TOKEN environment variable is required")
 	}
 
 	// Create temp directory for package

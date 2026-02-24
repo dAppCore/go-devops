@@ -3,6 +3,7 @@ package builders
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -271,5 +272,5 @@ func (b *TaskfileBuilder) validateTaskCli() error {
 		}
 	}
 
-	return fmt.Errorf("taskfile: task CLI not found. Install with: brew install go-task (macOS), go install github.com/go-task/task/v3/cmd/task@latest, or see https://taskfile.dev/installation/")
+	return errors.New("taskfile: task CLI not found. Install with: brew install go-task (macOS), go install github.com/go-task/task/v3/cmd/task@latest, or see https://taskfile.dev/installation/")
 }

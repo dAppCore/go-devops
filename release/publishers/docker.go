@@ -3,6 +3,7 @@ package publishers
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -250,7 +251,7 @@ func (p *DockerPublisher) ensureBuildx(ctx context.Context) error {
 	// Check if buildx is available
 	cmd := exec.CommandContext(ctx, "docker", "buildx", "version")
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("docker: buildx is not available. Install it from https://docs.docker.com/buildx/working-with-buildx/")
+		return errors.New("docker: buildx is not available. Install it from https://docs.docker.com/buildx/working-with-buildx/")
 	}
 
 	// Check if we have a builder, create one if not
@@ -272,7 +273,7 @@ func (p *DockerPublisher) ensureBuildx(ctx context.Context) error {
 func validateDockerCli() error {
 	cmd := exec.Command("docker", "--version")
 	if err := cmd.Run(); err != nil {
-		return fmt.Errorf("docker: docker CLI not found. Install it from https://docs.docker.com/get-docker/")
+		return errors.New("docker: docker CLI not found. Install it from https://docs.docker.com/get-docker/")
 	}
 	return nil
 }

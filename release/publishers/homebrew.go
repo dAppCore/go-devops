@@ -5,6 +5,7 @@ import (
 	"bytes"
 	"context"
 	"embed"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -57,7 +58,7 @@ func (p *HomebrewPublisher) Publish(ctx context.Context, release *Release, pubCf
 
 	// Validate configuration
 	if cfg.Tap == "" && (cfg.Official == nil || !cfg.Official.Enabled) {
-		return fmt.Errorf("homebrew.Publish: tap is required (set publish.homebrew.tap in config)")
+		return errors.New("homebrew.Publish: tap is required (set publish.homebrew.tap in config)")
 	}
 
 	// Get repository and project info

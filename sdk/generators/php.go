@@ -2,6 +2,7 @@ package generators
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"os"
 	"os/exec"
@@ -37,7 +38,7 @@ func (g *PHPGenerator) Install() string {
 // Generate creates SDK from OpenAPI spec.
 func (g *PHPGenerator) Generate(ctx context.Context, opts Options) error {
 	if !g.Available() {
-		return fmt.Errorf("php.Generate: Docker is required but not available")
+		return errors.New("php.Generate: Docker is required but not available")
 	}
 
 	if err := coreio.Local.EnsureDir(opts.OutputDir); err != nil {

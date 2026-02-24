@@ -3,6 +3,7 @@ package devops
 import (
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -109,7 +110,7 @@ func (m *ImageManager) Install(ctx context.Context, progress func(downloaded, to
 		}
 	}
 	if src == nil {
-		return fmt.Errorf("no image source available")
+		return errors.New("no image source available")
 	}
 
 	// Get version
@@ -139,7 +140,7 @@ func (m *ImageManager) Install(ctx context.Context, progress func(downloaded, to
 func (m *ImageManager) CheckUpdate(ctx context.Context) (current, latest string, hasUpdate bool, err error) {
 	info, ok := m.manifest.Images[ImageName()]
 	if !ok {
-		return "", "", false, fmt.Errorf("image not installed")
+		return "", "", false, errors.New("image not installed")
 	}
 	current = info.Version
 
@@ -152,7 +153,7 @@ func (m *ImageManager) CheckUpdate(ctx context.Context) (current, latest string,
 		}
 	}
 	if src == nil {
-		return current, "", false, fmt.Errorf("no image source available")
+		return current, "", false, errors.New("no image source available")
 	}
 
 	latest, err = src.LatestVersion(ctx)
