@@ -126,7 +126,7 @@ func runGitHubSetup() error {
 		// Single repo mode
 		repo, ok := reg.Get(ghRepo)
 		if !ok {
-			return errors.New(i18n.T("error.repo_not_found", map[string]interface{}{"Name": ghRepo}))
+			return errors.New(i18n.T("error.repo_not_found", map[string]any{"Name": ghRepo}))
 		}
 		reposToProcess = []*repos.Repo{repo}
 	} else if ghAll {

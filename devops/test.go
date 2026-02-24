@@ -177,7 +177,7 @@ func hasComposerScript(m io.Medium, projectDir, script string) bool {
 	}
 
 	var pkg struct {
-		Scripts map[string]interface{} `json:"scripts"`
+		Scripts map[string]any `json:"scripts"`
 	}
 	if err := json.Unmarshal([]byte(content), &pkg); err != nil {
 		return false

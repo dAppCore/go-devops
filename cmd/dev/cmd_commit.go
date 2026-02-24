@@ -86,17 +86,17 @@ func runCommit(registryPath string, all bool) error {
 	}
 
 	// Show dirty repos
-	cli.Print("\n%s\n\n", i18n.T("cmd.dev.repos_with_changes", map[string]interface{}{"Count": len(dirtyRepos)}))
+	cli.Print("\n%s\n\n", i18n.T("cmd.dev.repos_with_changes", map[string]any{"Count": len(dirtyRepos)}))
 	for _, s := range dirtyRepos {
 		cli.Print("  %s: ", repoNameStyle.Render(s.Name))
 		if s.Modified > 0 {
-			cli.Print("%s ", dirtyStyle.Render(i18n.T("cmd.dev.modified", map[string]interface{}{"Count": s.Modified})))
+			cli.Print("%s ", dirtyStyle.Render(i18n.T("cmd.dev.modified", map[string]any{"Count": s.Modified})))
 		}
 		if s.Untracked > 0 {
-			cli.Print("%s ", dirtyStyle.Render(i18n.T("cmd.dev.untracked", map[string]interface{}{"Count": s.Untracked})))
+			cli.Print("%s ", dirtyStyle.Render(i18n.T("cmd.dev.untracked", map[string]any{"Count": s.Untracked})))
 		}
 		if s.Staged > 0 {
-			cli.Print("%s ", aheadStyle.Render(i18n.T("cmd.dev.staged", map[string]interface{}{"Count": s.Staged})))
+			cli.Print("%s ", aheadStyle.Render(i18n.T("cmd.dev.staged", map[string]any{"Count": s.Staged})))
 		}
 		cli.Blank()
 	}
@@ -128,9 +128,9 @@ func runCommit(registryPath string, all bool) error {
 	}
 
 	// Summary
-	cli.Print("%s", successStyle.Render(i18n.T("cmd.dev.done_succeeded", map[string]interface{}{"Count": succeeded})))
+	cli.Print("%s", successStyle.Render(i18n.T("cmd.dev.done_succeeded", map[string]any{"Count": succeeded})))
 	if failed > 0 {
-		cli.Print(", %s", errorStyle.Render(i18n.T("common.count.failed", map[string]interface{}{"Count": failed})))
+		cli.Print(", %s", errorStyle.Render(i18n.T("common.count.failed", map[string]any{"Count": failed})))
 	}
 	cli.Blank()
 
@@ -170,13 +170,13 @@ func runCommitSingleRepo(ctx context.Context, repoPath string, all bool) error {
 	// Show status
 	cli.Print("%s: ", repoNameStyle.Render(s.Name))
 	if s.Modified > 0 {
-		cli.Print("%s ", dirtyStyle.Render(i18n.T("cmd.dev.modified", map[string]interface{}{"Count": s.Modified})))
+		cli.Print("%s ", dirtyStyle.Render(i18n.T("cmd.dev.modified", map[string]any{"Count": s.Modified})))
 	}
 	if s.Untracked > 0 {
-		cli.Print("%s ", dirtyStyle.Render(i18n.T("cmd.dev.untracked", map[string]interface{}{"Count": s.Untracked})))
+		cli.Print("%s ", dirtyStyle.Render(i18n.T("cmd.dev.untracked", map[string]any{"Count": s.Untracked})))
 	}
 	if s.Staged > 0 {
-		cli.Print("%s ", aheadStyle.Render(i18n.T("cmd.dev.staged", map[string]interface{}{"Count": s.Staged})))
+		cli.Print("%s ", aheadStyle.Render(i18n.T("cmd.dev.staged", map[string]any{"Count": s.Staged})))
 	}
 	cli.Blank()
 

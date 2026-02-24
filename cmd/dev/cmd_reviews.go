@@ -144,15 +144,15 @@ func runReviews(registryPath string, author string, showAll bool) error {
 	}
 
 	cli.Blank()
-	cli.Print("%s", i18n.T("cmd.dev.reviews.open_prs", map[string]interface{}{"Count": len(allPRs)}))
+	cli.Print("%s", i18n.T("cmd.dev.reviews.open_prs", map[string]any{"Count": len(allPRs)}))
 	if pending > 0 {
-		cli.Print(" * %s", prPendingStyle.Render(i18n.T("common.count.pending", map[string]interface{}{"Count": pending})))
+		cli.Print(" * %s", prPendingStyle.Render(i18n.T("common.count.pending", map[string]any{"Count": pending})))
 	}
 	if approved > 0 {
-		cli.Print(" * %s", prApprovedStyle.Render(i18n.T("cmd.dev.reviews.approved", map[string]interface{}{"Count": approved})))
+		cli.Print(" * %s", prApprovedStyle.Render(i18n.T("cmd.dev.reviews.approved", map[string]any{"Count": approved})))
 	}
 	if changesRequested > 0 {
-		cli.Print(" * %s", prChangesStyle.Render(i18n.T("cmd.dev.reviews.changes_requested", map[string]interface{}{"Count": changesRequested})))
+		cli.Print(" * %s", prChangesStyle.Render(i18n.T("cmd.dev.reviews.changes_requested", map[string]any{"Count": changesRequested})))
 	}
 	cli.Blank()
 	cli.Blank()

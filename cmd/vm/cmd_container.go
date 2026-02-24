@@ -99,8 +99,8 @@ func runContainer(image, name string, detach bool, memory, cpus, sshPort int) er
 		fmt.Printf("%s %s\n", successStyle.Render(i18n.Label("started")), c.ID)
 		fmt.Printf("%s %d\n", dimStyle.Render(i18n.T("cmd.vm.label.pid")), c.PID)
 		fmt.Println()
-		fmt.Println(i18n.T("cmd.vm.hint.view_logs", map[string]interface{}{"ID": c.ID[:8]}))
-		fmt.Println(i18n.T("cmd.vm.hint.stop", map[string]interface{}{"ID": c.ID[:8]}))
+		fmt.Println(i18n.T("cmd.vm.hint.view_logs", map[string]any{"ID": c.ID[:8]}))
+		fmt.Println(i18n.T("cmd.vm.hint.stop", map[string]any{"ID": c.ID[:8]}))
 	} else {
 		fmt.Printf("\n%s %s\n", dimStyle.Render(i18n.T("cmd.vm.label.container_stopped")), c.ID)
 	}
@@ -261,11 +261,11 @@ func resolveContainerID(manager *container.LinuxKitManager, partialID string) (s
 
 	switch len(matches) {
 	case 0:
-		return "", errors.New(i18n.T("cmd.vm.error.no_match", map[string]interface{}{"ID": partialID}))
+		return "", errors.New(i18n.T("cmd.vm.error.no_match", map[string]any{"ID": partialID}))
 	case 1:
 		return matches[0].ID, nil
 	default:
-		return "", errors.New(i18n.T("cmd.vm.error.multiple_match", map[string]interface{}{"ID": partialID}))
+		return "", errors.New(i18n.T("cmd.vm.error.multiple_match", map[string]any{"ID": partialID}))
 	}
 }
 

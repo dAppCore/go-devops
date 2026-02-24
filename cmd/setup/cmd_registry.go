@@ -159,9 +159,9 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 	// Summary
 	fmt.Println()
 	fmt.Printf("%s, %s, %s\n",
-		i18n.T("cmd.setup.to_clone", map[string]interface{}{"Count": len(toClone)}),
-		i18n.T("cmd.setup.exist", map[string]interface{}{"Count": exists}),
-		i18n.T("common.count.skipped", map[string]interface{}{"Count": skipped}))
+		i18n.T("cmd.setup.to_clone", map[string]any{"Count": len(toClone)}),
+		i18n.T("cmd.setup.exist", map[string]any{"Count": exists}),
+		i18n.T("common.count.skipped", map[string]any{"Count": skipped}))
 
 	if len(toClone) == 0 {
 		fmt.Printf("\n%s\n", i18n.T("cmd.setup.nothing_to_clone"))
@@ -209,12 +209,12 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 
 	// Summary
 	fmt.Println()
-	fmt.Printf("%s %s", successStyle.Render(i18n.Label("done")), i18n.T("cmd.setup.cloned_count", map[string]interface{}{"Count": succeeded}))
+	fmt.Printf("%s %s", successStyle.Render(i18n.Label("done")), i18n.T("cmd.setup.cloned_count", map[string]any{"Count": succeeded}))
 	if failed > 0 {
 		fmt.Printf(", %s", errorStyle.Render(i18n.T("i18n.count.failed", failed)))
 	}
 	if exists > 0 {
-		fmt.Printf(", %s", i18n.T("cmd.setup.already_exist_count", map[string]interface{}{"Count": exists}))
+		fmt.Printf(", %s", i18n.T("cmd.setup.already_exist_count", map[string]any{"Count": exists}))
 	}
 	fmt.Println()
 

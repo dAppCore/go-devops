@@ -84,12 +84,12 @@ func runPush(registryPath string, force bool) error {
 	}
 
 	// Show repos to push
-	cli.Print("\n%s\n\n", i18n.T("common.count.repos_unpushed", map[string]interface{}{"Count": len(aheadRepos)}))
+	cli.Print("\n%s\n\n", i18n.T("common.count.repos_unpushed", map[string]any{"Count": len(aheadRepos)}))
 	totalCommits := 0
 	for _, s := range aheadRepos {
 		cli.Print("  %s: %s\n",
 			repoNameStyle.Render(s.Name),
-			aheadStyle.Render(i18n.T("common.count.commits", map[string]interface{}{"Count": s.Ahead})),
+			aheadStyle.Render(i18n.T("common.count.commits", map[string]any{"Count": s.Ahead})),
 		)
 		totalCommits += s.Ahead
 	}
@@ -97,7 +97,7 @@ func runPush(registryPath string, force bool) error {
 	// Confirm unless --force
 	if !force {
 		cli.Blank()
-		if !cli.Confirm(i18n.T("cmd.dev.push.confirm_push", map[string]interface{}{"Commits": totalCommits, "Repos": len(aheadRepos)})) {
+		if !cli.Confirm(i18n.T("cmd.dev.push.confirm_push", map[string]any{"Commits": totalCommits, "Repos": len(aheadRepos)})) {
 			cli.Text(i18n.T("cli.aborted"))
 			return nil
 		}
@@ -158,9 +158,9 @@ func runPush(registryPath string, force bool) error {
 
 	// Summary
 	cli.Blank()
-	cli.Print("%s", successStyle.Render(i18n.T("cmd.dev.push.done_pushed", map[string]interface{}{"Count": succeeded})))
+	cli.Print("%s", successStyle.Render(i18n.T("cmd.dev.push.done_pushed", map[string]any{"Count": succeeded})))
 	if failed > 0 {
-		cli.Print(", %s", errorStyle.Render(i18n.T("common.count.failed", map[string]interface{}{"Count": failed})))
+		cli.Print(", %s", errorStyle.Render(i18n.T("common.count.failed", map[string]any{"Count": failed})))
 	}
 	cli.Blank()
 
@@ -191,13 +191,13 @@ func runPushSingleRepo(ctx context.Context, repoPath string, force bool) error {
 		if s.IsDirty() {
 			cli.Print("%s: ", repoNameStyle.Render(s.Name))
 			if s.Modified > 0 {
-				cli.Print("%s ", dirtyStyle.Render(i18n.T("cmd.dev.modified", map[string]interface{}{"Count": s.Modified})))
+				cli.Print("%s ", dirtyStyle.Render(i18n.T("cmd.dev.modified", map[string]any{"Count": s.Modified})))
 			}
 			if s.Untracked > 0 {
-				cli.Print("%s ", dirtyStyle.Render(i18n.T("cmd.dev.untracked", map[string]interface{}{"Count": s.Untracked})))
+				cli.Print("%s ", dirtyStyle.Render(i18n.T("cmd.dev.untracked", map[string]any{"Count": s.Untracked})))
 			}
 			if s.Staged > 0 {
-				cli.Print("%s ", aheadStyle.Render(i18n.T("cmd.dev.staged", map[string]interface{}{"Count": s.Staged})))
+				cli.Print("%s ", aheadStyle.Render(i18n.T("cmd.dev.staged", map[string]any{"Count": s.Staged})))
 			}
 			cli.Blank()
 			cli.Blank()
@@ -230,12 +230,12 @@ func runPushSingleRepo(ctx context.Context, repoPath string, force bool) error {
 
 	// Show commits to push
 	cli.Print("%s: %s\n", repoNameStyle.Render(s.Name),
-		aheadStyle.Render(i18n.T("common.count.commits", map[string]interface{}{"Count": s.Ahead})))
+		aheadStyle.Render(i18n.T("common.count.commits", map[string]any{"Count": s.Ahead})))
 
 	// Confirm unless --force
 	if !force {
 		cli.Blank()
-		if !cli.Confirm(i18n.T("cmd.dev.push.confirm_push", map[string]interface{}{"Commits": s.Ahead, "Repos": 1})) {
+		if !cli.Confirm(i18n.T("cmd.dev.push.confirm_push", map[string]any{"Commits": s.Ahead, "Repos": 1})) {
 			cli.Text(i18n.T("cli.aborted"))
 			return nil
 		}

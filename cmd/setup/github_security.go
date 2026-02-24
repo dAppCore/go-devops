@@ -154,8 +154,8 @@ func UpdateSecurityAndAnalysis(repoFullName string, secretScanning, pushProtecti
 	}
 
 	// Build the payload
-	payload := map[string]interface{}{
-		"security_and_analysis": map[string]interface{}{
+	payload := map[string]any{
+		"security_and_analysis": map[string]any{
 			"secret_scanning": map[string]string{
 				"status": boolToStatus(secretScanning),
 			},

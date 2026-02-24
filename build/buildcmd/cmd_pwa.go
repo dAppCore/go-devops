@@ -147,14 +147,14 @@ func findManifestURL(htmlContent, baseURL string) (string, error) {
 }
 
 // fetchManifest downloads and parses a PWA manifest.
-func fetchManifest(manifestURL string) (map[string]interface{}, error) {
+func fetchManifest(manifestURL string) (map[string]any, error) {
 	resp, err := http.Get(manifestURL)
 	if err != nil {
 		return nil, err
 	}
 	defer func() { _ = resp.Body.Close() }()
 
-	var manifest map[string]interface{}
+	var manifest map[string]any
 	if err := json.NewDecoder(resp.Body).Decode(&manifest); err != nil {
 		return nil, err
 	}
@@ -162,7 +162,7 @@ func fetchManifest(manifestURL string) (map[string]interface{}, error) {
 }
 
 // collectAssets extracts asset URLs from a PWA manifest.
-func collectAssets(manifest map[string]interface{}, manifestURL string) []string {
+func collectAssets(manifest map[string]any, manifestURL string) []string {
 	var assets []string
 	base, _ := url.Parse(manifestURL)
 
@@ -174,9 +174,9 @@ func collectAssets(manifest map[string]interface{}, manifestURL string) []string
 	}
 
 	// Add icons
-	if icons, ok := manifest["icons"].([]interface{}); ok {
+	if icons, ok := manifest["icons"].([]any); ok {
 		for _, icon := range icons {
-			if iconMap, ok := icon.(map[string]interface{}); ok {
+			if iconMap, ok := icon.(map[string]any); ok {
 				if src, ok := iconMap["src"].(string); ok {
 					if resolved, err := base.Parse(src); err == nil {
 						assets = append(assets, resolved.String())

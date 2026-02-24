@@ -151,7 +151,7 @@ func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) erro
 	// Find the template workflow
 	templatePath := findTemplateWorkflow(registryDir, workflowFile)
 	if templatePath == "" {
-		return cli.Err("%s", i18n.T("cmd.dev.workflow.template_not_found", map[string]interface{}{"File": workflowFile}))
+		return cli.Err("%s", i18n.T("cmd.dev.workflow.template_not_found", map[string]any{"File": workflowFile}))
 	}
 
 	// Read template content
@@ -240,15 +240,15 @@ func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) erro
 	// Summary
 	if dryRun {
 		cli.Print("%s %s\n",
-			i18n.T("cmd.dev.workflow.would_sync_count", map[string]interface{}{"Count": synced}),
-			dimStyle.Render(i18n.T("cmd.dev.workflow.skipped_count", map[string]interface{}{"Count": skipped})))
+			i18n.T("cmd.dev.workflow.would_sync_count", map[string]any{"Count": synced}),
+			dimStyle.Render(i18n.T("cmd.dev.workflow.skipped_count", map[string]any{"Count": skipped})))
 		cli.Text(i18n.T("cmd.dev.workflow.run_without_dry_run"))
 	} else {
 		cli.Print("%s %s\n",
-			successStyle.Render(i18n.T("cmd.dev.workflow.synced_count", map[string]interface{}{"Count": synced})),
-			dimStyle.Render(i18n.T("cmd.dev.workflow.skipped_count", map[string]interface{}{"Count": skipped})))
+			successStyle.Render(i18n.T("cmd.dev.workflow.synced_count", map[string]any{"Count": synced})),
+			dimStyle.Render(i18n.T("cmd.dev.workflow.skipped_count", map[string]any{"Count": skipped})))
 		if failed > 0 {
-			cli.Print("%s\n", errorStyle.Render(i18n.T("cmd.dev.workflow.failed_count", map[string]interface{}{"Count": failed})))
+			cli.Print("%s\n", errorStyle.Render(i18n.T("cmd.dev.workflow.failed_count", map[string]any{"Count": failed})))
 		}
 	}
 
