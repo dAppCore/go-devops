@@ -6,6 +6,7 @@ require (
 	forge.lthn.ai/core/cli v0.1.0
 	forge.lthn.ai/core/go v0.1.0
 	forge.lthn.ai/core/go-agentic v0.1.0
+	forge.lthn.ai/core/go-php v0.1.0
 	forge.lthn.ai/core/go-scm v0.1.0
 	github.com/Snider/Borg v0.2.0
 	github.com/getkin/kin-openapi v0.133.0
