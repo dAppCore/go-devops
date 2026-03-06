@@ -19,7 +19,7 @@ import (
 	"forge.lthn.ai/core/go-i18n"
 	coreio "forge.lthn.ai/core/go-io"
 	"forge.lthn.ai/core/go-log"
-	"forge.lthn.ai/core/go/pkg/repos"
+	"forge.lthn.ai/core/go-scm/repos"
 )
 
 // File sync command flags

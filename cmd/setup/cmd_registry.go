@@ -17,7 +17,7 @@ import (
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-i18n"
 	coreio "forge.lthn.ai/core/go-io"
-	"forge.lthn.ai/core/go/pkg/repos"
+	"forge.lthn.ai/core/go-scm/repos"
 )
 
 // runRegistrySetup loads a registry from path and runs setup.
