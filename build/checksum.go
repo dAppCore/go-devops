@@ -12,7 +12,7 @@ import (
 
 	"strings"
 
-	io_interface "forge.lthn.ai/core/go/pkg/io"
+	io_interface "forge.lthn.ai/core/go-io"
 )
 
 // Checksum computes SHA256 for an artifact and returns the artifact with the Checksum field filled.

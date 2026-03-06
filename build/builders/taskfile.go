@@ -11,7 +11,7 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/go-devops/build"
-	"forge.lthn.ai/core/go/pkg/io"
+	"forge.lthn.ai/core/go-io"
 )
 
 // TaskfileBuilder builds projects using Taskfile (https://taskfile.dev/).

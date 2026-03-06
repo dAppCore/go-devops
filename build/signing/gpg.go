@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os/exec"
 
-	"forge.lthn.ai/core/go/pkg/io"
+	"forge.lthn.ai/core/go-io"
 )
 
 // GPGSigner signs files using GPG.

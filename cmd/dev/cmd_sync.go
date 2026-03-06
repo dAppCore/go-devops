@@ -10,7 +10,7 @@ import (
 
 	"forge.lthn.ai/core/cli/pkg/cli"  // Added
 	"forge.lthn.ai/core/go-i18n" // Added
-	coreio "forge.lthn.ai/core/go/pkg/io"
+	coreio "forge.lthn.ai/core/go-io"
 	// Added
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"

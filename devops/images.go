@@ -10,7 +10,7 @@ import (
 	"time"
 
 	"forge.lthn.ai/core/go-devops/devops/sources"
-	"forge.lthn.ai/core/go/pkg/io"
+	"forge.lthn.ai/core/go-io"
 )
 
 // ImageManager handles image downloads and updates.

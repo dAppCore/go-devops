@@ -7,8 +7,8 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	coreio "forge.lthn.ai/core/go/pkg/io"
-	"forge.lthn.ai/core/go/pkg/log"
+	coreio "forge.lthn.ai/core/go-io"
+	"forge.lthn.ai/core/go-log"
 )
 
 // GoGenerator generates Go SDKs from OpenAPI specs.

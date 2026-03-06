@@ -11,7 +11,7 @@ import (
 	"text/template"
 	"time"
 
-	"forge.lthn.ai/core/go/pkg/log"
+	"forge.lthn.ai/core/go-log"
 )
 
 // Executor runs Ansible playbooks.

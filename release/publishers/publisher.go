@@ -5,7 +5,7 @@ import (
 	"context"
 
 	"forge.lthn.ai/core/go-devops/build"
-	"forge.lthn.ai/core/go/pkg/io"
+	"forge.lthn.ai/core/go-io"
 )
 
 // Release represents a release to be published.

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 
 	"forge.lthn.ai/core/go-devops/build/signing"
-	"forge.lthn.ai/core/go/pkg/io"
+	"forge.lthn.ai/core/go-io"
 	"gopkg.in/yaml.v3"
 )
 

@@ -12,7 +12,7 @@ import (
 	"regexp"
 	"strings"
 
-	coreio "forge.lthn.ai/core/go/pkg/io"
+	coreio "forge.lthn.ai/core/go-io"
 	"gopkg.in/yaml.v3"
 )
 

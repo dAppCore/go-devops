@@ -8,7 +8,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"forge.lthn.ai/core/go/pkg/io"
+	"forge.lthn.ai/core/go-io"
 )
 
 // ServeOptions configures the dev server.

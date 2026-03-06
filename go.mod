@@ -6,6 +6,9 @@ require (
 	forge.lthn.ai/core/cli v0.1.0
 	forge.lthn.ai/core/go v0.1.0
 	forge.lthn.ai/core/go-agentic v0.1.0
+	forge.lthn.ai/core/go-i18n v0.1.0
+	forge.lthn.ai/core/go-io v0.0.1
+	forge.lthn.ai/core/go-log v0.0.1
 	forge.lthn.ai/core/go-scm v0.1.0
 	github.com/Snider/Borg v0.2.0
 	github.com/getkin/kin-openapi v0.133.0
@@ -25,6 +28,7 @@ require (
 require (
 	cloud.google.com/go v0.123.0 // indirect
 	forge.lthn.ai/core/go-crypt v0.1.0 // indirect
+	forge.lthn.ai/core/go-inference v0.0.2 // indirect
 	forge.lthn.ai/core/go-store v0.1.3 // indirect
 	github.com/ProtonMail/go-crypto v1.3.0 // indirect
 	github.com/TwiN/go-color v1.4.1 // indirect

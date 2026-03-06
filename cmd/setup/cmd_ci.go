@@ -7,7 +7,7 @@ import (
 	"runtime"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	coreio "forge.lthn.ai/core/go/pkg/io"
+	coreio "forge.lthn.ai/core/go-io"
 	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )

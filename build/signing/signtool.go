@@ -3,7 +3,7 @@ package signing
 import (
 	"context"
 
-	"forge.lthn.ai/core/go/pkg/io"
+	"forge.lthn.ai/core/go-io"
 )
 
 // WindowsSigner signs binaries using Windows signtool (placeholder).

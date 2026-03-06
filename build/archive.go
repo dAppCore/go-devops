@@ -12,7 +12,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	io_interface "forge.lthn.ai/core/go/pkg/io"
+	io_interface "forge.lthn.ai/core/go-io"
 	"github.com/Snider/Borg/pkg/compress"
 )
 

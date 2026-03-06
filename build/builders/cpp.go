@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/go-devops/build"
-	"forge.lthn.ai/core/go/pkg/io"
+	"forge.lthn.ai/core/go-io"
 )
 
 // CPPBuilder implements the Builder interface for C++ projects using CMake + Conan.

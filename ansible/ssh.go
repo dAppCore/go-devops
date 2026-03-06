@@ -12,7 +12,7 @@ import (
 	"sync"
 	"time"
 
-	"forge.lthn.ai/core/go/pkg/log"
+	"forge.lthn.ai/core/go-log"
 	"golang.org/x/crypto/ssh"
 	"golang.org/x/crypto/ssh/knownhosts"
 )

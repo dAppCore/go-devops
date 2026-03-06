@@ -16,7 +16,7 @@ import (
 	"forge.lthn.ai/core/go-agentic/cmd/workspace"
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-i18n"
-	coreio "forge.lthn.ai/core/go/pkg/io"
+	coreio "forge.lthn.ai/core/go-io"
 	"forge.lthn.ai/core/go/pkg/repos"
 )
 

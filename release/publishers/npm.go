@@ -13,7 +13,7 @@ import (
 	"strings"
 	"text/template"
 
-	"forge.lthn.ai/core/go/pkg/io"
+	"forge.lthn.ai/core/go-io"
 )
 
 //go:embed templates/npm/*.tmpl

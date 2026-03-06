@@ -6,7 +6,7 @@ package build
 import (
 	"context"
 
-	"forge.lthn.ai/core/go/pkg/io"
+	"forge.lthn.ai/core/go-io"
 )
 
 // ProjectType represents a detected project type.

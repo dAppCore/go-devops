@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	coreio "forge.lthn.ai/core/go/pkg/io"
+	coreio "forge.lthn.ai/core/go-io"
 )
 
 // commonSpecPaths are checked in order when no spec is configured.

@@ -9,7 +9,7 @@ import (
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-devops/devops"
 	"forge.lthn.ai/core/go-i18n"
-	"forge.lthn.ai/core/go/pkg/io"
+	"forge.lthn.ai/core/go-io"
 )
 
 // addVMCommands adds the dev environment VM commands to the dev parent command.

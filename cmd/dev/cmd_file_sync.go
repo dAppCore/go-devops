@@ -17,8 +17,8 @@ import (
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-scm/git"
 	"forge.lthn.ai/core/go-i18n"
-	coreio "forge.lthn.ai/core/go/pkg/io"
-	"forge.lthn.ai/core/go/pkg/log"
+	coreio "forge.lthn.ai/core/go-io"
+	"forge.lthn.ai/core/go-log"
 	"forge.lthn.ai/core/go/pkg/repos"
 )
 

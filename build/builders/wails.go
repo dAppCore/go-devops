@@ -10,7 +10,7 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/go-devops/build"
-	"forge.lthn.ai/core/go/pkg/io"
+	"forge.lthn.ai/core/go-io"
 )
 
 // WailsBuilder implements the Builder interface for Wails v3 projects.

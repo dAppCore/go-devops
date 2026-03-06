@@ -7,7 +7,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	coreio "forge.lthn.ai/core/go/pkg/io"
+	coreio "forge.lthn.ai/core/go-io"
 )
 
 // TypeScriptGenerator generates TypeScript SDKs from OpenAPI specs.

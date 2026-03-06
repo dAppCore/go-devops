@@ -13,7 +13,7 @@ import (
 	"forge.lthn.ai/core/go-devops/build"
 	"forge.lthn.ai/core/go-devops/build/builders"
 	"forge.lthn.ai/core/go-devops/release/publishers"
-	"forge.lthn.ai/core/go/pkg/io"
+	"forge.lthn.ai/core/go-io"
 )
 
 // Release represents a release with its version, artifacts, and changelog.

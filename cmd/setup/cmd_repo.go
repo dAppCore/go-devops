@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/go-i18n"
-	coreio "forge.lthn.ai/core/go/pkg/io"
+	coreio "forge.lthn.ai/core/go-io"
 )
 
 // runRepoSetup sets up the current repository with .core/ configuration.

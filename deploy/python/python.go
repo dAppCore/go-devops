@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"forge.lthn.ai/core/go/pkg/framework/core"
+	"forge.lthn.ai/core/go-log"
 	"github.com/kluctl/go-embed-python/python"
 )
 
@@ -41,13 +41,13 @@ func RunScript(ctx context.Context, code string, args ...string) (string, error)
 	// Write code to temp file
 	tmpFile, err := os.CreateTemp("", "core-*.py")
 	if err != nil {
-		return "", core.E("python", "create temp file", err)
+		return "", log.E("python", "create temp file", err)
 	}
 	defer func() { _ = os.Remove(tmpFile.Name()) }()
 
 	if _, err := tmpFile.WriteString(code); err != nil {
 		_ = tmpFile.Close()
-		return "", core.E("python", "write script", err)
+		return "", log.E("python", "write script", err)
 	}
 	_ = tmpFile.Close()
 
@@ -57,7 +57,7 @@ func RunScript(ctx context.Context, code string, args ...string) (string, error)
 	// Get the command
 	cmd, err := ep.PythonCmd(cmdArgs...)
 	if err != nil {
-		return "", core.E("python", "create command", err)
+		return "", log.E("python", "create command", err)
 	}
 
 	// Run with context
@@ -65,9 +65,9 @@ func RunScript(ctx context.Context, code string, args ...string) (string, error)
 	if err != nil {
 		// Try to get stderr for better error message
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			return "", core.E("python", "run script", fmt.Errorf("%w: %s", err, string(exitErr.Stderr)))
+			return "", log.E("python", "run script", fmt.Errorf("%w: %s", err, string(exitErr.Stderr)))
 		}
-		return "", core.E("python", "run script", err)
+		return "", log.E("python", "run script", err)
 	}
 
 	return string(output), nil
@@ -82,12 +82,12 @@ func RunModule(ctx context.Context, module string, args ...string) (string, erro
 	cmdArgs := append([]string{"-m", module}, args...)
 	cmd, err := ep.PythonCmd(cmdArgs...)
 	if err != nil {
-		return "", core.E("python", "create command", err)
+		return "", log.E("python", "create command", err)
 	}
 
 	output, err := cmd.Output()
 	if err != nil {
-		return "", core.E("python", fmt.Sprintf("run module %s", module), err)
+		return "", log.E("python", fmt.Sprintf("run module %s", module), err)
 	}
 
 	return string(output), nil
@@ -100,7 +100,7 @@ func DevOpsPath() (string, error) {
 	}
 	home, err := os.UserHomeDir()
 	if err != nil {
-		return "", core.E("python", "get user home", err)
+		return "", log.E("python", "get user home", err)
 	}
 	return filepath.Join(home, "Code", "DevOps"), nil
 }
@@ -118,7 +118,7 @@ func CoolifyModulePath() (string, error) {
 func CoolifyScript(baseURL, apiToken, operation string, params map[string]any) (string, error) {
 	paramsJSON, err := json.Marshal(params)
 	if err != nil {
-		return "", core.E("python", "marshal params", err)
+		return "", log.E("python", "marshal params", err)
 	}
 
 	modulePath, err := CoolifyModulePath()
