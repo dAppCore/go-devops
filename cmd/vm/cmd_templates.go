@@ -11,7 +11,7 @@ import (
 	"text/tabwriter"
 
 	"forge.lthn.ai/core/go-devops/container"
-	"forge.lthn.ai/core/go/pkg/i18n"
+	"forge.lthn.ai/core/go-i18n"
 	"forge.lthn.ai/core/go/pkg/io"
 	"github.com/spf13/cobra"
 )

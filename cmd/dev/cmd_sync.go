@@ -9,7 +9,7 @@ import (
 	"text/template"
 
 	"forge.lthn.ai/core/cli/pkg/cli"  // Added
-	"forge.lthn.ai/core/go/pkg/i18n" // Added
+	"forge.lthn.ai/core/go-i18n" // Added
 	coreio "forge.lthn.ai/core/go/pkg/io"
 	// Added
 	"golang.org/x/text/cases"

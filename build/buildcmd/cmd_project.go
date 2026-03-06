@@ -17,7 +17,7 @@ import (
 	"forge.lthn.ai/core/go-devops/build"
 	"forge.lthn.ai/core/go-devops/build/builders"
 	"forge.lthn.ai/core/go-devops/build/signing"
-	"forge.lthn.ai/core/go/pkg/i18n"
+	"forge.lthn.ai/core/go-i18n"
 	"forge.lthn.ai/core/go/pkg/io"
 )
 

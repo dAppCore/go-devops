@@ -12,7 +12,7 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/go-devops/sdk"
-	"forge.lthn.ai/core/go/pkg/i18n"
+	"forge.lthn.ai/core/go-i18n"
 )
 
 // runBuildSDK handles the `core build sdk` command.
