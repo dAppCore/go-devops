@@ -33,7 +33,7 @@ func init() {
 	docsSyncCmd.Flags().StringVar(&docsSyncRegistryPath, "registry", "", i18n.T("common.flag.registry"))
 	docsSyncCmd.Flags().BoolVar(&docsSyncDryRun, "dry-run", false, i18n.T("cmd.docs.sync.flag.dry_run"))
 	docsSyncCmd.Flags().StringVar(&docsSyncOutputDir, "output", "", i18n.T("cmd.docs.sync.flag.output"))
-	docsSyncCmd.Flags().StringVar(&docsSyncTarget, "target", "php", "Target format: php (default) or hugo")
+	docsSyncCmd.Flags().StringVar(&docsSyncTarget, "target", "php", "Target format: php (default), hugo, or gohelp")
 }
 
 // packageOutputName maps repo name to output folder name
@@ -71,6 +71,8 @@ func runDocsSync(registryPath string, outputDir string, dryRun bool, target stri
 	switch target {
 	case "hugo":
 		return runHugoSync(reg, basePath, outputDir, dryRun)
+	case "gohelp":
+		return runGoHelpSync(reg, basePath, outputDir, dryRun)
 	default:
 		return runPHPSync(reg, basePath, outputDir, dryRun)
 	}
@@ -323,5 +325,96 @@ func runHugoSync(reg *repos.Registry, basePath string, outputDir string, dryRun 
 	}
 
 	cli.Print("\n  Synced %d repos to Hugo content\n", synced)
+	return nil
+}
+
+// goHelpOutputName maps repo name to output folder name for go-help.
+func goHelpOutputName(repoName string) string {
+	if repoName == "core" {
+		return "cli"
+	}
+	if strings.HasPrefix(repoName, "core-") {
+		return strings.TrimPrefix(repoName, "core-")
+	}
+	return repoName
+}
+
+func runGoHelpSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) error {
+	if outputDir == "" {
+		outputDir = filepath.Join(basePath, "docs", "content")
+	}
+
+	var docsInfo []RepoDocInfo
+	for _, repo := range reg.List() {
+		if repo.Name == "core-template" || repo.Name == "core-claude" {
+			continue
+		}
+		info := scanRepoDocs(repo)
+		if info.HasDocs && len(info.DocsFiles) > 0 {
+			docsInfo = append(docsInfo, info)
+		}
+	}
+
+	if len(docsInfo) == 0 {
+		cli.Text("No documentation found")
+		return nil
+	}
+
+	cli.Print("\n  Go-help sync: %d repos with docs → %s\n\n", len(docsInfo), outputDir)
+
+	var totalFiles int
+	for _, info := range docsInfo {
+		outName := goHelpOutputName(info.Name)
+		totalFiles += len(info.DocsFiles)
+		cli.Print("  %s → content/%s/ (%d files)\n", repoNameStyle.Render(info.Name), outName, len(info.DocsFiles))
+	}
+
+	cli.Print("\n  %s %d files from %d repos → %s\n",
+		dimStyle.Render("Total:"), totalFiles, len(docsInfo), outputDir)
+
+	if dryRun {
+		cli.Print("\n  Dry run — no files written\n")
+		return nil
+	}
+
+	cli.Blank()
+	if !confirm("Sync to go-help content directory?") {
+		cli.Text("Aborted")
+		return nil
+	}
+
+	cli.Blank()
+	var synced int
+	for _, info := range docsInfo {
+		outName := goHelpOutputName(info.Name)
+		repoOutDir := filepath.Join(outputDir, outName)
+
+		// Clear existing directory
+		_ = io.Local.DeleteAll(repoOutDir)
+
+		if err := io.Local.EnsureDir(repoOutDir); err != nil {
+			cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), info.Name, err)
+			continue
+		}
+
+		// Plain copy of docs files (no frontmatter injection)
+		docsDir := filepath.Join(info.Path, "docs")
+		for _, f := range info.DocsFiles {
+			src := filepath.Join(docsDir, f)
+			dst := filepath.Join(repoOutDir, f)
+			if err := io.Local.EnsureDir(filepath.Dir(dst)); err != nil {
+				cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), f, err)
+				continue
+			}
+			if err := io.Copy(io.Local, src, io.Local, dst); err != nil {
+				cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), f, err)
+			}
+		}
+
+		cli.Print("  %s %s → content/%s/\n", successStyle.Render("✓"), info.Name, outName)
+		synced++
+	}
+
+	cli.Print("\n  Synced %d repos to go-help content\n", synced)
 	return nil
 }
