@@ -4,13 +4,13 @@ import (
 	"context"
 
 	"forge.lthn.ai/core/go-agentic"
-	"forge.lthn.ai/core/go/pkg/framework"
+	"forge.lthn.ai/core/go/pkg/core"
 	"forge.lthn.ai/core/go-scm/git"
 )
 
 // WorkBundle contains the Core instance for dev work operations.
 type WorkBundle struct {
-	Core *framework.Core
+	Core *core.Core
 }
 
 // WorkBundleOptions configures the work bundle.
@@ -22,15 +22,15 @@ type WorkBundleOptions struct {
 // NewWorkBundle creates a bundle for dev work operations.
 // Includes: dev (orchestration), git, agentic services.
 func NewWorkBundle(opts WorkBundleOptions) (*WorkBundle, error) {
-	c, err := framework.New(
-		framework.WithService(NewService(ServiceOptions{
+	c, err := core.New(
+		core.WithService(NewService(ServiceOptions{
 			RegistryPath: opts.RegistryPath,
 		})),
-		framework.WithService(git.NewService(git.ServiceOptions{})),
-		framework.WithService(agentic.NewService(agentic.ServiceOptions{
+		core.WithService(git.NewService(git.ServiceOptions{})),
+		core.WithService(agentic.NewService(agentic.ServiceOptions{
 			AllowEdit: opts.AllowEdit,
 		})),
-		framework.WithServiceLock(),
+		core.WithServiceLock(),
 	)
 	if err != nil {
 		return nil, err
@@ -51,7 +51,7 @@ func (b *WorkBundle) Stop(ctx context.Context) error {
 
 // StatusBundle contains the Core instance for status-only operations.
 type StatusBundle struct {
-	Core *framework.Core
+	Core *core.Core
 }
 
 // StatusBundleOptions configures the status bundle.
@@ -62,11 +62,11 @@ type StatusBundleOptions struct {
 // NewStatusBundle creates a bundle for status-only operations.
 // Includes: dev (orchestration), git services. No agentic - commits not available.
 func NewStatusBundle(opts StatusBundleOptions) (*StatusBundle, error) {
-	c, err := framework.New(
-		framework.WithService(NewService(ServiceOptions(opts))),
-		framework.WithService(git.NewService(git.ServiceOptions{})),
+	c, err := core.New(
+		core.WithService(NewService(ServiceOptions(opts))),
+		core.WithService(git.NewService(git.ServiceOptions{})),
 		// No agentic service - TaskCommit will be unhandled
-		framework.WithServiceLock(),
+		core.WithServiceLock(),
 	)
 	if err != nil {
 		return nil, err

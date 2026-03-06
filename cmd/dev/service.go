@@ -9,7 +9,7 @@ import (
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-agentic"
 	"forge.lthn.ai/core/go-scm/git"
-	"forge.lthn.ai/core/go/pkg/framework"
+	"forge.lthn.ai/core/go/pkg/core"
 )
 
 // Tasks for dev service
@@ -34,14 +34,14 @@ type ServiceOptions struct {
 
 // Service provides dev workflow orchestration as a Core service.
 type Service struct {
-	*framework.ServiceRuntime[ServiceOptions]
+	*core.ServiceRuntime[ServiceOptions]
 }
 
 // NewService creates a dev service factory.
-func NewService(opts ServiceOptions) func(*framework.Core) (any, error) {
-	return func(c *framework.Core) (any, error) {
+func NewService(opts ServiceOptions) func(*core.Core) (any, error) {
+	return func(c *core.Core) (any, error) {
 		return &Service{
-			ServiceRuntime: framework.NewServiceRuntime(c, opts),
+			ServiceRuntime: core.NewServiceRuntime(c, opts),
 		}, nil
 	}
 }
@@ -52,7 +52,7 @@ func (s *Service) OnStartup(ctx context.Context) error {
 	return nil
 }
 
-func (s *Service) handleTask(c *framework.Core, t framework.Task) (any, bool, error) {
+func (s *Service) handleTask(c *core.Core, t core.Task) (any, bool, error) {
 	switch m := t.(type) {
 	case TaskWork:
 		err := s.runWork(m)
