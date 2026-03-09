@@ -3,7 +3,7 @@ package dev
 import (
 	"context"
 
-	"forge.lthn.ai/core/go-agentic"
+	agentic "forge.lthn.ai/core/agent/pkg/lifecycle"
 	"forge.lthn.ai/core/go/pkg/core"
 	"forge.lthn.ai/core/go-scm/git"
 )

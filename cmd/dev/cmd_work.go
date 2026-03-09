@@ -9,7 +9,7 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-agentic"
+	agentic "forge.lthn.ai/core/agent/pkg/lifecycle"
 	"forge.lthn.ai/core/go-scm/git"
 	"forge.lthn.ai/core/go-i18n"
 )

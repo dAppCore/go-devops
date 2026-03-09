@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"forge.lthn.ai/core/go-agentic/cmd/workspace"
+	"forge.lthn.ai/core/agent/cmd/workspace"
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-i18n"
 	coreio "forge.lthn.ai/core/go-io"
