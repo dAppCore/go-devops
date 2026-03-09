@@ -1,0 +1,69 @@
+{
+  "name": "devops",
+  "description": "CI/CD, deployment, and issue tracking",
+  "version": "0.1.0",
+  "author": {
+    "name": "Host UK",
+    "email": "hello@host.uk.com"
+  },
+  "homepage": "https://forge.lthn.ai/core/go-devops",
+  "repository": {
+    "type": "git",
+    "url": "ssh://git@forge.lthn.ai:2223/core/go-devops.git"
+  },
+  "license": "EUPL-1.2",
+  "commands": {
+    "ci": {
+      "description": "Check CI status and manage workflows",
+      "source": "ci/commands/ci.md"
+    },
+    "ci:status": {
+      "description": "Show CI status for current branch",
+      "source": "ci/commands/status.md"
+    },
+    "ci:run": {
+      "description": "Trigger a CI workflow run",
+      "source": "ci/commands/run.md"
+    },
+    "ci:fix": {
+      "description": "Analyse and fix failing CI",
+      "source": "ci/commands/fix.md"
+    },
+    "ci:workflow": {
+      "description": "Create or update GitHub Actions workflow",
+      "source": "ci/commands/workflow.md"
+    },
+    "coolify:deploy": {
+      "description": "Deploy a service to Coolify via browser automation",
+      "source": "coolify/commands/deploy.md"
+    },
+    "coolify:status": {
+      "description": "Check Coolify deployment status via browser or API",
+      "source": "coolify/commands/status.md"
+    },
+    "issue:list": {
+      "description": "List open issues",
+      "source": "issue/commands/list.md"
+    },
+    "issue:view": {
+      "description": "View issue details",
+      "source": "issue/commands/view.md"
+    },
+    "issue:start": {
+      "description": "Start working on an issue",
+      "source": "issue/commands/start.md"
+    },
+    "issue:close": {
+      "description": "Close an issue with a commit",
+      "source": "issue/commands/close.md"
+    }
+  },
+  "keywords": [
+    "devops",
+    "ci",
+    "coolify",
+    "issue",
+    "deployment",
+    "host-uk"
+  ]
+}
