@@ -26,7 +26,6 @@ import (
 	"forge.lthn.ai/core/go-i18n"
 	coreio "forge.lthn.ai/core/go-io"
 	"forge.lthn.ai/core/go-scm/repos"
-	"github.com/spf13/cobra"
 )
 
 // GitHub command flags
@@ -43,13 +42,13 @@ var (
 )
 
 // addGitHubCommand adds the 'github' subcommand to the setup command.
-func addGitHubCommand(parent *cobra.Command) {
-	ghCmd := &cobra.Command{
+func addGitHubCommand(parent *cli.Command) {
+	ghCmd := &cli.Command{
 		Use:     "github",
 		Aliases: []string{"gh"},
 		Short:   i18n.T("cmd.setup.github.short"),
 		Long:    i18n.T("cmd.setup.github.long"),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cli.Command, args []string) error {
 			return runGitHubSetup()
 		},
 	}

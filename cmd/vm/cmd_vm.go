@@ -4,7 +4,6 @@ package vm
 import (
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-i18n"
-	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -26,8 +25,8 @@ var (
 )
 
 // AddVMCommands adds container-related commands under 'vm' to the CLI.
-func AddVMCommands(root *cobra.Command) {
-	vmCmd := &cobra.Command{
+func AddVMCommands(root *cli.Command) {
+	vmCmd := &cli.Command{
 		Use:   "vm",
 		Short: i18n.T("cmd.vm.short"),
 		Long:  i18n.T("cmd.vm.long"),

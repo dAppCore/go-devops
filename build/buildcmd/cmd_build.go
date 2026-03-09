@@ -6,7 +6,6 @@ import (
 
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-i18n"
-	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -58,19 +57,19 @@ var (
 	sdkDryRun  bool
 )
 
-var buildCmd = &cobra.Command{
+var buildCmd = &cli.Command{
 	Use:   "build",
 	Short: i18n.T("cmd.build.short"),
 	Long:  i18n.T("cmd.build.long"),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cli.Command, args []string) error {
 		return runProjectBuild(cmd.Context(), buildType, ciMode, targets, outputDir, doArchive, doChecksum, configPath, format, push, imageName, noSign, notarize, verbose)
 	},
 }
 
-var fromPathCmd = &cobra.Command{
+var fromPathCmd = &cli.Command{
 	Use:   "from-path",
 	Short: i18n.T("cmd.build.from_path.short"),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cli.Command, args []string) error {
 		if fromPath == "" {
 			return errPathRequired
 		}
@@ -78,10 +77,10 @@ var fromPathCmd = &cobra.Command{
 	},
 }
 
-var pwaCmd = &cobra.Command{
+var pwaCmd = &cli.Command{
 	Use:   "pwa",
 	Short: i18n.T("cmd.build.pwa.short"),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cli.Command, args []string) error {
 		if pwaURL == "" {
 			return errURLRequired
 		}
@@ -89,11 +88,11 @@ var pwaCmd = &cobra.Command{
 	},
 }
 
-var sdkBuildCmd = &cobra.Command{
+var sdkBuildCmd = &cli.Command{
 	Use:   "sdk",
 	Short: i18n.T("cmd.build.sdk.short"),
 	Long:  i18n.T("cmd.build.sdk.long"),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cli.Command, args []string) error {
 		return runBuildSDK(sdkSpec, sdkLang, sdkVersion, sdkDryRun)
 	},
 }
@@ -137,7 +136,7 @@ func initBuildFlags() {
 }
 
 // AddBuildCommands registers the 'build' command and all subcommands.
-func AddBuildCommands(root *cobra.Command) {
+func AddBuildCommands(root *cli.Command) {
 	initBuildFlags()
 	AddReleaseCommand(buildCmd)
 	root.AddCommand(buildCmd)

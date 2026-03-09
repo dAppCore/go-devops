@@ -4,7 +4,6 @@ package setup
 import (
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-i18n"
-	"github.com/spf13/cobra"
 )
 
 // Style aliases from shared package
@@ -33,11 +32,11 @@ var (
 	build        bool
 )
 
-var setupCmd = &cobra.Command{
+var setupCmd = &cli.Command{
 	Use:   "setup",
 	Short: i18n.T("cmd.setup.short"),
 	Long:  i18n.T("cmd.setup.long"),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cli.Command, args []string) error {
 		return runSetupOrchestrator(registryPath, only, dryRun, all, name, build)
 	},
 }
@@ -52,7 +51,7 @@ func initSetupFlags() {
 }
 
 // AddSetupCommand adds the 'setup' command to the given parent command.
-func AddSetupCommand(root *cobra.Command) {
+func AddSetupCommand(root *cli.Command) {
 	initSetupFlags()
 	addGitHubCommand(setupCmd)
 	root.AddCommand(setupCmd)

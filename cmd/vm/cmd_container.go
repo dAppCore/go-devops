@@ -10,10 +10,10 @@ import (
 	"text/tabwriter"
 	"time"
 
+	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-container"
 	"forge.lthn.ai/core/go-i18n"
 	"forge.lthn.ai/core/go-io"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -27,12 +27,12 @@ var (
 )
 
 // addVMRunCommand adds the 'run' command under vm.
-func addVMRunCommand(parent *cobra.Command) {
-	runCmd := &cobra.Command{
+func addVMRunCommand(parent *cli.Command) {
+	runCmd := &cli.Command{
 		Use:   "run [image]",
 		Short: i18n.T("cmd.vm.run.short"),
 		Long:  i18n.T("cmd.vm.run.long"),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cli.Command, args []string) error {
 			opts := container.RunOptions{
 				Name:    runName,
 				Detach:  runDetach,
@@ -111,12 +111,12 @@ func runContainer(image, name string, detach bool, memory, cpus, sshPort int) er
 var psAll bool
 
 // addVMPsCommand adds the 'ps' command under vm.
-func addVMPsCommand(parent *cobra.Command) {
-	psCmd := &cobra.Command{
+func addVMPsCommand(parent *cli.Command) {
+	psCmd := &cli.Command{
 		Use:   "ps",
 		Short: i18n.T("cmd.vm.ps.short"),
 		Long:  i18n.T("cmd.vm.ps.long"),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cli.Command, args []string) error {
 			return listContainers(psAll)
 		},
 	}
@@ -205,12 +205,12 @@ func formatDuration(d time.Duration) string {
 }
 
 // addVMStopCommand adds the 'stop' command under vm.
-func addVMStopCommand(parent *cobra.Command) {
-	stopCmd := &cobra.Command{
+func addVMStopCommand(parent *cli.Command) {
+	stopCmd := &cli.Command{
 		Use:   "stop <container-id>",
 		Short: i18n.T("cmd.vm.stop.short"),
 		Long:  i18n.T("cmd.vm.stop.long"),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cli.Command, args []string) error {
 			if len(args) == 0 {
 				return errors.New(i18n.T("cmd.vm.error.id_required"))
 			}
@@ -272,12 +272,12 @@ func resolveContainerID(manager *container.LinuxKitManager, partialID string) (s
 var logsFollow bool
 
 // addVMLogsCommand adds the 'logs' command under vm.
-func addVMLogsCommand(parent *cobra.Command) {
-	logsCmd := &cobra.Command{
+func addVMLogsCommand(parent *cli.Command) {
+	logsCmd := &cli.Command{
 		Use:   "logs <container-id>",
 		Short: i18n.T("cmd.vm.logs.short"),
 		Long:  i18n.T("cmd.vm.logs.long"),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cli.Command, args []string) error {
 			if len(args) == 0 {
 				return errors.New(i18n.T("cmd.vm.error.id_required"))
 			}
@@ -313,12 +313,12 @@ func viewLogs(id string, follow bool) error {
 }
 
 // addVMExecCommand adds the 'exec' command under vm.
-func addVMExecCommand(parent *cobra.Command) {
-	execCmd := &cobra.Command{
+func addVMExecCommand(parent *cli.Command) {
+	execCmd := &cli.Command{
 		Use:   "exec <container-id> <command> [args...]",
 		Short: i18n.T("cmd.vm.exec.short"),
 		Long:  i18n.T("cmd.vm.exec.long"),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cli.Command, args []string) error {
 			if len(args) < 2 {
 				return errors.New(i18n.T("cmd.vm.error.id_and_cmd_required"))
 			}

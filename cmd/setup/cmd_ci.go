@@ -8,7 +8,6 @@ import (
 
 	"forge.lthn.ai/core/cli/pkg/cli"
 	coreio "forge.lthn.ai/core/go-io"
-	"github.com/spf13/cobra"
 	"gopkg.in/yaml.v3"
 )
 
@@ -76,7 +75,7 @@ var (
 )
 
 func init() {
-	ciCmd := &cobra.Command{
+	ciCmd := &cli.Command{
 		Use:   "ci",
 		Short: "Output CI installation commands for core CLI",
 		Long: `Output installation commands for the core CLI in CI environments.
@@ -119,7 +118,7 @@ Examples:
 	setupCmd.AddCommand(ciCmd)
 }
 
-func runSetupCI(cmd *cobra.Command, args []string) error {
+func runSetupCI(cmd *cli.Command, args []string) error {
 	cfg := LoadCIConfig()
 
 	// Use flag version or config default

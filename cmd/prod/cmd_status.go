@@ -11,10 +11,9 @@ import (
 	"forge.lthn.ai/core/go-ansible"
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-infra"
-	"github.com/spf13/cobra"
 )
 
-var statusCmd = &cobra.Command{
+var statusCmd = &cli.Command{
 	Use:   "status",
 	Short: "Show production infrastructure health",
 	Long: `Check connectivity, services, and cluster health across all production hosts.
@@ -40,7 +39,7 @@ type hostStatus struct {
 	Error     error
 }
 
-func runStatus(cmd *cobra.Command, args []string) error {
+func runStatus(cmd *cli.Command, args []string) error {
 	cfg, cfgPath, err := loadConfig()
 	if err != nil {
 		return err

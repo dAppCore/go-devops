@@ -25,7 +25,6 @@ package setup
 
 import (
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -33,6 +32,6 @@ func init() {
 }
 
 // AddSetupCommands registers the 'setup' command and all subcommands.
-func AddSetupCommands(root *cobra.Command) {
+func AddSetupCommands(root *cli.Command) {
 	AddSetupCommand(root)
 }

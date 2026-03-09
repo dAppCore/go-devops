@@ -10,19 +10,19 @@ import (
 	"strings"
 	"text/tabwriter"
 
+	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-container"
 	"forge.lthn.ai/core/go-i18n"
 	"forge.lthn.ai/core/go-io"
-	"github.com/spf13/cobra"
 )
 
 // addVMTemplatesCommand adds the 'templates' command under vm.
-func addVMTemplatesCommand(parent *cobra.Command) {
-	templatesCmd := &cobra.Command{
+func addVMTemplatesCommand(parent *cli.Command) {
+	templatesCmd := &cli.Command{
 		Use:   "templates",
 		Short: i18n.T("cmd.vm.templates.short"),
 		Long:  i18n.T("cmd.vm.templates.long"),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cli.Command, args []string) error {
 			return listTemplates()
 		},
 	}
@@ -35,12 +35,12 @@ func addVMTemplatesCommand(parent *cobra.Command) {
 }
 
 // addTemplatesShowCommand adds the 'templates show' subcommand.
-func addTemplatesShowCommand(parent *cobra.Command) {
-	showCmd := &cobra.Command{
+func addTemplatesShowCommand(parent *cli.Command) {
+	showCmd := &cli.Command{
 		Use:   "show <template-name>",
 		Short: i18n.T("cmd.vm.templates.show.short"),
 		Long:  i18n.T("cmd.vm.templates.show.long"),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cli.Command, args []string) error {
 			if len(args) == 0 {
 				return errors.New(i18n.T("cmd.vm.error.template_required"))
 			}
@@ -52,12 +52,12 @@ func addTemplatesShowCommand(parent *cobra.Command) {
 }
 
 // addTemplatesVarsCommand adds the 'templates vars' subcommand.
-func addTemplatesVarsCommand(parent *cobra.Command) {
-	varsCmd := &cobra.Command{
+func addTemplatesVarsCommand(parent *cli.Command) {
+	varsCmd := &cli.Command{
 		Use:   "vars <template-name>",
 		Short: i18n.T("cmd.vm.templates.vars.short"),
 		Long:  i18n.T("cmd.vm.templates.vars.long"),
-		RunE: func(cmd *cobra.Command, args []string) error {
+		RunE: func(cmd *cli.Command, args []string) error {
 			if len(args) == 0 {
 				return errors.New(i18n.T("cmd.vm.error.template_required"))
 			}

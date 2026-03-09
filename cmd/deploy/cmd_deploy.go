@@ -9,7 +9,6 @@ import (
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-devops/deploy/coolify"
 	"forge.lthn.ai/core/go-i18n"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -19,53 +18,53 @@ var (
 )
 
 // Cmd is the root deploy command.
-var Cmd = &cobra.Command{
+var Cmd = &cli.Command{
 	Use:   "deploy",
 	Short: i18n.T("cmd.deploy.short"),
 	Long:  i18n.T("cmd.deploy.long"),
 }
 
-var serversCmd = &cobra.Command{
+var serversCmd = &cli.Command{
 	Use:   "servers",
 	Short: "List Coolify servers",
 	RunE:  runListServers,
 }
 
-var projectsCmd = &cobra.Command{
+var projectsCmd = &cli.Command{
 	Use:   "projects",
 	Short: "List Coolify projects",
 	RunE:  runListProjects,
 }
 
-var appsCmd = &cobra.Command{
+var appsCmd = &cli.Command{
 	Use:   "apps",
 	Short: "List Coolify applications",
 	RunE:  runListApps,
 }
 
-var dbsCmd = &cobra.Command{
+var dbsCmd = &cli.Command{
 	Use:     "databases",
 	Short:   "List Coolify databases",
 	Aliases: []string{"dbs", "db"},
 	RunE:    runListDatabases,
 }
 
-var servicesCmd = &cobra.Command{
+var servicesCmd = &cli.Command{
 	Use:   "services",
 	Short: "List Coolify services",
 	RunE:  runListServices,
 }
 
-var teamCmd = &cobra.Command{
+var teamCmd = &cli.Command{
 	Use:   "team",
 	Short: "Show current team info",
 	RunE:  runTeam,
 }
 
-var callCmd = &cobra.Command{
+var callCmd = &cli.Command{
 	Use:   "call <operation> [params-json]",
 	Short: "Call any Coolify API operation",
-	Args:  cobra.RangeArgs(1, 2),
+	Args:  cli.RangeArgs(1, 2),
 	RunE:  runCall,
 }
 
@@ -148,7 +147,7 @@ func printItem(item map[string]any) {
 	fmt.Println()
 }
 
-func runListServers(cmd *cobra.Command, args []string) error {
+func runListServers(cmd *cli.Command, args []string) error {
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -167,7 +166,7 @@ func runListServers(cmd *cobra.Command, args []string) error {
 	return outputResult(servers)
 }
 
-func runListProjects(cmd *cobra.Command, args []string) error {
+func runListProjects(cmd *cli.Command, args []string) error {
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -186,7 +185,7 @@ func runListProjects(cmd *cobra.Command, args []string) error {
 	return outputResult(projects)
 }
 
-func runListApps(cmd *cobra.Command, args []string) error {
+func runListApps(cmd *cli.Command, args []string) error {
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -205,7 +204,7 @@ func runListApps(cmd *cobra.Command, args []string) error {
 	return outputResult(apps)
 }
 
-func runListDatabases(cmd *cobra.Command, args []string) error {
+func runListDatabases(cmd *cli.Command, args []string) error {
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -224,7 +223,7 @@ func runListDatabases(cmd *cobra.Command, args []string) error {
 	return outputResult(dbs)
 }
 
-func runListServices(cmd *cobra.Command, args []string) error {
+func runListServices(cmd *cli.Command, args []string) error {
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -243,7 +242,7 @@ func runListServices(cmd *cobra.Command, args []string) error {
 	return outputResult(services)
 }
 
-func runTeam(cmd *cobra.Command, args []string) error {
+func runTeam(cmd *cli.Command, args []string) error {
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -257,7 +256,7 @@ func runTeam(cmd *cobra.Command, args []string) error {
 	return outputResult(team)
 }
 
-func runCall(cmd *cobra.Command, args []string) error {
+func runCall(cmd *cli.Command, args []string) error {
 	client, err := getClient()
 	if err != nil {
 		return cli.WrapVerb(err, "initialize", "client")

@@ -2,7 +2,6 @@ package prod
 
 import (
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -10,6 +9,6 @@ func init() {
 }
 
 // AddProdCommands registers the 'prod' command and all subcommands.
-func AddProdCommands(root *cobra.Command) {
+func AddProdCommands(root *cli.Command) {
 	root.AddCommand(Cmd)
 }

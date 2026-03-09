@@ -9,10 +9,9 @@ import (
 
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-infra"
-	"github.com/spf13/cobra"
 )
 
-var setupCmd = &cobra.Command{
+var setupCmd = &cli.Command{
 	Use:   "setup",
 	Short: "Phase 1: discover topology, create LB, configure DNS",
 	Long: `Run the Phase 1 foundation setup:
@@ -41,7 +40,7 @@ func init() {
 	setupCmd.Flags().StringVar(&setupStep, "step", "", "Run a specific step only (discover, lb, dns)")
 }
 
-func runSetup(cmd *cobra.Command, args []string) error {
+func runSetup(cmd *cli.Command, args []string) error {
 	cfg, cfgPath, err := loadConfig()
 	if err != nil {
 		return err

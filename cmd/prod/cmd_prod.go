@@ -1,7 +1,7 @@
 package prod
 
 import (
-	"github.com/spf13/cobra"
+	"forge.lthn.ai/core/cli/pkg/cli"
 )
 
 var (
@@ -9,7 +9,7 @@ var (
 )
 
 // Cmd is the root prod command.
-var Cmd = &cobra.Command{
+var Cmd = &cli.Command{
 	Use:   "prod",
 	Short: "Production infrastructure management",
 	Long: `Manage the Host UK production infrastructure.

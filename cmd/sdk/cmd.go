@@ -15,7 +15,6 @@ import (
 	"forge.lthn.ai/core/go-devops/sdk"
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-i18n"
-	"github.com/spf13/cobra"
 )
 
 func init() {
@@ -30,7 +29,7 @@ var (
 	sdkDimStyle     = cli.DimStyle
 )
 
-var sdkCmd = &cobra.Command{
+var sdkCmd = &cli.Command{
 	Use:   "sdk",
 	Short: i18n.T("cmd.sdk.short"),
 	Long:  i18n.T("cmd.sdk.long"),
@@ -39,28 +38,28 @@ var sdkCmd = &cobra.Command{
 var diffBasePath string
 var diffSpecPath string
 
-var sdkDiffCmd = &cobra.Command{
+var sdkDiffCmd = &cli.Command{
 	Use:   "diff",
 	Short: i18n.T("cmd.sdk.diff.short"),
 	Long:  i18n.T("cmd.sdk.diff.long"),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cli.Command, args []string) error {
 		return runSDKDiff(diffBasePath, diffSpecPath)
 	},
 }
 
 var validateSpecPath string
 
-var sdkValidateCmd = &cobra.Command{
+var sdkValidateCmd = &cli.Command{
 	Use:   "validate",
 	Short: i18n.T("cmd.sdk.validate.short"),
 	Long:  i18n.T("cmd.sdk.validate.long"),
-	RunE: func(cmd *cobra.Command, args []string) error {
+	RunE: func(cmd *cli.Command, args []string) error {
 		return runSDKValidate(validateSpecPath)
 	},
 }
 
 // AddSDKCommands registers the 'sdk' command and all subcommands.
-func AddSDKCommands(root *cobra.Command) {
+func AddSDKCommands(root *cli.Command) {
 	// sdk diff flags
 	sdkDiffCmd.Flags().StringVar(&diffBasePath, "base", "", i18n.T("cmd.sdk.diff.flag.base"))
 	sdkDiffCmd.Flags().StringVar(&diffSpecPath, "spec", "", i18n.T("cmd.sdk.diff.flag.spec"))

@@ -7,10 +7,9 @@ import (
 	"syscall"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"github.com/spf13/cobra"
 )
 
-var sshCmd = &cobra.Command{
+var sshCmd = &cli.Command{
 	Use:   "ssh <host>",
 	Short: "SSH into a production host",
 	Long: `Open an SSH session to a production host defined in infra.yaml.
@@ -20,11 +19,11 @@ Examples:
   core prod ssh de
   core prod ssh de2
   core prod ssh build`,
-	Args: cobra.ExactArgs(1),
+	Args: cli.ExactArgs(1),
 	RunE: runSSH,
 }
 
-func runSSH(cmd *cobra.Command, args []string) error {
+func runSSH(cmd *cli.Command, args []string) error {
 	cfg, _, err := loadConfig()
 	if err != nil {
 		return err

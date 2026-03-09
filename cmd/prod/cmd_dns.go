@@ -9,10 +9,9 @@ import (
 
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-infra"
-	"github.com/spf13/cobra"
 )
 
-var dnsCmd = &cobra.Command{
+var dnsCmd = &cli.Command{
 	Use:   "dns",
 	Short: "Manage DNS records via CloudNS",
 	Long: `View and manage DNS records for host.uk.com via CloudNS API.
@@ -22,20 +21,20 @@ Requires:
   CLOUDNS_AUTH_PASSWORD  CloudNS auth password`,
 }
 
-var dnsListCmd = &cobra.Command{
+var dnsListCmd = &cli.Command{
 	Use:   "list [zone]",
 	Short: "List DNS records",
-	Args:  cobra.MaximumNArgs(1),
+	Args:  cli.MaximumNArgs(1),
 	RunE:  runDNSList,
 }
 
-var dnsSetCmd = &cobra.Command{
+var dnsSetCmd = &cli.Command{
 	Use:   "set <host> <type> <value>",
 	Short: "Create or update a DNS record",
 	Long: `Create or update a DNS record. Example:
   core prod dns set hermes.lb A 1.2.3.4
   core prod dns set "*.host.uk.com" CNAME hermes.lb.host.uk.com`,
-	Args: cobra.ExactArgs(3),
+	Args: cli.ExactArgs(3),
 	RunE: runDNSSet,
 }
 
@@ -62,7 +61,7 @@ func getDNSClient() (*infra.CloudNSClient, error) {
 	return infra.NewCloudNSClient(authID, authPass), nil
 }
 
-func runDNSList(cmd *cobra.Command, args []string) error {
+func runDNSList(cmd *cli.Command, args []string) error {
 	dns, err := getDNSClient()
 	if err != nil {
 		return err
@@ -100,7 +99,7 @@ func runDNSList(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runDNSSet(cmd *cobra.Command, args []string) error {
+func runDNSSet(cmd *cli.Command, args []string) error {
 	dns, err := getDNSClient()
 	if err != nil {
 		return err

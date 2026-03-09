@@ -10,7 +10,6 @@ import (
 
 	"forge.lthn.ai/core/go-ansible"
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"github.com/spf13/cobra"
 )
 
 var (
@@ -23,7 +22,7 @@ var (
 	ansibleCheck     bool
 )
 
-var ansibleCmd = &cobra.Command{
+var ansibleCmd = &cli.Command{
 	Use:   "ansible <playbook>",
 	Short: "Run Ansible playbooks natively (no Python required)",
 	Long: `Execute Ansible playbooks using a pure Go implementation.
@@ -44,11 +43,11 @@ Examples:
   core deploy ansible playbooks/coolify/create.yml -i inventory/
   core deploy ansible site.yml -l production
   core deploy ansible deploy.yml -e "version=1.2.3" -e "env=prod"`,
-	Args: cobra.ExactArgs(1),
+	Args: cli.ExactArgs(1),
 	RunE: runAnsible,
 }
 
-var ansibleTestCmd = &cobra.Command{
+var ansibleTestCmd = &cli.Command{
 	Use:   "test <host>",
 	Short: "Test SSH connectivity to a host",
 	Long: `Test SSH connection and gather facts from a host.
@@ -56,7 +55,7 @@ var ansibleTestCmd = &cobra.Command{
 Examples:
   core deploy ansible test linux.snider.dev -u claude -p claude
   core deploy ansible test server.example.com -i ~/.ssh/id_rsa`,
-	Args: cobra.ExactArgs(1),
+	Args: cli.ExactArgs(1),
 	RunE: runAnsibleTest,
 }
 
@@ -88,7 +87,7 @@ func init() {
 	Cmd.AddCommand(ansibleCmd)
 }
 
-func runAnsible(cmd *cobra.Command, args []string) error {
+func runAnsible(cmd *cli.Command, args []string) error {
 	playbookPath := args[0]
 
 	// Resolve playbook path
@@ -229,7 +228,7 @@ func runAnsible(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runAnsibleTest(cmd *cobra.Command, args []string) error {
+func runAnsibleTest(cmd *cli.Command, args []string) error {
 	host := args[0]
 
 	fmt.Printf("Testing SSH connection to %s...\n", cli.BoldStyle.Render(host))

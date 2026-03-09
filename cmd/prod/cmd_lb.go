@@ -9,10 +9,9 @@ import (
 
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-infra"
-	"github.com/spf13/cobra"
 )
 
-var lbCmd = &cobra.Command{
+var lbCmd = &cli.Command{
 	Use:   "lb",
 	Short: "Manage Hetzner load balancer",
 	Long: `View and manage the Hetzner Cloud managed load balancer.
@@ -20,13 +19,13 @@ var lbCmd = &cobra.Command{
 Requires: HCLOUD_TOKEN`,
 }
 
-var lbStatusCmd = &cobra.Command{
+var lbStatusCmd = &cli.Command{
 	Use:   "status",
 	Short: "Show load balancer status and target health",
 	RunE:  runLBStatus,
 }
 
-var lbCreateCmd = &cobra.Command{
+var lbCreateCmd = &cli.Command{
 	Use:   "create",
 	Short: "Create load balancer from infra.yaml",
 	RunE:  runLBCreate,
@@ -45,7 +44,7 @@ func getHCloudClient() (*infra.HCloudClient, error) {
 	return infra.NewHCloudClient(token), nil
 }
 
-func runLBStatus(cmd *cobra.Command, args []string) error {
+func runLBStatus(cmd *cli.Command, args []string) error {
 	hc, err := getHCloudClient()
 	if err != nil {
 		return err
@@ -101,7 +100,7 @@ func runLBStatus(cmd *cobra.Command, args []string) error {
 	return nil
 }
 
-func runLBCreate(cmd *cobra.Command, args []string) error {
+func runLBCreate(cmd *cli.Command, args []string) error {
 	cfg, _, err := loadConfig()
 	if err != nil {
 		return err
