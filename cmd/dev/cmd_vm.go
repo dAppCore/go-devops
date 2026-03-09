@@ -7,7 +7,7 @@ import (
 	"time"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-devops/devops"
+	"forge.lthn.ai/core/go-container/devenv"
 	"forge.lthn.ai/core/go-i18n"
 	"forge.lthn.ai/core/go-io"
 )
@@ -41,7 +41,7 @@ func addVMInstallCommand(parent *cli.Command) {
 }
 
 func runVMInstall() error {
-	d, err := devops.New(io.Local)
+	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
 	}
@@ -53,7 +53,7 @@ func runVMInstall() error {
 		return nil
 	}
 
-	cli.Print("%s %s\n", dimStyle.Render(i18n.Label("image")), devops.ImageName())
+	cli.Print("%s %s\n", dimStyle.Render(i18n.Label("image")), devenv.ImageName())
 	cli.Blank()
 	cli.Text(i18n.T("cmd.dev.vm.downloading"))
 	cli.Blank()
@@ -113,7 +113,7 @@ func addVMBootCommand(parent *cli.Command) {
 }
 
 func runVMBoot(memory, cpus int, fresh bool) error {
-	d, err := devops.New(io.Local)
+	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
 	}
@@ -122,7 +122,7 @@ func runVMBoot(memory, cpus int, fresh bool) error {
 		return errors.New(i18n.T("cmd.dev.vm.not_installed"))
 	}
 
-	opts := devops.DefaultBootOptions()
+	opts := devenv.DefaultBootOptions()
 	if memory > 0 {
 		opts.Memory = memory
 	}
@@ -164,7 +164,7 @@ func addVMStopCommand(parent *cli.Command) {
 }
 
 func runVMStop() error {
-	d, err := devops.New(io.Local)
+	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
 	}
@@ -205,7 +205,7 @@ func addVMStatusCommand(parent *cli.Command) {
 }
 
 func runVMStatus() error {
-	d, err := devops.New(io.Local)
+	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
 	}
@@ -284,12 +284,12 @@ func addVMShellCommand(parent *cli.Command) {
 }
 
 func runVMShell(console bool, command []string) error {
-	d, err := devops.New(io.Local)
+	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
 	}
 
-	opts := devops.ShellOptions{
+	opts := devenv.ShellOptions{
 		Console: console,
 		Command: command,
 	}
@@ -322,7 +322,7 @@ func addVMServeCommand(parent *cli.Command) {
 }
 
 func runVMServe(port int, path string) error {
-	d, err := devops.New(io.Local)
+	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
 	}
@@ -332,7 +332,7 @@ func runVMServe(port int, path string) error {
 		return err
 	}
 
-	opts := devops.ServeOptions{
+	opts := devenv.ServeOptions{
 		Port: port,
 		Path: path,
 	}
@@ -361,7 +361,7 @@ func addVMTestCommand(parent *cli.Command) {
 }
 
 func runVMTest(name string, command []string) error {
-	d, err := devops.New(io.Local)
+	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
 	}
@@ -371,7 +371,7 @@ func runVMTest(name string, command []string) error {
 		return err
 	}
 
-	opts := devops.TestOptions{
+	opts := devenv.TestOptions{
 		Name:    name,
 		Command: command,
 	}
@@ -406,7 +406,7 @@ func addVMClaudeCommand(parent *cli.Command) {
 }
 
 func runVMClaude(noAuth bool, model string, authFlags []string) error {
-	d, err := devops.New(io.Local)
+	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
 	}
@@ -416,7 +416,7 @@ func runVMClaude(noAuth bool, model string, authFlags []string) error {
 		return err
 	}
 
-	opts := devops.ClaudeOptions{
+	opts := devenv.ClaudeOptions{
 		NoAuth: noAuth,
 		Model:  model,
 		Auth:   authFlags,
@@ -446,7 +446,7 @@ func addVMUpdateCommand(parent *cli.Command) {
 }
 
 func runVMUpdate(apply bool) error {
-	d, err := devops.New(io.Local)
+	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
 	}

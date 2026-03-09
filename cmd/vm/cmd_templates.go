@@ -10,7 +10,7 @@ import (
 	"strings"
 	"text/tabwriter"
 
-	"forge.lthn.ai/core/go-devops/container"
+	"forge.lthn.ai/core/go-container"
 	"forge.lthn.ai/core/go-i18n"
 	"forge.lthn.ai/core/go-io"
 	"github.com/spf13/cobra"

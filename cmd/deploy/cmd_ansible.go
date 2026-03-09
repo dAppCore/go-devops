@@ -8,7 +8,7 @@ import (
 	"strings"
 	"time"
 
-	"forge.lthn.ai/core/go-devops/ansible"
+	"forge.lthn.ai/core/go-ansible"
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"github.com/spf13/cobra"
 )
