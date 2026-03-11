@@ -33,7 +33,7 @@ func init() {
 	docsSyncCmd.Flags().StringVar(&docsSyncRegistryPath, "registry", "", i18n.T("common.flag.registry"))
 	docsSyncCmd.Flags().BoolVar(&docsSyncDryRun, "dry-run", false, i18n.T("cmd.docs.sync.flag.dry_run"))
 	docsSyncCmd.Flags().StringVar(&docsSyncOutputDir, "output", "", i18n.T("cmd.docs.sync.flag.output"))
-	docsSyncCmd.Flags().StringVar(&docsSyncTarget, "target", "php", "Target format: php (default), hugo, or gohelp")
+	docsSyncCmd.Flags().StringVar(&docsSyncTarget, "target", "php", "Target format: php (default), zensical, or gohelp")
 }
 
 // packageOutputName maps repo name to output folder name
@@ -69,8 +69,8 @@ func runDocsSync(registryPath string, outputDir string, dryRun bool, target stri
 	}
 
 	switch target {
-	case "hugo":
-		return runHugoSync(reg, basePath, outputDir, dryRun)
+	case "zensical":
+		return runZensicalSync(reg, basePath, outputDir, dryRun)
 	case "gohelp":
 		return runGoHelpSync(reg, basePath, outputDir, dryRun)
 	default:
@@ -174,8 +174,8 @@ func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun b
 	return nil
 }
 
-// hugoOutputName maps repo name to Hugo content section and folder.
-func hugoOutputName(repoName string) (string, string) {
+// zensicalOutputName maps repo name to Zensical content section and folder.
+func zensicalOutputName(repoName string) (string, string) {
 	if repoName == "cli" {
 		return "getting-started", ""
 	}
@@ -228,9 +228,9 @@ func copyWithFrontMatter(src, dst string, weight int) error {
 	return io.Local.Write(dst, string(result))
 }
 
-func runHugoSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) error {
+func runZensicalSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) error {
 	if outputDir == "" {
-		outputDir = filepath.Join(basePath, "docs-site", "content")
+		outputDir = filepath.Join(basePath, "docs-site", "docs")
 	}
 
 	var docsInfo []RepoDocInfo
@@ -249,10 +249,10 @@ func runHugoSync(reg *repos.Registry, basePath string, outputDir string, dryRun 
 		return nil
 	}
 
-	cli.Print("\n  Hugo sync: %d repos with docs → %s\n\n", len(docsInfo), outputDir)
+	cli.Print("\n  Zensical sync: %d repos with docs → %s\n\n", len(docsInfo), outputDir)
 
 	for _, info := range docsInfo {
-		section, folder := hugoOutputName(info.Name)
+		section, folder := zensicalOutputName(info.Name)
 		target := section
 		if folder != "" {
 			target = section + "/" + folder
@@ -270,7 +270,7 @@ func runHugoSync(reg *repos.Registry, basePath string, outputDir string, dryRun 
 	}
 
 	cli.Blank()
-	if !confirm("Sync to Hugo content directory?") {
+	if !confirm("Sync to Zensical docs directory?") {
 		cli.Text("Aborted")
 		return nil
 	}
@@ -278,7 +278,7 @@ func runHugoSync(reg *repos.Registry, basePath string, outputDir string, dryRun 
 	cli.Blank()
 	var synced int
 	for _, info := range docsInfo {
-		section, folder := hugoOutputName(info.Name)
+		section, folder := zensicalOutputName(info.Name)
 
 		destDir := filepath.Join(outputDir, section)
 		if folder != "" {
@@ -298,7 +298,7 @@ func runHugoSync(reg *repos.Registry, basePath string, outputDir string, dryRun 
 		}
 
 		if info.Readme != "" && folder != "" {
-			dst := filepath.Join(destDir, "_index.md")
+			dst := filepath.Join(destDir, "index.md")
 			if err := copyWithFrontMatter(info.Readme, dst, 1); err != nil {
 				cli.Print("  %s README: %s\n", errorStyle.Render("✗"), err)
 			}
@@ -324,7 +324,7 @@ func runHugoSync(reg *repos.Registry, basePath string, outputDir string, dryRun 
 		synced++
 	}
 
-	cli.Print("\n  Synced %d repos to Hugo content\n", synced)
+	cli.Print("\n  Synced %d repos to Zensical docs\n", synced)
 	return nil
 }
 
