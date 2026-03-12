@@ -3,6 +3,7 @@ module forge.lthn.ai/core/go-devops
 go 1.26.0
 
 require (
+	code.gitea.io/sdk/gitea v0.23.2
 	forge.lthn.ai/core/cli v0.1.0
 	forge.lthn.ai/core/agent v0.1.0
 	forge.lthn.ai/core/go-ansible v0.1.0

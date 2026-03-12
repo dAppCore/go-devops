@@ -7,10 +7,10 @@
 //   - push: Push repos with unpushed commits
 //   - pull: Pull repos that are behind remote
 //
-// GitHub Integration (requires gh CLI):
+// Forge Integration (uses Forgejo/Gitea API):
 //   - issues: List open issues across repos
 //   - reviews: List PRs needing review
-//   - ci: Check GitHub Actions CI status
+//   - ci: Check CI workflow status
 //   - impact: Analyse dependency impact of changes
 //
 // CI/Workflow Management:

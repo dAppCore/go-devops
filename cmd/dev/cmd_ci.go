@@ -1,17 +1,14 @@
 package dev
 
 import (
-	"encoding/json"
-	"errors"
-	"os"
-	"os/exec"
+	"path/filepath"
 	"strings"
 	"time"
 
+	"code.gitea.io/sdk/gitea"
+
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-i18n"
-	"forge.lthn.ai/core/go-io"
-	"forge.lthn.ai/core/go-scm/repos"
 )
 
 // CI-specific styles (aliases to shared)
@@ -22,18 +19,16 @@ var (
 	ciSkippedStyle = cli.DimStyle
 )
 
-// WorkflowRun represents a GitHub Actions workflow run
+// WorkflowRun represents a CI workflow run.
 type WorkflowRun struct {
-	Name       string    `json:"name"`
-	Status     string    `json:"status"`
-	Conclusion string    `json:"conclusion"`
-	HeadBranch string    `json:"headBranch"`
-	CreatedAt  time.Time `json:"createdAt"`
-	UpdatedAt  time.Time `json:"updatedAt"`
-	URL        string    `json:"url"`
-
-	// Added by us
-	RepoName string `json:"-"`
+	Name       string
+	Status     string
+	Conclusion string
+	HeadBranch string
+	CreatedAt  time.Time
+	UpdatedAt  time.Time
+	URL        string
+	RepoName   string
 }
 
 // CI command flags
@@ -66,34 +61,15 @@ func addCICommand(parent *cli.Command) {
 }
 
 func runCI(registryPath string, branch string, failedOnly bool) error {
-	// Check gh is available
-	if _, err := exec.LookPath("gh"); err != nil {
-		return errors.New(i18n.T("error.gh_not_found"))
+	client, err := forgeAPIClient()
+	if err != nil {
+		return err
 	}
 
 	// Find or use provided registry
-	var reg *repos.Registry
-	var err error
-
-	if registryPath != "" {
-		reg, err = repos.LoadRegistry(io.Local, registryPath)
-		if err != nil {
-			return cli.Wrap(err, "failed to load registry")
-		}
-	} else {
-		registryPath, err = repos.FindRegistry(io.Local)
-		if err == nil {
-			reg, err = repos.LoadRegistry(io.Local, registryPath)
-			if err != nil {
-				return cli.Wrap(err, "failed to load registry")
-			}
-		} else {
-			cwd, _ := os.Getwd()
-			reg, err = repos.ScanDirectory(io.Local, cwd)
-			if err != nil {
-				return cli.Wrap(err, "failed to scan directory")
-			}
-		}
+	reg, _, err := loadRegistryWithConfig(registryPath)
+	if err != nil {
+		return err
 	}
 
 	// Fetch CI status sequentially
@@ -103,12 +79,12 @@ func runCI(registryPath string, branch string, failedOnly bool) error {
 
 	repoList := reg.List()
 	for i, repo := range repoList {
-		repoFullName := cli.Sprintf("%s/%s", reg.Org, repo.Name)
 		cli.Print("\033[2K\r%s %d/%d %s", dimStyle.Render(i18n.T("i18n.progress.check")), i+1, len(repoList), repo.Name)
 
-		runs, err := fetchWorkflowRuns(repoFullName, repo.Name, branch)
+		owner, apiRepo := forgeRepoIdentity(repo.Path, reg.Org, repo.Name)
+		runs, err := fetchWorkflowRuns(client, owner, apiRepo, repo.Name, branch)
 		if err != nil {
-			if strings.Contains(err.Error(), "no workflows") {
+			if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "no workflows") {
 				noCI = append(noCI, repo.Name)
 			} else {
 				fetchErrors = append(fetchErrors, cli.Wrap(err, repo.Name))
@@ -134,7 +110,8 @@ func runCI(registryPath string, branch string, failedOnly bool) error {
 		case "failure":
 			failed++
 		case "":
-			if run.Status == "in_progress" || run.Status == "queued" {
+			if run.Status == "running" || run.Status == "waiting" ||
+				run.Status == "in_progress" || run.Status == "queued" {
 				pending++
 			} else {
 				other++
@@ -189,33 +166,68 @@ func runCI(registryPath string, branch string, failedOnly bool) error {
 	return nil
 }
 
-func fetchWorkflowRuns(repoFullName, repoName string, branch string) ([]WorkflowRun, error) {
-	args := []string{
-		"run", "list",
-		"--repo", repoFullName,
-		"--branch", branch,
-		"--limit", "1",
-		"--json", "name,status,conclusion,headBranch,createdAt,updatedAt,url",
+func fetchWorkflowRuns(client *gitea.Client, owner, apiRepo, displayName string, branch string) ([]WorkflowRun, error) {
+	// Try ListRepoActionRuns first (Gitea 1.25+ / modern Forgejo)
+	resp, _, err := client.ListRepoActionRuns(owner, apiRepo, gitea.ListRepoActionRunsOptions{
+		ListOptions: gitea.ListOptions{Page: 1, PageSize: 5},
+		Branch:      branch,
+	})
+	if err == nil && resp != nil && len(resp.WorkflowRuns) > 0 {
+		var runs []WorkflowRun
+		for _, r := range resp.WorkflowRuns {
+			name := r.DisplayTitle
+			if r.Path != "" {
+				// Use workflow filename as name: ".forgejo/workflows/ci.yml" → "ci"
+				name = strings.TrimSuffix(filepath.Base(r.Path), filepath.Ext(r.Path))
+			}
+			updated := r.CompletedAt
+			if updated.IsZero() {
+				updated = r.StartedAt
+			}
+			runs = append(runs, WorkflowRun{
+				Name:       name,
+				Status:     r.Status,
+				Conclusion: r.Conclusion,
+				HeadBranch: r.HeadBranch,
+				CreatedAt:  r.StartedAt,
+				UpdatedAt:  updated,
+				URL:        r.HTMLURL,
+				RepoName:   displayName,
+			})
+		}
+		return runs, nil
 	}
 
-	cmd := exec.Command("gh", args...)
-	output, err := cmd.Output()
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			stderr := string(exitErr.Stderr)
-			return nil, cli.Err("%s", strings.TrimSpace(stderr))
+	// Fallback: ListRepoActionTasks (older API, no version check)
+	taskResp, _, taskErr := client.ListRepoActionTasks(owner, apiRepo, gitea.ListOptions{Page: 1, PageSize: 10})
+	if taskErr != nil {
+		if err != nil {
+			return nil, err
 		}
-		return nil, err
+		return nil, taskErr
 	}
 
 	var runs []WorkflowRun
-	if err := json.Unmarshal(output, &runs); err != nil {
-		return nil, err
-	}
-
-	// Tag with repo name
-	for i := range runs {
-		runs[i].RepoName = repoName
+	for _, t := range taskResp.WorkflowRuns {
+		if branch != "" && t.HeadBranch != branch {
+			continue
+		}
+		// ActionTask has single Status field — map to conclusion for completed runs
+		conclusion := ""
+		switch t.Status {
+		case "success", "failure", "skipped", "cancelled":
+			conclusion = t.Status
+		}
+		runs = append(runs, WorkflowRun{
+			Name:       t.Name,
+			Status:     t.Status,
+			Conclusion: conclusion,
+			HeadBranch: t.HeadBranch,
+			CreatedAt:  t.CreatedAt,
+			UpdatedAt:  t.UpdatedAt,
+			URL:        t.URL,
+			RepoName:   displayName,
+		})
 	}
 
 	return runs, nil
@@ -231,9 +243,9 @@ func printWorkflowRun(run WorkflowRun) {
 		status = ciFailureStyle.Render("x")
 	case "":
 		switch run.Status {
-		case "in_progress":
+		case "running", "in_progress":
 			status = ciPendingStyle.Render("*")
-		case "queued":
+		case "waiting", "queued":
 			status = ciPendingStyle.Render("o")
 		default:
 			status = ciSkippedStyle.Render("-")

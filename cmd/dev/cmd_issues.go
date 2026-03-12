@@ -1,12 +1,11 @@
 package dev
 
 import (
-	"encoding/json"
-	"errors"
-	"os/exec"
 	"slices"
 	"strings"
 	"time"
+
+	"code.gitea.io/sdk/gitea"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-i18n"
@@ -22,29 +21,16 @@ var (
 	issueAgeStyle      = cli.DimStyle
 )
 
-// GitHubIssue represents a GitHub issue from the API.
-type GitHubIssue struct {
-	Number    int       `json:"number"`
-	Title     string    `json:"title"`
-	State     string    `json:"state"`
-	CreatedAt time.Time `json:"createdAt"`
-	Author    struct {
-		Login string `json:"login"`
-	} `json:"author"`
-	Assignees struct {
-		Nodes []struct {
-			Login string `json:"login"`
-		} `json:"nodes"`
-	} `json:"assignees"`
-	Labels struct {
-		Nodes []struct {
-			Name string `json:"name"`
-		} `json:"nodes"`
-	} `json:"labels"`
-	URL string `json:"url"`
-
-	// Added by us
-	RepoName string `json:"-"`
+// ForgeIssue holds display data for an issue.
+type ForgeIssue struct {
+	Number    int64
+	Title     string
+	Author    string
+	Assignees []string
+	Labels    []string
+	CreatedAt time.Time
+	URL       string
+	RepoName  string
 }
 
 // Issues command flags
@@ -77,9 +63,9 @@ func addIssuesCommand(parent *cli.Command) {
 }
 
 func runIssues(registryPath string, limit int, assignee string) error {
-	// Check gh is available
-	if _, err := exec.LookPath("gh"); err != nil {
-		return errors.New(i18n.T("error.gh_not_found"))
+	client, err := forgeAPIClient()
+	if err != nil {
+		return err
 	}
 
 	// Find or use provided registry
@@ -88,16 +74,16 @@ func runIssues(registryPath string, limit int, assignee string) error {
 		return err
 	}
 
-	// Fetch issues sequentially (avoid GitHub rate limits)
-	var allIssues []GitHubIssue
+	// Fetch issues sequentially
+	var allIssues []ForgeIssue
 	var fetchErrors []error
 
 	repoList := reg.List()
 	for i, repo := range repoList {
-		repoFullName := cli.Sprintf("%s/%s", reg.Org, repo.Name)
 		cli.Print("\033[2K\r%s %d/%d %s", dimStyle.Render(i18n.T("i18n.progress.fetch")), i+1, len(repoList), repo.Name)
 
-		issues, err := fetchIssues(repoFullName, repo.Name, limit, assignee)
+		owner, apiRepo := forgeRepoIdentity(repo.Path, reg.Org, repo.Name)
+		issues, err := fetchIssues(client, owner, apiRepo, repo.Name, limit, assignee)
 		if err != nil {
 			fetchErrors = append(fetchErrors, cli.Wrap(err, repo.Name))
 			continue
@@ -107,7 +93,7 @@ func runIssues(registryPath string, limit int, assignee string) error {
 	cli.Print("\033[2K\r") // Clear progress line
 
 	// Sort by created date (newest first)
-	slices.SortFunc(allIssues, func(a, b GitHubIssue) int {
+	slices.SortFunc(allIssues, func(a, b ForgeIssue) int {
 		return b.CreatedAt.Compare(a.CreatedAt)
 	})
 
@@ -134,47 +120,50 @@ func runIssues(registryPath string, limit int, assignee string) error {
 	return nil
 }
 
-func fetchIssues(repoFullName, repoName string, limit int, assignee string) ([]GitHubIssue, error) {
-	args := []string{
-		"issue", "list",
-		"--repo", repoFullName,
-		"--state", "open",
-		"--limit", cli.Sprintf("%d", limit),
-		"--json", "number,title,state,createdAt,author,assignees,labels,url",
+func fetchIssues(client *gitea.Client, owner, apiRepo, displayName string, limit int, assignee string) ([]ForgeIssue, error) {
+	opts := gitea.ListIssueOption{
+		ListOptions: gitea.ListOptions{Page: 1, PageSize: limit},
+		State:       gitea.StateOpen,
+		Type:        gitea.IssueTypeIssue,
 	}
-
 	if assignee != "" {
-		args = append(args, "--assignee", assignee)
+		opts.AssignedBy = assignee
 	}
 
-	cmd := exec.Command("gh", args...)
-	output, err := cmd.Output()
+	issues, _, err := client.ListRepoIssues(owner, apiRepo, opts)
 	if err != nil {
-		// Check if it's just "no issues" vs actual error
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			stderr := string(exitErr.Stderr)
-			if strings.Contains(stderr, "no issues") || strings.Contains(stderr, "Could not resolve") {
-				return nil, nil
-			}
-			return nil, cli.Err("%s", stderr)
+		errMsg := err.Error()
+		if strings.Contains(errMsg, "404") || strings.Contains(errMsg, "Not Found") {
+			return nil, nil
 		}
 		return nil, err
 	}
 
-	var issues []GitHubIssue
-	if err := json.Unmarshal(output, &issues); err != nil {
-		return nil, err
+	var result []ForgeIssue
+	for _, issue := range issues {
+		fi := ForgeIssue{
+			Number:    issue.Index,
+			Title:     issue.Title,
+			CreatedAt: issue.Created,
+			URL:       issue.HTMLURL,
+			RepoName:  displayName,
+		}
+		if issue.Poster != nil {
+			fi.Author = issue.Poster.UserName
+		}
+		for _, a := range issue.Assignees {
+			fi.Assignees = append(fi.Assignees, a.UserName)
+		}
+		for _, l := range issue.Labels {
+			fi.Labels = append(fi.Labels, l.Name)
+		}
+		result = append(result, fi)
 	}
 
-	// Tag with repo name
-	for i := range issues {
-		issues[i].RepoName = repoName
-	}
-
-	return issues, nil
+	return result, nil
 }
 
-func printIssue(issue GitHubIssue) {
+func printIssue(issue ForgeIssue) {
 	// #42 [core-bio] Fix avatar upload
 	num := issueNumberStyle.Render(cli.Sprintf("#%d", issue.Number))
 	repo := issueRepoStyle.Render(cli.Sprintf("[%s]", issue.RepoName))
@@ -183,21 +172,17 @@ func printIssue(issue GitHubIssue) {
 	line := cli.Sprintf("  %s %s %s", num, repo, title)
 
 	// Add labels if any
-	if len(issue.Labels.Nodes) > 0 {
-		var labels []string
-		for _, l := range issue.Labels.Nodes {
-			labels = append(labels, l.Name)
-		}
-		line += " " + issueLabelStyle.Render("["+strings.Join(labels, ", ")+"]")
+	if len(issue.Labels) > 0 {
+		line += " " + issueLabelStyle.Render("["+strings.Join(issue.Labels, ", ")+"]")
 	}
 
 	// Add assignee if any
-	if len(issue.Assignees.Nodes) > 0 {
-		var assignees []string
-		for _, a := range issue.Assignees.Nodes {
-			assignees = append(assignees, "@"+a.Login)
+	if len(issue.Assignees) > 0 {
+		var tagged []string
+		for _, a := range issue.Assignees {
+			tagged = append(tagged, "@"+a)
 		}
-		line += " " + issueAssigneeStyle.Render(strings.Join(assignees, ", "))
+		line += " " + issueAssigneeStyle.Render(strings.Join(tagged, ", "))
 	}
 
 	// Add age
