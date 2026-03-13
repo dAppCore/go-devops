@@ -7,63 +7,7 @@
     "email": "hello@host.uk.com"
   },
   "license": "EUPL-1.2",
-  "commands": [
-    {
-      "name": "ci",
-      "description": "Check CI status and manage workflows",
-      "file": "ci/commands/ci.md"
-    },
-    {
-      "name": "ci:status",
-      "description": "Show CI status for current branch",
-      "file": "ci/commands/status.md"
-    },
-    {
-      "name": "ci:run",
-      "description": "Trigger a CI workflow run",
-      "file": "ci/commands/run.md"
-    },
-    {
-      "name": "ci:fix",
-      "description": "Analyse and fix failing CI",
-      "file": "ci/commands/fix.md"
-    },
-    {
-      "name": "ci:workflow",
-      "description": "Create or update GitHub Actions workflow",
-      "file": "ci/commands/workflow.md"
-    },
-    {
-      "name": "coolify:deploy",
-      "description": "Deploy a service to Coolify via browser automation",
-      "file": "coolify/commands/deploy.md"
-    },
-    {
-      "name": "coolify:status",
-      "description": "Check Coolify deployment status",
-      "file": "coolify/commands/status.md"
-    },
-    {
-      "name": "issue:list",
-      "description": "List open issues",
-      "file": "issue/commands/list.md"
-    },
-    {
-      "name": "issue:view",
-      "description": "View issue details",
-      "file": "issue/commands/view.md"
-    },
-    {
-      "name": "issue:start",
-      "description": "Start working on an issue",
-      "file": "issue/commands/start.md"
-    },
-    {
-      "name": "issue:close",
-      "description": "Close an issue with a commit",
-      "file": "issue/commands/close.md"
-    }
-  ],
+  "repository": "https://forge.lthn.ai/core/go-devops.git",
   "keywords": [
     "devops",
     "ci",
