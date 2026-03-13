@@ -6,64 +6,69 @@
     "name": "Host UK",
     "email": "hello@host.uk.com"
   },
-  "homepage": "https://forge.lthn.ai/core/go-devops",
-  "repository": {
-    "type": "git",
-    "url": "ssh://git@forge.lthn.ai:2223/core/go-devops.git"
-  },
   "license": "EUPL-1.2",
-  "commands": {
-    "ci": {
+  "commands": [
+    {
+      "name": "ci",
       "description": "Check CI status and manage workflows",
-      "source": "ci/commands/ci.md"
+      "file": "ci/commands/ci.md"
     },
-    "ci:status": {
+    {
+      "name": "ci:status",
       "description": "Show CI status for current branch",
-      "source": "ci/commands/status.md"
+      "file": "ci/commands/status.md"
     },
-    "ci:run": {
+    {
+      "name": "ci:run",
       "description": "Trigger a CI workflow run",
-      "source": "ci/commands/run.md"
+      "file": "ci/commands/run.md"
     },
-    "ci:fix": {
+    {
+      "name": "ci:fix",
       "description": "Analyse and fix failing CI",
-      "source": "ci/commands/fix.md"
+      "file": "ci/commands/fix.md"
     },
-    "ci:workflow": {
+    {
+      "name": "ci:workflow",
       "description": "Create or update GitHub Actions workflow",
-      "source": "ci/commands/workflow.md"
+      "file": "ci/commands/workflow.md"
     },
-    "coolify:deploy": {
+    {
+      "name": "coolify:deploy",
       "description": "Deploy a service to Coolify via browser automation",
-      "source": "coolify/commands/deploy.md"
+      "file": "coolify/commands/deploy.md"
     },
-    "coolify:status": {
-      "description": "Check Coolify deployment status via browser or API",
-      "source": "coolify/commands/status.md"
+    {
+      "name": "coolify:status",
+      "description": "Check Coolify deployment status",
+      "file": "coolify/commands/status.md"
     },
-    "issue:list": {
+    {
+      "name": "issue:list",
       "description": "List open issues",
-      "source": "issue/commands/list.md"
+      "file": "issue/commands/list.md"
     },
-    "issue:view": {
+    {
+      "name": "issue:view",
       "description": "View issue details",
-      "source": "issue/commands/view.md"
+      "file": "issue/commands/view.md"
     },
-    "issue:start": {
+    {
+      "name": "issue:start",
       "description": "Start working on an issue",
-      "source": "issue/commands/start.md"
+      "file": "issue/commands/start.md"
     },
-    "issue:close": {
+    {
+      "name": "issue:close",
       "description": "Close an issue with a commit",
-      "source": "issue/commands/close.md"
+      "file": "issue/commands/close.md"
     }
-  },
+  ],
   "keywords": [
     "devops",
     "ci",
     "coolify",
     "issue",
-    "deployment",
-    "host-uk"
+    "deployment"
   ]
 }

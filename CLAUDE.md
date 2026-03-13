@@ -1,6 +1,6 @@
-# CLAUDE.md — go-devops Agent Instructions
+# CLAUDE.md
 
-You are a dedicated domain expert for `forge.lthn.ai/core/go-devops`. Virgil (in core/go) orchestrates your work via TODO.md. Pick up tasks in phase order, mark `[x]` when done, commit and push.
+This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
 ## Commands
 
@@ -11,55 +11,67 @@ go test -race ./...              # Race detector
 go vet ./...                     # Static analysis
 ```
 
-## Local Dependencies
+## Workspace Context
 
-| Module | Local Path | Notes |
-|--------|-----------|-------|
-| `forge.lthn.ai/core/go` | `../go` | Framework (core.E, io.Medium, config, i18n, log) |
+This module (`forge.lthn.ai/core/go-devops`) is part of a 57-module Go workspace rooted at `/Users/snider/Code/go.work`. The parent framework module `forge.lthn.ai/core/go` (at `../go`) provides core libraries: `core.E` errors, `io.Medium` filesystem abstraction, config, i18n, and logging.
 
-## Key Interfaces
+Most implementation code (ansible engine, build system, infra clients, release pipeline, devkit, SDK generators) lives in the parent framework. This repo contains CLI commands that wire those packages together, plus deployment integrations and infrastructure playbooks.
 
-```go
-// build/builders/
-type Builder interface {
-    Name() string
-    Detect(fs io.Medium, dir string) (bool, error)
-    Build(ctx context.Context, cfg *Config, targets []Target) ([]Artifact, error)
-}
+## Architecture
 
-// release/publishers/
-type Publisher interface {
-    Name() string
-    Publish(ctx context.Context, release *Release, pubCfg PublisherConfig, relCfg ReleaseConfig, dryRun bool) error
-}
+### Package Layout
 
-// container/
-type Hypervisor interface {
-    Name() string
-    Available() bool
-    Run(ctx context.Context, opts RunOptions) (*process.Handle, error)
-}
+- **`cmd/dev/`** — Multi-repo developer commands registered under `core dev`. The main CLI surface (~4,400 LOC across 21 files).
+- **`cmd/deploy/`** — `core deploy servers` — Coolify PaaS server/app listing.
+- **`cmd/docs/`** — `core docs sync` — Documentation sync across the multi-repo workspace.
+- **`cmd/setup/`** — `core setup repo` — Generate `.core` configuration for a project.
+- **`cmd/gitcmd/`** — Git helper commands.
+- **`cmd/vanity-import/`** — Vanity import path server (the default build target in `.core/build.yaml`).
+- **`cmd/community/`** — Community-related commands.
+- **`deploy/coolify/`** — Coolify PaaS API HTTP client.
+- **`deploy/python/`** — Embedded Python 3.13 runtime wrapper (adds ~50 MB to binary).
+- **`snapshot/`** — `core.json` release manifest generation.
+- **`playbooks/`** — Ansible YAML playbooks for production infrastructure (Galera, Redis). Executed by the native Go Ansible engine, not `ansible-playbook`.
 
-// devops/sources/
-type ImageSource interface {
-    Name() string
-    Available() bool
-    Download(ctx context.Context, name, version string, progress func(downloaded, total int64)) (string, error)
-}
+### Key CLI Commands (`cmd/dev/`)
 
-// build/signing/
-type Signer interface {
-    Name() string
-    Available() bool
-    Sign(filePath, keyID string) ([]byte, error)
-}
+| Command | Purpose |
+|---------|---------|
+| `core dev work` | Combined git status/commit/push workflow |
+| `core dev commit` | Claude-assisted commit generation |
+| `core dev push/pull` | Push/pull repos with pending changes |
+| `core dev issues` | List open Forgejo issues |
+| `core dev reviews` | List PRs needing review |
+| `core dev ci` | Check CI/workflow status |
+| `core dev impact` | Analyse dependency impact across workspace |
+| `core dev vm` | Boot, stop, shell, serve dev environments |
+| `core dev workflow` | List/sync CI workflows across repos |
+| `core dev file-sync` | Safe file sync for AI agents |
+| `core dev apply` | Apply safe changes (AI-friendly) |
 
-// sdk/generators/
-type Generator interface {
-    Language() string
-    Generate(ctx context.Context, spec, outputDir string, config *Config) error
-}
-```
+### Extension Interfaces (in parent framework)
+
+All extensible subsystems follow a plugin/provider pattern with small interfaces:
+
+| Interface | Package | Implementations |
+|-----------|---------|-----------------|
+| `Builder` | `build/builders/` | Go, Wails, Docker, C++, LinuxKit, Taskfile |
+| `Publisher` | `release/publishers/` | GitHub, Docker, Homebrew, npm, AUR, Scoop, Chocolatey, LinuxKit |
+| `Signer` | `build/signing/` | macOS codesign, GPG, Windows signtool |
+| `Hypervisor` | `container/` | QEMU (Linux), Hyperkit (macOS) |
+| `ImageSource` | `devops/sources/` | GitHub Releases, S3/CDN |
+| `Generator` | `sdk/generators/` | TypeScript, Python, Go, PHP |
+
+### Shared API Client Pattern
+
+`infra/client.go` (parent module) provides HTTP client abstraction with exponential backoff retry (3 retries, 100ms–5s), HTTP 429 rate-limit handling with Retry-After parsing, and configurable auth (Bearer, Basic, query params). Used by Hetzner Cloud/Robot, CloudNS, and Forgejo clients.
+
+### Build & Release Flow
+
+`core build` → auto-detects project type → produces artifacts in `dist/`
+`core build release` → version detection → changelog generation → publish via configured publishers
+
+Configuration lives in `.core/build.yaml` (targets, ldflags) and `.core/release.yaml` (publishers, changelog filters).
 
 ## Coding Standards
 
@@ -69,18 +81,16 @@ type Generator interface {
 - **Co-Author**: `Co-Authored-By: Virgil <virgil@lethean.io>`
 - **Licence**: EUPL-1.2
 - **Imports**: stdlib → forge.lthn.ai → third-party, each group separated by blank line
+- **Errors**: `core.E()` for contextual errors, or `fmt.Errorf("%w", err)` for wrapping
 
 ## Forge
 
 - **Repo**: `forge.lthn.ai/core/go-devops`
 - **Push via SSH**: `git push forge main` (remote: `ssh://git@forge.lthn.ai:2223/core/go-devops.git`)
+- **Issues/PRs**: Managed via Forgejo SDK (`code.gitea.io/sdk/gitea`), not GitHub
 
 ## Documentation
 
-- Architecture: `docs/architecture.md`
-- Development guide: `docs/development.md`
-- Project history: `docs/history.md`
-
-## Task Queue
-
-See `TODO.md` for prioritised work.
+- Architecture deep-dive: `docs/architecture.md`
+- Development guide & testing patterns: `docs/development.md`
+- Project history & known limitations: `docs/history.md`
