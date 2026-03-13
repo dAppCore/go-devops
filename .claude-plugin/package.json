@@ -1,0 +1,30 @@
+{
+  "name": "@lthn/core-claude-devops",
+  "version": "0.1.0",
+  "description": "Claude Code plugin for CI/CD, deployment, issue tracking, and Coolify integration",
+  "license": "EUPL-1.2",
+  "author": {
+    "name": "Host UK",
+    "email": "hello@host.uk.com"
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://forge.lthn.ai/core/go-devops.git",
+    "directory": ".claude-plugin"
+  },
+  "files": [
+    "plugin.json",
+    "commands/",
+    "ci/",
+    "coolify/",
+    "issue/",
+    "codex-ci/"
+  ],
+  "keywords": [
+    "claude-code-plugin",
+    "devops",
+    "ci",
+    "coolify",
+    "issues"
+  ]
+}
