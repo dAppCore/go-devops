@@ -7,7 +7,7 @@ require (
 	forge.lthn.ai/core/cli v0.1.0
 	forge.lthn.ai/core/agent v0.1.0
 	forge.lthn.ai/core/go-ansible v0.1.0
-	forge.lthn.ai/core/go-config v0.1.0
+	forge.lthn.ai/core/config v0.1.0
 	forge.lthn.ai/core/go-container v0.1.0
 	forge.lthn.ai/core/go-infra v0.1.0
 	forge.lthn.ai/core/go-i18n v0.1.0
