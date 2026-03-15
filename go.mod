@@ -4,8 +4,8 @@ go 1.26.0
 
 require (
 	code.gitea.io/sdk/gitea v0.23.2
-	forge.lthn.ai/core/agent v0.3.0
-	forge.lthn.ai/core/cli v0.3.1
+	forge.lthn.ai/core/agent v0.3.1
+	forge.lthn.ai/core/cli v0.3.2
 	forge.lthn.ai/core/go v0.3.1
 	forge.lthn.ai/core/go-container v0.1.3
 	forge.lthn.ai/core/go-i18n v0.1.4
