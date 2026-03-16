@@ -16,6 +16,7 @@ import (
 	"forge.lthn.ai/core/agent/cmd/workspace"
 	"forge.lthn.ai/core/go-i18n"
 	coreio "forge.lthn.ai/core/go-io"
+	log "forge.lthn.ai/core/go-log"
 	"forge.lthn.ai/core/go-scm/repos"
 )
 
@@ -46,7 +47,7 @@ func runSetupOrchestrator(registryPath, only string, dryRun, all bool, projectNa
 func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectName string, runBuild bool) error {
 	cwd, err := os.Getwd()
 	if err != nil {
-		return fmt.Errorf("failed to get working directory: %w", err)
+		return log.E("setup.bootstrap", "failed to get working directory", err)
 	}
 
 	fmt.Printf("%s %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.bootstrap_mode"))
@@ -56,7 +57,7 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 	// Check if current directory is empty
 	empty, err := isDirEmpty(cwd)
 	if err != nil {
-		return fmt.Errorf("failed to check directory: %w", err)
+		return log.E("setup.bootstrap", "failed to check directory", err)
 	}
 
 	if empty {
@@ -71,7 +72,7 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 			// Offer choice: setup working directory or create package
 			choice, err := promptSetupChoice()
 			if err != nil {
-				return fmt.Errorf("failed to get choice: %w", err)
+				return log.E("setup.bootstrap", "failed to get choice", err)
 			}
 
 			if choice == "setup" {
@@ -88,7 +89,7 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 			} else {
 				projectName, err = promptProjectName(defaultOrg)
 				if err != nil {
-					return fmt.Errorf("failed to get project name: %w", err)
+					return log.E("setup.bootstrap", "failed to get project name", err)
 				}
 			}
 		}
@@ -98,7 +99,7 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 
 		if !dryRun {
 			if err := coreio.Local.EnsureDir(targetDir); err != nil {
-				return fmt.Errorf("failed to create directory: %w", err)
+				return log.E("setup.bootstrap", "failed to create directory", err)
 			}
 		}
 	}
@@ -110,7 +111,7 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 
 		if !dryRun {
 			if err := gitClone(ctx, defaultOrg, devopsRepo, devopsPath); err != nil {
-				return fmt.Errorf("failed to clone %s: %w", devopsRepo, err)
+				return log.E("setup.bootstrap", fmt.Sprintf("failed to clone %s", devopsRepo), err)
 			}
 			fmt.Printf("%s %s %s\n", successStyle.Render(">>"), devopsRepo, i18n.T("cmd.setup.cloned"))
 		} else {
@@ -130,7 +131,7 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 
 	reg, err := repos.LoadRegistry(coreio.Local, registryPath)
 	if err != nil {
-		return fmt.Errorf("failed to load registry from %s: %w", devopsRepo, err)
+		return log.E("setup.bootstrap", fmt.Sprintf("failed to load registry from %s", devopsRepo), err)
 	}
 
 	// Override base path to target directory

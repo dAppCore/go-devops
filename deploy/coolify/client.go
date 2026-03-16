@@ -3,10 +3,11 @@ package coolify
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"os"
 	"sync"
+
+	log "forge.lthn.ai/core/go-log"
 
 	"forge.lthn.ai/core/go-devops/deploy/python"
 )
@@ -42,15 +43,15 @@ func DefaultConfig() Config {
 // NewClient creates a new Coolify client.
 func NewClient(cfg Config) (*Client, error) {
 	if cfg.BaseURL == "" {
-		return nil, errors.New("COOLIFY_URL not set")
+		return nil, log.E("coolify", "COOLIFY_URL not set", nil)
 	}
 	if cfg.APIToken == "" {
-		return nil, errors.New("COOLIFY_TOKEN not set")
+		return nil, log.E("coolify", "COOLIFY_TOKEN not set", nil)
 	}
 
 	// Initialize Python runtime
 	if err := python.Init(); err != nil {
-		return nil, fmt.Errorf("failed to initialize Python: %w", err)
+		return nil, log.E("coolify", "failed to initialize Python", err)
 	}
 
 	return &Client{
@@ -73,11 +74,11 @@ func (c *Client) Call(ctx context.Context, operationID string, params map[string
 	// Generate and run Python script
 	script, err := python.CoolifyScript(c.baseURL, c.apiToken, operationID, params)
 	if err != nil {
-		return nil, fmt.Errorf("failed to generate script: %w", err)
+		return nil, log.E("coolify", "failed to generate script", err)
 	}
 	output, err := python.RunScript(ctx, script)
 	if err != nil {
-		return nil, fmt.Errorf("API call %s failed: %w", operationID, err)
+		return nil, log.E("coolify", fmt.Sprintf("API call %s failed", operationID), err)
 	}
 
 	// Parse JSON result
@@ -88,7 +89,7 @@ func (c *Client) Call(ctx context.Context, operationID string, params map[string
 		if err2 := json.Unmarshal([]byte(output), &arrResult); err2 == nil {
 			return map[string]any{"result": arrResult}, nil
 		}
-		return nil, fmt.Errorf("failed to parse response: %w (output: %s)", err, output)
+		return nil, log.E("coolify", fmt.Sprintf("failed to parse response (output: %s)", output), err)
 	}
 
 	return result, nil

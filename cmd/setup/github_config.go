@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	coreio "forge.lthn.ai/core/go-io"
+	log "forge.lthn.ai/core/go-log"
 	"gopkg.in/yaml.v3"
 )
 
@@ -67,7 +68,7 @@ type SecurityConfig struct {
 func LoadGitHubConfig(path string) (*GitHubConfig, error) {
 	data, err := coreio.Local.Read(path)
 	if err != nil {
-		return nil, fmt.Errorf("failed to read config file: %w", err)
+		return nil, log.E("setup.github_config", "failed to read config file", err)
 	}
 
 	// Expand environment variables before parsing
@@ -75,7 +76,7 @@ func LoadGitHubConfig(path string) (*GitHubConfig, error) {
 
 	var config GitHubConfig
 	if err := yaml.Unmarshal([]byte(expanded), &config); err != nil {
-		return nil, fmt.Errorf("failed to parse config file: %w", err)
+		return nil, log.E("setup.github_config", "failed to parse config file", err)
 	}
 
 	// Set defaults
@@ -131,7 +132,7 @@ func FindGitHubConfig(registryDir, specifiedPath string) (string, error) {
 		if coreio.Local.IsFile(specifiedPath) {
 			return specifiedPath, nil
 		}
-		return "", fmt.Errorf("config file not found: %s", specifiedPath)
+		return "", log.E("setup.github_config", fmt.Sprintf("config file not found: %s", specifiedPath), nil)
 	}
 
 	// Search in common locations (using filepath.Join for OS-portable paths)
@@ -146,26 +147,26 @@ func FindGitHubConfig(registryDir, specifiedPath string) (string, error) {
 		}
 	}
 
-	return "", fmt.Errorf("github.yaml not found in %s/.core/ or %s/", registryDir, registryDir)
+	return "", log.E("setup.github_config", fmt.Sprintf("github.yaml not found in %s/.core/ or %s/", registryDir, registryDir), nil)
 }
 
 // Validate checks the configuration for errors.
 func (c *GitHubConfig) Validate() error {
 	if c.Version != 1 {
-		return fmt.Errorf("unsupported config version: %d (expected 1)", c.Version)
+		return log.E("setup.github_config", fmt.Sprintf("unsupported config version: %d (expected 1)", c.Version), nil)
 	}
 
 	// Validate labels
 	for i, label := range c.Labels {
 		if label.Name == "" {
-			return fmt.Errorf("label %d: name is required", i+1)
+			return log.E("setup.github_config", fmt.Sprintf("label %d: name is required", i+1), nil)
 		}
 		if label.Color == "" {
-			return fmt.Errorf("label %q: color is required", label.Name)
+			return log.E("setup.github_config", fmt.Sprintf("label %q: color is required", label.Name), nil)
 		}
 		// Validate color format (hex without #)
 		if !isValidHexColor(label.Color) {
-			return fmt.Errorf("label %q: invalid color %q (expected 6-digit hex without #)", label.Name, label.Color)
+			return log.E("setup.github_config", fmt.Sprintf("label %q: invalid color %q (expected 6-digit hex without #)", label.Name, label.Color), nil)
 		}
 	}
 
@@ -176,14 +177,14 @@ func (c *GitHubConfig) Validate() error {
 			continue
 		}
 		if len(wh.Events) == 0 {
-			return fmt.Errorf("webhook %q: at least one event is required", name)
+			return log.E("setup.github_config", fmt.Sprintf("webhook %q: at least one event is required", name), nil)
 		}
 	}
 
 	// Validate branch protection
 	for i, bp := range c.BranchProtection {
 		if bp.Branch == "" {
-			return fmt.Errorf("branch_protection %d: branch is required", i+1)
+			return log.E("setup.github_config", fmt.Sprintf("branch_protection %d: branch is required", i+1), nil)
 		}
 	}
 

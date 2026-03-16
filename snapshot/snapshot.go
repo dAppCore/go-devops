@@ -3,8 +3,9 @@ package snapshot
 
 import (
 	"encoding/json"
-	"errors"
 	"time"
+
+	log "forge.lthn.ai/core/go-log"
 
 	"forge.lthn.ai/core/go-scm/manifest"
 )
@@ -35,7 +36,7 @@ func Generate(m *manifest.Manifest, commit, tag string) ([]byte, error) {
 // GenerateAt creates a core.json snapshot with an explicit build timestamp.
 func GenerateAt(m *manifest.Manifest, commit, tag string, built time.Time) ([]byte, error) {
 	if m == nil {
-		return nil, errors.New("snapshot: manifest is nil")
+		return nil, log.E("snapshot", "manifest is nil", nil)
 	}
 
 	snap := Snapshot{

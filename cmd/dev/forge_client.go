@@ -1,13 +1,13 @@
 package dev
 
 import (
-	"fmt"
-	"os"
 	"path/filepath"
 	"strings"
 
 	"code.gitea.io/sdk/gitea"
 
+	coreio "forge.lthn.ai/core/go-io"
+	log "forge.lthn.ai/core/go-log"
 	"forge.lthn.ai/core/go-scm/forge"
 )
 
@@ -19,7 +19,7 @@ func forgeAPIClient() (*gitea.Client, error) {
 		return nil, err
 	}
 	if token == "" {
-		return nil, fmt.Errorf("no Forge API token configured (set FORGE_TOKEN or run: core forge config --token TOKEN)")
+		return nil, log.E("dev.forge", "no Forge API token configured (set FORGE_TOKEN or run: core forge config --token TOKEN)", nil)
 	}
 	return gitea.NewClient(forgeURL, gitea.SetToken(token))
 }
@@ -28,12 +28,12 @@ func forgeAPIClient() (*gitea.Client, error) {
 // Falls back to fallbackOrg/repoName if no forge.lthn.ai remote is found.
 func forgeRepoIdentity(repoPath, fallbackOrg, repoName string) (owner, repo string) {
 	configPath := filepath.Join(repoPath, ".git", "config")
-	content, err := os.ReadFile(configPath)
+	content, err := coreio.Local.Read(configPath)
 	if err != nil {
 		return fallbackOrg, repoName
 	}
 
-	for _, line := range strings.Split(string(content), "\n") {
+	for _, line := range strings.Split(content, "\n") {
 		line = strings.TrimSpace(line)
 		if !strings.HasPrefix(line, "url = ") {
 			continue

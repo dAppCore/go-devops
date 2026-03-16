@@ -17,6 +17,7 @@ import (
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-i18n"
 	coreio "forge.lthn.ai/core/go-io"
+	log "forge.lthn.ai/core/go-log"
 	"forge.lthn.ai/core/go-scm/repos"
 )
 
@@ -24,7 +25,7 @@ import (
 func runRegistrySetup(ctx context.Context, registryPath, only string, dryRun, all, runBuild bool) error {
 	reg, err := repos.LoadRegistry(coreio.Local, registryPath)
 	if err != nil {
-		return fmt.Errorf("failed to load registry: %w", err)
+		return log.E("setup.registry", "failed to load registry", err)
 	}
 
 	// Check workspace config for default_only if no filter specified
@@ -82,7 +83,7 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 	// Ensure base path exists
 	if !dryRun {
 		if err := coreio.Local.EnsureDir(basePath); err != nil {
-			return fmt.Errorf("failed to create packages directory: %w", err)
+			return log.E("setup.registry", "failed to create packages directory", err)
 		}
 	}
 
@@ -99,7 +100,7 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 	if useWizard {
 		selected, err := runPackageWizard(reg, typeFilter)
 		if err != nil {
-			return fmt.Errorf("wizard error: %w", err)
+			return log.E("setup.registry", "wizard error", err)
 		}
 
 		// Build set of selected repos
@@ -227,7 +228,7 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 		buildCmd.Stdout = os.Stdout
 		buildCmd.Stderr = os.Stderr
 		if err := buildCmd.Run(); err != nil {
-			return fmt.Errorf("%s: %w", i18n.T("i18n.fail.run", "build"), err)
+			return log.E("setup.registry", i18n.T("i18n.fail.run", "build"), err)
 		}
 	}
 
@@ -249,7 +250,7 @@ func gitClone(ctx context.Context, org, repo, path string) error {
 		// Only fall through to SSH if it's an auth error
 		if !strings.Contains(errStr, "Permission denied") &&
 			!strings.Contains(errStr, "could not read") {
-			return fmt.Errorf("%s", errStr)
+			return log.E("setup.registry", errStr, nil)
 		}
 	}
 
@@ -258,7 +259,7 @@ func gitClone(ctx context.Context, org, repo, path string) error {
 	cmd := exec.CommandContext(ctx, "git", "clone", url, path)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%s", strings.TrimSpace(string(output)))
+		return log.E("setup.registry", strings.TrimSpace(string(output)), nil)
 	}
 	return nil
 }

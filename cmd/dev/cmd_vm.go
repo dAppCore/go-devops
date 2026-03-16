@@ -2,7 +2,6 @@ package dev
 
 import (
 	"context"
-	"errors"
 	"os"
 	"time"
 
@@ -10,6 +9,7 @@ import (
 	"forge.lthn.ai/core/go-container/devenv"
 	"forge.lthn.ai/core/go-i18n"
 	"forge.lthn.ai/core/go-io"
+	log "forge.lthn.ai/core/go-log"
 )
 
 // addVMCommands adds the dev environment VM commands to the dev parent command.
@@ -119,7 +119,7 @@ func runVMBoot(memory, cpus int, fresh bool) error {
 	}
 
 	if !d.IsInstalled() {
-		return errors.New(i18n.T("cmd.dev.vm.not_installed"))
+		return log.E("dev.vm", i18n.T("cmd.dev.vm.not_installed"), nil)
 	}
 
 	opts := devenv.DefaultBootOptions()

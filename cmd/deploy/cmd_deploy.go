@@ -9,6 +9,7 @@ import (
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-devops/deploy/coolify"
 	"forge.lthn.ai/core/go-i18n"
+	log "forge.lthn.ai/core/go-log"
 )
 
 var (
@@ -266,7 +267,7 @@ func runCall(cmd *cli.Command, args []string) error {
 	var params map[string]any
 	if len(args) > 1 {
 		if err := json.Unmarshal([]byte(args[1]), &params); err != nil {
-			return fmt.Errorf("invalid JSON params: %w", err)
+			return log.E("deploy", "invalid JSON params", err)
 		}
 	}
 

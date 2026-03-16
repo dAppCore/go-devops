@@ -15,6 +15,7 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
+	log "forge.lthn.ai/core/go-log"
 )
 
 // GitHubSecurityStatus represents the security settings status of a repository.
@@ -46,7 +47,7 @@ type SecurityFeature struct {
 func GetSecuritySettings(repoFullName string) (*GitHubSecurityStatus, error) {
 	parts := strings.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid repo format: %s", repoFullName)
+		return nil, log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
 	status := &GitHubSecurityStatus{}
@@ -102,7 +103,7 @@ func GetSecuritySettings(repoFullName string) (*GitHubSecurityStatus, error) {
 func EnableDependabotAlerts(repoFullName string) error {
 	parts := strings.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid repo format: %s", repoFullName)
+		return log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
 	endpoint := fmt.Sprintf("repos/%s/%s/vulnerability-alerts", parts[0], parts[1])
@@ -118,7 +119,7 @@ func EnableDependabotAlerts(repoFullName string) error {
 func EnableDependabotSecurityUpdates(repoFullName string) error {
 	parts := strings.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid repo format: %s", repoFullName)
+		return log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
 	endpoint := fmt.Sprintf("repos/%s/%s/automated-security-fixes", parts[0], parts[1])
@@ -134,7 +135,7 @@ func EnableDependabotSecurityUpdates(repoFullName string) error {
 func DisableDependabotSecurityUpdates(repoFullName string) error {
 	parts := strings.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid repo format: %s", repoFullName)
+		return log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
 	endpoint := fmt.Sprintf("repos/%s/%s/automated-security-fixes", parts[0], parts[1])
@@ -150,7 +151,7 @@ func DisableDependabotSecurityUpdates(repoFullName string) error {
 func UpdateSecurityAndAnalysis(repoFullName string, secretScanning, pushProtection bool) error {
 	parts := strings.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid repo format: %s", repoFullName)
+		return log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
 	// Build the payload

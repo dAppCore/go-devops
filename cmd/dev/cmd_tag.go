@@ -11,6 +11,7 @@ import (
 
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-i18n"
+	log "forge.lthn.ai/core/go-log"
 )
 
 // Tag command flags
@@ -77,7 +78,7 @@ func runTag(registryPath string, dryRun, force bool) error {
 
 		next, err := bumpPatch(current)
 		if err != nil {
-			return fmt.Errorf("%s: failed to bump version %s: %w", repo.Name, current, err)
+			return log.E("dev.tag", fmt.Sprintf("%s: failed to bump version %s", repo.Name, current), err)
 		}
 
 		hasGoMod := fileExists(filepath.Join(repo.Path, "go.mod"))
@@ -207,11 +208,11 @@ func bumpPatch(tag string) (string, error) {
 	v := strings.TrimPrefix(tag, "v")
 	parts := strings.Split(v, ".")
 	if len(parts) != 3 {
-		return "", fmt.Errorf("invalid semver: %s", tag)
+		return "", log.E("dev.tag", fmt.Sprintf("invalid semver: %s", tag), nil)
 	}
 	patch, err := strconv.Atoi(parts[2])
 	if err != nil {
-		return "", fmt.Errorf("invalid patch version: %s", parts[2])
+		return "", log.E("dev.tag", fmt.Sprintf("invalid patch version: %s", parts[2]), nil)
 	}
 	return fmt.Sprintf("v%s.%s.%d", parts[0], parts[1], patch+1), nil
 }
@@ -223,7 +224,7 @@ func goGetUpdate(ctx context.Context, repoPath string) error {
 	cmd.Env = append(os.Environ(), "GOWORK=off")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%s: %w", strings.TrimSpace(string(out)), err)
+		return log.E("dev.tag", strings.TrimSpace(string(out)), err)
 	}
 	return nil
 }
@@ -235,7 +236,7 @@ func goModTidy(ctx context.Context, repoPath string) error {
 	cmd.Env = append(os.Environ(), "GOWORK=off")
 	out, err := cmd.CombinedOutput()
 	if err != nil {
-		return fmt.Errorf("%s: %w", strings.TrimSpace(string(out)), err)
+		return log.E("dev.tag", strings.TrimSpace(string(out)), err)
 	}
 	return nil
 }
@@ -261,7 +262,7 @@ func commitGoMod(ctx context.Context, repoPath, version string) error {
 	addCmd := exec.CommandContext(ctx, "git", "add", "go.mod", "go.sum")
 	addCmd.Dir = repoPath
 	if out, err := addCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git add: %s: %w", strings.TrimSpace(string(out)), err)
+		return log.E("dev.tag", "git add: "+strings.TrimSpace(string(out)), err)
 	}
 
 	// Check if anything is actually staged
@@ -276,7 +277,7 @@ func commitGoMod(ctx context.Context, repoPath, version string) error {
 	commitCmd := exec.CommandContext(ctx, "git", "commit", "-m", msg)
 	commitCmd.Dir = repoPath
 	if out, err := commitCmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("git commit: %s: %w", strings.TrimSpace(string(out)), err)
+		return log.E("dev.tag", "git commit: "+strings.TrimSpace(string(out)), err)
 	}
 	return nil
 }
@@ -286,7 +287,7 @@ func createTag(ctx context.Context, repoPath, tag string) error {
 	cmd := exec.CommandContext(ctx, "git", "tag", "-a", tag, "-m", tag)
 	cmd.Dir = repoPath
 	if out, err := cmd.CombinedOutput(); err != nil {
-		return fmt.Errorf("%s: %w", strings.TrimSpace(string(out)), err)
+		return log.E("dev.tag", strings.TrimSpace(string(out)), err)
 	}
 	return nil
 }

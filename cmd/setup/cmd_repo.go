@@ -14,6 +14,7 @@ import (
 
 	"forge.lthn.ai/core/go-i18n"
 	coreio "forge.lthn.ai/core/go-io"
+	log "forge.lthn.ai/core/go-log"
 )
 
 // runRepoSetup sets up the current repository with .core/ configuration.
@@ -28,7 +29,7 @@ func runRepoSetup(repoPath string, dryRun bool) error {
 	coreDir := filepath.Join(repoPath, ".core")
 	if !dryRun {
 		if err := coreio.Local.EnsureDir(coreDir); err != nil {
-			return fmt.Errorf("failed to create .core directory: %w", err)
+			return log.E("setup.repo", "failed to create .core directory", err)
 		}
 	}
 
@@ -55,7 +56,7 @@ func runRepoSetup(repoPath string, dryRun bool) error {
 	for filename, content := range configs {
 		configPath := filepath.Join(coreDir, filename)
 		if err := coreio.Local.Write(configPath, content); err != nil {
-			return fmt.Errorf("failed to write %s: %w", filename, err)
+			return log.E("setup.repo", fmt.Sprintf("failed to write %s", filename), err)
 		}
 		fmt.Printf("%s %s %s\n", successStyle.Render(">>"), i18n.T("cmd.setup.repo.created"), configPath)
 	}

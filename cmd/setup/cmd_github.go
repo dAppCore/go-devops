@@ -18,13 +18,13 @@
 package setup
 
 import (
-	"errors"
 	"os/exec"
 	"path/filepath"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-i18n"
 	coreio "forge.lthn.ai/core/go-io"
+	log "forge.lthn.ai/core/go-log"
 	"forge.lthn.ai/core/go-scm/repos"
 )
 
@@ -69,12 +69,12 @@ func addGitHubCommand(parent *cli.Command) {
 func runGitHubSetup() error {
 	// Check gh is available
 	if _, err := exec.LookPath("gh"); err != nil {
-		return errors.New(i18n.T("error.gh_not_found"))
+		return log.E("setup.github", i18n.T("error.gh_not_found"), nil)
 	}
 
 	// Check gh is authenticated
 	if !cli.GhAuthenticated() {
-		return errors.New(i18n.T("cmd.setup.github.error.not_authenticated"))
+		return log.E("setup.github", i18n.T("cmd.setup.github.error.not_authenticated"), nil)
 	}
 
 	// Find registry
@@ -118,14 +118,14 @@ func runGitHubSetup() error {
 
 	// Reject conflicting flags
 	if ghRepo != "" && ghAll {
-		return errors.New(i18n.T("cmd.setup.github.error.conflicting_flags"))
+		return log.E("setup.github", i18n.T("cmd.setup.github.error.conflicting_flags"), nil)
 	}
 
 	if ghRepo != "" {
 		// Single repo mode
 		repo, ok := reg.Get(ghRepo)
 		if !ok {
-			return errors.New(i18n.T("error.repo_not_found", map[string]any{"Name": ghRepo}))
+			return log.E("setup.github", i18n.T("error.repo_not_found", map[string]any{"Name": ghRepo}), nil)
 		}
 		reposToProcess = []*repos.Repo{repo}
 	} else if ghAll {

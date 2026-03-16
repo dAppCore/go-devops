@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
+	log "forge.lthn.ai/core/go-log"
 )
 
 // GitHubBranchProtection represents branch protection rules from the GitHub API.
@@ -68,7 +69,7 @@ type RequiredConversationResolution struct {
 func GetBranchProtection(repoFullName, branch string) (*GitHubBranchProtection, error) {
 	parts := strings.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid repo format: %s", repoFullName)
+		return nil, log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
 	endpoint := fmt.Sprintf("repos/%s/%s/branches/%s/protection", parts[0], parts[1], branch)
@@ -101,7 +102,7 @@ func GetBranchProtection(repoFullName, branch string) (*GitHubBranchProtection, 
 func SetBranchProtection(repoFullName, branch string, config BranchProtectionConfig) error {
 	parts := strings.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid repo format: %s", repoFullName)
+		return log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
 	// Build the protection payload

@@ -13,6 +13,7 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
+	log "forge.lthn.ai/core/go-log"
 )
 
 // GitHubWebhook represents a webhook as returned by the GitHub API.
@@ -35,7 +36,7 @@ type GitHubWebhookConfig struct {
 func ListWebhooks(repoFullName string) ([]GitHubWebhook, error) {
 	parts := strings.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return nil, fmt.Errorf("invalid repo format: %s", repoFullName)
+		return nil, log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
 	endpoint := fmt.Sprintf("repos/%s/%s/hooks", parts[0], parts[1])
@@ -65,7 +66,7 @@ func ListWebhooks(repoFullName string) ([]GitHubWebhook, error) {
 func CreateWebhook(repoFullName string, name string, config WebhookConfig) error {
 	parts := strings.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid repo format: %s", repoFullName)
+		return log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
 	// Build the webhook payload
@@ -108,7 +109,7 @@ func CreateWebhook(repoFullName string, name string, config WebhookConfig) error
 func UpdateWebhook(repoFullName string, hookID int, config WebhookConfig) error {
 	parts := strings.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return fmt.Errorf("invalid repo format: %s", repoFullName)
+		return log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
 	payload := map[string]any{

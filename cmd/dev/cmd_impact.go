@@ -1,12 +1,12 @@
 package dev
 
 import (
-	"errors"
 	"slices"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
 	"forge.lthn.ai/core/go-i18n"
 	"forge.lthn.ai/core/go-io"
+	log "forge.lthn.ai/core/go-log"
 	"forge.lthn.ai/core/go-scm/repos"
 )
 
@@ -55,14 +55,14 @@ func runImpact(registryPath string, repoName string) error {
 				return cli.Wrap(err, "failed to load registry")
 			}
 		} else {
-			return errors.New(i18n.T("cmd.dev.impact.requires_registry"))
+			return log.E("dev.impact", i18n.T("cmd.dev.impact.requires_registry"), nil)
 		}
 	}
 
 	// Check repo exists
 	repo, exists := reg.Get(repoName)
 	if !exists {
-		return errors.New(i18n.T("error.repo_not_found", map[string]any{"Name": repoName}))
+		return log.E("dev.impact", i18n.T("error.repo_not_found", map[string]any{"Name": repoName}), nil)
 	}
 
 	// Build reverse dependency graph
