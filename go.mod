@@ -4,14 +4,14 @@ go 1.26.0
 
 require (
 	code.gitea.io/sdk/gitea v0.23.2
-	forge.lthn.ai/core/agent v0.3.2
-	forge.lthn.ai/core/cli v0.3.5
-	forge.lthn.ai/core/go v0.3.1
-	forge.lthn.ai/core/go-container v0.1.5
-	forge.lthn.ai/core/go-i18n v0.1.6
-	forge.lthn.ai/core/go-io v0.1.5
+	forge.lthn.ai/core/agent v0.3.3
+	forge.lthn.ai/core/cli v0.3.6
+	forge.lthn.ai/core/go v0.3.2
+	forge.lthn.ai/core/go-container v0.1.6
+	forge.lthn.ai/core/go-i18n v0.1.7
+	forge.lthn.ai/core/go-io v0.1.6
 	forge.lthn.ai/core/go-log v0.0.4
-	forge.lthn.ai/core/go-scm v0.3.4
+	forge.lthn.ai/core/go-scm v0.3.5
 	github.com/kluctl/go-embed-python v0.0.0-3.13.1-20241219-1
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/term v0.41.0
@@ -21,9 +21,9 @@ require (
 
 require (
 	codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2 v2.2.0 // indirect
-	forge.lthn.ai/core/config v0.1.6 // indirect
-	forge.lthn.ai/core/go-inference v0.1.5 // indirect
-	forge.lthn.ai/core/go-store v0.1.8 // indirect
+	forge.lthn.ai/core/config v0.1.7 // indirect
+	forge.lthn.ai/core/go-inference v0.1.6 // indirect
+	forge.lthn.ai/core/go-store v0.1.9 // indirect
 	github.com/42wim/httpsig v1.2.3 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
@@ -77,5 +77,5 @@ require (
 	modernc.org/libc v1.70.0 // indirect
 	modernc.org/mathutil v1.7.1 // indirect
 	modernc.org/memory v1.11.0 // indirect
-	modernc.org/sqlite v1.46.2 // indirect
+	modernc.org/sqlite v1.47.0 // indirect
 )
