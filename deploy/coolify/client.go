@@ -3,7 +3,6 @@ package coolify
 import (
 	"context"
 	"encoding/json"
-	"fmt"
 	"os"
 	"sync"
 
@@ -78,7 +77,7 @@ func (c *Client) Call(ctx context.Context, operationID string, params map[string
 	}
 	output, err := python.RunScript(ctx, script)
 	if err != nil {
-		return nil, log.E("coolify", fmt.Sprintf("API call %s failed", operationID), err)
+		return nil, log.E("coolify", "API call "+operationID+" failed", err)
 	}
 
 	// Parse JSON result
@@ -89,7 +88,7 @@ func (c *Client) Call(ctx context.Context, operationID string, params map[string
 		if err2 := json.Unmarshal([]byte(output), &arrResult); err2 == nil {
 			return map[string]any{"result": arrResult}, nil
 		}
-		return nil, log.E("coolify", fmt.Sprintf("failed to parse response (output: %s)", output), err)
+		return nil, log.E("coolify", "failed to parse response (output: "+output+")", err)
 	}
 
 	return result, nil

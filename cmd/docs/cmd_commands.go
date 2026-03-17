@@ -10,11 +10,12 @@ package docs
 
 import (
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-devops/locales"
+
+	_ "forge.lthn.ai/core/go-devops/locales"
 )
 
 func init() {
-	cli.RegisterCommands(AddDocsCommands, locales.FS)
+	cli.RegisterCommands(AddDocsCommands)
 }
 
 // AddDocsCommands registers the 'docs' command and all subcommands.

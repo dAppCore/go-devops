@@ -21,15 +21,16 @@ Most implementation code (ansible engine, build system, infra clients, release p
 
 ### Package Layout
 
-- **`cmd/dev/`** — Multi-repo developer commands registered under `core dev`. The main CLI surface (~4,400 LOC across 21 files).
+- **`cmd/dev/`** — Multi-repo developer commands registered under `core dev`. The main CLI surface (~4,700 LOC across 21 files).
 - **`cmd/deploy/`** — `core deploy servers` — Coolify PaaS server/app listing.
 - **`cmd/docs/`** — `core docs sync` — Documentation sync across the multi-repo workspace.
 - **`cmd/setup/`** — `core setup repo` — Generate `.core` configuration for a project.
-- **`cmd/gitcmd/`** — Git helper commands.
+- **`cmd/gitcmd/`** — Git helper commands (mirrors dev commands under `core git`).
 - **`cmd/vanity-import/`** — Vanity import path server (the default build target in `.core/build.yaml`).
-- **`cmd/community/`** — Community-related commands.
+- **`cmd/community/`** — Community landing page assets.
 - **`deploy/coolify/`** — Coolify PaaS API HTTP client.
 - **`deploy/python/`** — Embedded Python 3.13 runtime wrapper (adds ~50 MB to binary).
+- **`locales/`** — Embedded i18n translation files (en.json).
 - **`snapshot/`** — `core.json` release manifest generation.
 - **`playbooks/`** — Ansible YAML playbooks for production infrastructure (Galera, Redis). Executed by the native Go Ansible engine, not `ansible-playbook`.
 
@@ -81,7 +82,7 @@ Configuration lives in `.core/build.yaml` (targets, ldflags) and `.core/release.
 - **Co-Author**: `Co-Authored-By: Virgil <virgil@lethean.io>`
 - **Licence**: EUPL-1.2
 - **Imports**: stdlib → forge.lthn.ai → third-party, each group separated by blank line
-- **Errors**: `core.E()` for contextual errors, or `fmt.Errorf("%w", err)` for wrapping
+- **Errors**: `log.E(op, msg, err)` from `go-log` for all contextual errors (never `fmt.Errorf` or `errors.New`)
 
 ## Forge
 

@@ -63,9 +63,9 @@ func RunScript(ctx context.Context, code string, args ...string) (string, error)
 	// Run with context
 	output, err := cmd.Output()
 	if err != nil {
-		// Try to get stderr for better error message
+		// Include stderr in the error message for better diagnostics
 		if exitErr, ok := err.(*exec.ExitError); ok {
-			return "", log.E("python", "run script", fmt.Errorf("%w: %s", err, string(exitErr.Stderr)))
+			return "", log.E("python", "run script: "+string(exitErr.Stderr), err)
 		}
 		return "", log.E("python", "run script", err)
 	}
@@ -87,7 +87,7 @@ func RunModule(ctx context.Context, module string, args ...string) (string, erro
 
 	output, err := cmd.Output()
 	if err != nil {
-		return "", log.E("python", fmt.Sprintf("run module %s", module), err)
+		return "", log.E("python", "run module "+module, err)
 	}
 
 	return string(output), nil
