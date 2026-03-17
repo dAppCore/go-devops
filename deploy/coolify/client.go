@@ -89,7 +89,11 @@ func (c *Client) Call(ctx context.Context, operationID string, params map[string
 		if err2 := json.Unmarshal([]byte(output), &arrResult); err2 == nil {
 			return map[string]any{"result": arrResult}, nil
 		}
-		return nil, log.E("coolify", fmt.Sprintf("failed to parse response (output: %s)", output), err)
+		truncated := output
+		if len(truncated) > 100 {
+			truncated = truncated[:100] + "..."
+		}
+		return nil, log.E("coolify", fmt.Sprintf("failed to parse response (output: %s)", truncated), err)
 	}
 
 	return result, nil

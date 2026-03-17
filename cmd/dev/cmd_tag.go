@@ -188,6 +188,10 @@ func runTag(registryPath string, dryRun, force bool) error {
 	}
 	cli.Blank()
 
+	if failed > 0 {
+		return log.E("dev.tag", fmt.Sprintf("%d of %d repos failed to tag", failed, len(plans)), nil)
+	}
+
 	return nil
 }
 
