@@ -2,11 +2,12 @@ package deploy
 
 import (
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-devops/locales"
+
+	_ "forge.lthn.ai/core/go-devops/locales"
 )
 
 func init() {
-	cli.RegisterCommands(AddDeployCommands, locales.FS)
+	cli.RegisterCommands(AddDeployCommands)
 }
 
 // AddDeployCommands registers the 'deploy' command and all subcommands.
