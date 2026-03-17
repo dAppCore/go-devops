@@ -21,9 +21,7 @@ var (
 )
 
 var docsSyncCmd = &cli.Command{
-	Use:   "sync",
-	Short: i18n.T("cmd.docs.sync.short"),
-	Long:  i18n.T("cmd.docs.sync.long"),
+	Use: "sync",
 	RunE: func(cmd *cli.Command, args []string) error {
 		return runDocsSync(docsSyncRegistryPath, docsSyncOutputDir, docsSyncDryRun, docsSyncTarget)
 	},

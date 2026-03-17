@@ -20,9 +20,12 @@ var (
 
 // Cmd is the root deploy command.
 var Cmd = &cli.Command{
-	Use:   "deploy",
-	Short: i18n.T("cmd.deploy.short"),
-	Long:  i18n.T("cmd.deploy.long"),
+	Use: "deploy",
+}
+
+func setDeployI18n() {
+	Cmd.Short = i18n.T("cmd.deploy.short")
+	Cmd.Long = i18n.T("cmd.deploy.long")
 }
 
 var serversCmd = &cli.Command{

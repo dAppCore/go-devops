@@ -33,9 +33,7 @@ var (
 )
 
 var setupCmd = &cli.Command{
-	Use:   "setup",
-	Short: i18n.T("cmd.setup.short"),
-	Long:  i18n.T("cmd.setup.long"),
+	Use: "setup",
 	RunE: func(cmd *cli.Command, args []string) error {
 		return runSetupOrchestrator(registryPath, only, dryRun, all, name, build)
 	},

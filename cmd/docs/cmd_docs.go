@@ -19,9 +19,16 @@ var (
 )
 
 var docsCmd = &cli.Command{
-	Use:   "docs",
-	Short: i18n.T("cmd.docs.short"),
-	Long:  i18n.T("cmd.docs.long"),
+	Use: "docs",
+}
+
+func setDocsI18n() {
+	docsCmd.Short = i18n.T("cmd.docs.short")
+	docsCmd.Long = i18n.T("cmd.docs.long")
+	docsListCmd.Short = i18n.T("cmd.docs.list.short")
+	docsListCmd.Long = i18n.T("cmd.docs.list.long")
+	docsSyncCmd.Short = i18n.T("cmd.docs.sync.short")
+	docsSyncCmd.Long = i18n.T("cmd.docs.sync.long")
 }
 
 func init() {

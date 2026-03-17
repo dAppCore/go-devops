@@ -25,13 +25,17 @@ package setup
 
 import (
 	"forge.lthn.ai/core/cli/pkg/cli"
+	"forge.lthn.ai/core/go-devops/locales"
+	"forge.lthn.ai/core/go-i18n"
 )
 
 func init() {
-	cli.RegisterCommands(AddSetupCommands)
+	cli.RegisterCommands(AddSetupCommands, locales.FS)
 }
 
 // AddSetupCommands registers the 'setup' command and all subcommands.
 func AddSetupCommands(root *cli.Command) {
+	setupCmd.Short = i18n.T("cmd.setup.short")
+	setupCmd.Long = i18n.T("cmd.setup.long")
 	AddSetupCommand(root)
 }

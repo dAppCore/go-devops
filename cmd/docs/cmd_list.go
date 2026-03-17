@@ -11,9 +11,7 @@ import (
 var docsListRegistryPath string
 
 var docsListCmd = &cli.Command{
-	Use:   "list",
-	Short: i18n.T("cmd.docs.list.short"),
-	Long:  i18n.T("cmd.docs.list.long"),
+	Use: "list",
 	RunE: func(cmd *cli.Command, args []string) error {
 		return runDocsList(docsListRegistryPath)
 	},

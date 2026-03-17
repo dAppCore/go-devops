@@ -8,13 +8,17 @@
 // to a central location for unified documentation builds.
 package docs
 
-import "forge.lthn.ai/core/cli/pkg/cli"
+import (
+	"forge.lthn.ai/core/cli/pkg/cli"
+	"forge.lthn.ai/core/go-devops/locales"
+)
 
 func init() {
-	cli.RegisterCommands(AddDocsCommands)
+	cli.RegisterCommands(AddDocsCommands, locales.FS)
 }
 
 // AddDocsCommands registers the 'docs' command and all subcommands.
 func AddDocsCommands(root *cli.Command) {
+	setDocsI18n()
 	root.AddCommand(docsCmd)
 }
