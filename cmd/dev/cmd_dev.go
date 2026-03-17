@@ -39,9 +39,7 @@ import (
 )
 
 func init() {
-	// Load go-devops translations (cmd.dev.*, cmd.deploy.*, cmd.docs.*, etc.)
-	i18n.LoadFS(locales.FS, ".")
-	cli.RegisterCommands(AddDevCommands)
+	cli.RegisterCommands(AddDevCommands, locales.FS)
 }
 
 // Style aliases from shared package
