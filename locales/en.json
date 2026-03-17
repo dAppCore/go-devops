@@ -1,0 +1,493 @@
+{
+  "cmd": {
+    "deploy": {
+      "short": "Manage deployments via Coolify",
+      "long": "Manage deployments, servers, applications and services via the Coolify API."
+    },
+    "dev": {
+      "short": "Multi-repo development workflows",
+      "long": "Development workflow commands for managing multiple repositories.\n\nIncludes git operations, forge integration, CI status, and dev environment management.",
+      "api": {
+        "short": "API synchronisation tools"
+      },
+      "health": {
+        "short": "Quick health check across all repos",
+        "long": "Show a one-line summary of repository health: total repos, dirty count, push/pull status and errors.",
+        "repos": "repos",
+        "to_push": "to push",
+        "to_pull": "to pull",
+        "dirty_label": "Dirty:",
+        "ahead_label": "Ahead:",
+        "behind_label": "Behind:",
+        "errors": "errors",
+        "errors_label": "Errors:",
+        "more": "(+{{.Count}} more)",
+        "flag": {
+          "verbose": "Show per-repo details"
+        }
+      },
+      "work": {
+        "short": "Combined status, commit and push workflow",
+        "long": "Show status table for all repos, optionally commit dirty repos and push unpushed commits in a single workflow.",
+        "flag": {
+          "status": "Show status table only (no commit or push)",
+          "commit": "Auto-commit dirty repos before pushing"
+        },
+        "table_modified": "Modified",
+        "table_untracked": "Untracked",
+        "table_staged": "Staged",
+        "table_ahead": "Ahead",
+        "all_up_to_date": "All repos are up to date.",
+        "use_commit_flag": "Tip: use --commit to auto-commit dirty repos",
+        "error_prefix": "error:"
+      },
+      "commit": {
+        "short": "Claude-assisted commit for dirty repos",
+        "long": "Generate commit messages with Claude for repositories that have uncommitted changes.\n\nRuns in single-repo mode when inside a git repo, or multi-repo mode with a registry.",
+        "flag": {
+          "all": "Commit all dirty repos without prompting"
+        },
+        "committing": "Committing..."
+      },
+      "push": {
+        "short": "Push repos with unpushed commits",
+        "long": "Push all repositories that have commits ahead of remote.\n\nHandles diverged branches by offering to pull and retry.",
+        "flag": {
+          "force": "Push without confirmation"
+        },
+        "confirm": "Push?",
+        "confirm_push": "Push {{.Commits}} commit(s) across {{.Repos}} repo(s)?",
+        "all_up_to_date": "All repos are up to date.",
+        "done_pushed": "{{.Count}} pushed",
+        "diverged": "branch has diverged",
+        "diverged_help": "Some repos have diverged from remote. This usually means someone pushed while you were working.",
+        "pull_and_retry": "Pull and retry push?",
+        "uncommitted_changes_commit": "Uncommitted changes found. Commit first?"
+      },
+      "pull": {
+        "short": "Pull repos that are behind remote",
+        "long": "Pull latest changes for repositories that are behind their remote tracking branch.",
+        "flag": {
+          "all": "Pull all repos, not just those behind"
+        },
+        "pulling": "pulling",
+        "pulling_repos": "Pulling {{.Count}} repo(s)...",
+        "all_up_to_date": "All repos are up to date.",
+        "done_pulled": "{{.Count}} pulled",
+        "repos_behind": "{{.Count}} repo(s) behind remote",
+        "commits_behind": "{{.Count}} commit(s) behind"
+      },
+      "tag": {
+        "short": "Tag and push all repos in dependency order",
+        "long": "Bump patch version, update Go dependencies, tag and push all repos in topological order.",
+        "flag": {
+          "dry_run": "Preview the tag plan without making changes",
+          "force": "Tag without confirmation"
+        }
+      },
+      "impact": {
+        "short": "Analyse dependency impact of a repo",
+        "long": "Show which repositories are affected when a given repo changes, including direct and transitive dependents.",
+        "analysis_for": "Impact analysis for",
+        "direct_dependents": "{{.Count}} direct dependent(s)",
+        "transitive_dependents": "{{.Count}} transitive dependent(s)",
+        "no_dependents": "{{.Name}} has no dependents",
+        "changes_affect": "Changes to {{.Repo}} affect {{.Affected}} of {{.Total}} repos",
+        "requires_registry": "Impact analysis requires a repos.yaml registry"
+      },
+      "issues": {
+        "short": "List open issues across repos",
+        "long": "Fetch and display open issues from the Forge API across all registered repositories.",
+        "flag": {
+          "assignee": "Filter by assignee username",
+          "limit": "Maximum issues per repo"
+        },
+        "open_issues": "{{.Count}} open issue(s)",
+        "no_issues": "No open issues found."
+      },
+      "reviews": {
+        "short": "List pull requests needing review",
+        "long": "Show open pull requests with review status across all registered repositories.",
+        "flag": {
+          "all": "Include draft PRs",
+          "author": "Filter by PR author"
+        },
+        "open_prs": "{{.Count}} open PR(s)",
+        "no_prs": "No open pull requests found.",
+        "approved": "{{.Count}} approved",
+        "changes_requested": "{{.Count}} changes requested",
+        "draft": "[draft]",
+        "status_approved": "approved",
+        "status_changes": "changes requested",
+        "status_pending": "pending review"
+      },
+      "ci": {
+        "short": "Check CI workflow status",
+        "long": "Show CI/CD pipeline status for all repos, with pass/fail counts and optional branch filtering.",
+        "flag": {
+          "branch": "Branch to check (default: main)",
+          "failed": "Show only failed workflows"
+        },
+        "passing": "{{.Count}} passing",
+        "failing": "{{.Count}} failing",
+        "repos_checked": "{{.Count}} repos checked",
+        "no_ci": "{{.Count}} no CI"
+      },
+      "apply": {
+        "short": "Run a command across repos",
+        "long": "Execute a shell command or script in every repo directory, optionally committing and pushing changes.\n\nDesigned for safe batch operations by AI agents.",
+        "action": "Action",
+        "cancelled": "Cancelled.",
+        "confirm": "Proceed?",
+        "dry_run_mode": "[dry-run] No changes will be made",
+        "no_changes": "no changes",
+        "summary": "Summary",
+        "targets": "Targets",
+        "warning": "This will run the command in each repo directory.",
+        "flag": {
+          "command": "Shell command to run in each repo",
+          "script": "Script file to run in each repo",
+          "repos": "Comma-separated list of repo names to target",
+          "commit": "Commit changes after running",
+          "message": "Commit message (required with --commit)",
+          "push": "Push after committing",
+          "co_author": "Co-author for commits",
+          "dry_run": "Preview without making changes",
+          "yes": "Skip confirmation prompt",
+          "continue": "Continue on error instead of stopping"
+        },
+        "error": {
+          "no_command": "Either --command or --script is required",
+          "both_command_script": "Cannot use both --command and --script",
+          "no_repos": "No target repos found",
+          "command_failed": "Command failed — stopping (use --continue to skip failures)",
+          "commit_needs_message": "--commit requires --message"
+        }
+      },
+      "file_sync": {
+        "short": "Sync a file or directory to repos",
+        "long": "Copy a file or directory to matching repos, optionally committing and pushing the changes.\n\nDesigned for safe file distribution by AI agents.",
+        "source": "Source",
+        "targets": "Targets",
+        "dry_run_mode": "[dry-run] No changes will be made",
+        "no_changes": "no changes",
+        "summary": "Summary",
+        "flag": {
+          "to": "Target repo pattern (e.g. core-*)",
+          "message": "Commit message (omit to leave uncommitted)",
+          "push": "Push after committing",
+          "co_author": "Co-author for commits",
+          "dry_run": "Preview without making changes"
+        },
+        "error": {
+          "source_not_found": "Source not found: {{.Path}}",
+          "no_targets": "No target repos matched the pattern"
+        }
+      },
+      "sync": {
+        "short": "Synchronise public API surfaces",
+        "long": "Scan internal service packages and regenerate public API wrappers to keep them in sync."
+      },
+      "workflow": {
+        "short": "Manage CI workflow files",
+        "long": "List and synchronise CI/CD workflow files across all registered repositories.",
+        "no_workflows": "No workflow files found in any repo.",
+        "synced": "synced",
+        "up_to_date": "up to date",
+        "would_sync": "would sync",
+        "dry_run_mode": "[dry-run] No changes will be made",
+        "run_without_dry_run": "Run without --dry-run to apply changes.",
+        "template_not_found": "Template workflow not found: {{.File}}",
+        "read_template_error": "Failed to read template workflow",
+        "failed_count": "{{.Count}} failed",
+        "skipped_count": "{{.Count}} skipped",
+        "synced_count": "{{.Count}} synced",
+        "would_sync_count": "{{.Count}} would sync",
+        "header": {
+          "repo": "Repo"
+        },
+        "list": {
+          "short": "Show workflow matrix across repos",
+          "long": "Display a table showing which CI/CD workflow files exist in each repository."
+        },
+        "sync": {
+          "short": "Copy a workflow template to all repos",
+          "long": "Synchronise a workflow template file into every registered repository's .github/workflows/ directory.",
+          "flag": {
+            "dry_run": "Preview sync without writing files"
+          }
+        }
+      },
+      "scanning_label": "Scanning...",
+      "no_git_repos": "No git repositories found.",
+      "no_changes": "No changes to commit.",
+      "repos_with_changes": "{{.Count}} repo(s) with changes",
+      "modified": "{{.Count}} modified",
+      "untracked": "{{.Count}} untracked",
+      "staged": "{{.Count}} staged",
+      "committed": "committed",
+      "committing": "Committing",
+      "confirm_claude_commit": "Commit with Claude?",
+      "done_succeeded": "{{.Count}} succeeded",
+      "status": {
+        "clean": "clean"
+      },
+      "vm": {
+        "boot": {
+          "short": "Start the dev environment VM",
+          "long": "Boot the Parallels dev environment virtual machine with configurable memory and CPU.",
+          "flag": {
+            "memory": "Memory in MB (default: auto)",
+            "cpus": "Number of CPUs (default: auto)",
+            "fresh": "Discard existing state and boot fresh"
+          }
+        },
+        "install": {
+          "short": "Download the dev environment image",
+          "long": "Download and install the Parallels dev environment VM image."
+        },
+        "serve": {
+          "short": "Mount project and start dev server",
+          "long": "Mount the current project directory into the VM and start the development server.",
+          "flag": {
+            "port": "Port to expose (default: auto)",
+            "path": "Project path to mount"
+          }
+        },
+        "shell": {
+          "short": "Open a shell in the dev VM",
+          "long": "Open an interactive shell session inside the running dev environment VM.",
+          "flag": {
+            "console": "Use serial console instead of SSH"
+          }
+        },
+        "stop": {
+          "short": "Stop the dev environment VM",
+          "long": "Gracefully shut down the running Parallels dev environment VM."
+        },
+        "update": {
+          "short": "Check for and apply VM updates",
+          "long": "Check if a newer dev environment image is available and optionally download it.",
+          "flag": {
+            "apply": "Download and apply the update"
+          }
+        },
+        "status": {
+          "short": "Check dev VM status",
+          "long": "Show installation and runtime status of the Parallels dev environment VM."
+        },
+        "claude": {
+          "short": "Start sandboxed Claude session in VM",
+          "long": "Launch a Claude Code session inside the dev VM with project files mounted and optional authentication.",
+          "flag": {
+            "no_auth": "Skip authentication forwarding",
+            "model": "Model to use for the Claude session",
+            "auth": "Authentication flags to pass through"
+          }
+        },
+        "test": {
+          "short": "Run tests in the dev environment",
+          "long": "Execute the test suite inside the dev environment VM with the current project mounted.",
+          "flag": {
+            "name": "Run only tests matching this name"
+          }
+        },
+        "already_installed": "Dev environment already installed.",
+        "check_updates": "Check for updates with {{.Command}}",
+        "downloading": "Downloading dev environment image...",
+        "progress_label": "Progress:",
+        "installed_in": "Installed in {{.Duration}}",
+        "start_with": "Start with {{.Command}}",
+        "not_installed": "Dev environment not installed. Run 'core dev install' first.",
+        "config_label": "Config:",
+        "config_value": "{{.Memory}}MB RAM, {{.CPUs}} CPUs",
+        "booting": "Booting dev environment...",
+        "running": "Dev environment running",
+        "connect_with": "Connect with {{.Command}}",
+        "ssh_port": "SSH port:",
+        "not_running": "Dev environment is not running.",
+        "stopping": "Stopping dev environment...",
+        "status_title": "Dev Environment Status",
+        "installed_label": "Installed:",
+        "installed_yes": "Yes",
+        "installed_no": "No",
+        "install_with": "Install with {{.Command}}",
+        "container_label": "Container:",
+        "memory_label": "Memory:",
+        "cpus_label": "CPUs:",
+        "uptime_label": "Uptime:",
+        "latest_label": "Latest:",
+        "up_to_date": "Dev environment is up to date.",
+        "update_available": "Update available!",
+        "run_to_update": "Run {{.Command}} to update.",
+        "stopping_current": "Stopping current VM...",
+        "downloading_update": "Downloading update...",
+        "updated_in": "Updated in {{.Duration}}"
+      }
+    },
+    "docs": {
+      "short": "Documentation management",
+      "long": "List, scan and synchronise documentation across all registered repositories.",
+      "list": {
+        "short": "List documentation coverage",
+        "long": "Show a table of documentation files (README, CLAUDE.md, CHANGELOG, docs/) for each repo.",
+        "coverage_summary": "{{.WithDocs}} with docs, {{.WithoutDocs}} without",
+        "header": {
+          "readme": "README",
+          "claude": "CLAUDE",
+          "changelog": "CHANGELOG",
+          "docs": "Docs"
+        }
+      },
+      "sync": {
+        "short": "Sync docs to a central location",
+        "long": "Copy documentation from each repo's docs/ directory into a central output directory.",
+        "flag": {
+          "dry_run": "Preview sync without writing files",
+          "output": "Output directory for synced docs"
+        },
+        "confirm": "Sync documentation?",
+        "dry_run_notice": "Dry run — no files written.",
+        "files_count": "({{.Count}} file(s))",
+        "repos_with_docs": "{{.Count}} repo(s) with docs",
+        "synced_packages": "{{.Count}} package(s) synced",
+        "total_summary": "{{.Files}} files from {{.Repos}} repos → {{.Output}}",
+        "no_docs_found": "No documentation found in any repo."
+      }
+    },
+    "git": {
+      "short": "Git workflow commands",
+      "long": "Git operations for single or multi-repo workflows.\n\nIncludes status, commit, push, pull, and safe batch operations for AI agents."
+    },
+    "setup": {
+      "short": "Set up workspace and clone packages",
+      "long": "Bootstrap a new workspace or clone packages from a repos.yaml registry.\n\nIn bootstrap mode (no registry), clones the devops repo first, then offers a package wizard.\nIn registry mode, clones all or selected packages into the packages directory.",
+      "flag": {
+        "all": "Clone all packages without prompting",
+        "build": "Run build after cloning",
+        "dry_run": "Preview what would be cloned",
+        "name": "Project directory name (bootstrap mode)",
+        "only": "Filter by repo type (e.g. foundation,module,product)",
+        "registry": "Path to repos.yaml"
+      },
+      "bootstrap_mode": "No registry found — entering bootstrap mode",
+      "cloning_current_dir": "Cloning into current directory",
+      "creating_project_dir": "Creating project directory",
+      "cloned": "cloned",
+      "would_clone": "Would clone",
+      "already_exists": "already exists",
+      "would_load_registry": "Would load registry from",
+      "org_label": "Organisation:",
+      "to_clone": "{{.Count}} to clone",
+      "exist": "{{.Count}} exist",
+      "nothing_to_clone": "Nothing to clone — all repos already exist.",
+      "would_clone_list": "Would clone:",
+      "cancelled": "Cancelled.",
+      "done": "done",
+      "cloned_count": "{{.Count}} cloned",
+      "already_exist_count": "{{.Count}} already exist",
+      "wizard": {
+        "git_repo_title": "Git Repository Detected",
+        "what_to_do": "This directory is already a git repository. What would you like to do?",
+        "project_name_title": "Project Name",
+        "project_name_desc": "Enter a name for the project directory",
+        "package_selection": "Package Selection",
+        "selection_hint": "Use space to select, enter to confirm",
+        "select_packages": "Select packages to clone",
+        "confirm_clone": "Clone {{.Count}} package(s) to {{.Target}}?"
+      },
+      "github": {
+        "short": "Configure GitHub repo settings",
+        "long": "Apply standardised GitHub settings (labels, webhooks, branch protection, security) to repos.",
+        "flag": {
+          "repo": "Target a specific repo",
+          "all": "Apply all settings",
+          "labels": "Sync issue labels",
+          "webhooks": "Sync webhooks",
+          "protection": "Sync branch protection rules",
+          "security": "Sync security settings",
+          "check": "Check current settings (dry run)",
+          "config": "Path to GitHub config file"
+        },
+        "error": {
+          "not_authenticated": "GitHub CLI (gh) is not authenticated. Run 'gh auth login' first.",
+          "config_not_found": "GitHub config file not found",
+          "conflicting_flags": "Cannot use --check with modification flags"
+        },
+        "dry_run_mode": "[dry-run] Checking current settings",
+        "no_repos_specified": "No repos specified.",
+        "usage_hint": "Use --repo=<name> or --all to target repos.",
+        "run_without_check": "Run without --check to apply changes.",
+        "no_changes": "No changes needed",
+        "repos_checked": "Repos checked",
+        "all_up_to_date": "All repos are up to date",
+        "repos_with_changes": "Repos with changes",
+        "to_create": "To create",
+        "to_update": "To update",
+        "to_delete": "To delete"
+      },
+      "repo": {
+        "setting_up": "Setting up repo",
+        "detected_type": "Detected project type",
+        "would_create": "Would create",
+        "created": "Created"
+      }
+    }
+  },
+  "common": {
+    "flag": {
+      "registry": "Path to repos.yaml registry",
+      "verbose": "Show detailed output"
+    },
+    "count": {
+      "commits": "{{.Count}} commit(s)",
+      "failed": "{{.Count}} failed",
+      "files": "{{.Count}} file(s)",
+      "pending": "{{.Count}} pending",
+      "repos_unpushed": "{{.Count}} repo(s) with unpushed commits",
+      "skipped": "{{.Count}} skipped",
+      "succeeded": "{{.Count}} succeeded"
+    },
+    "status": {
+      "clean": "clean",
+      "dirty": "dirty",
+      "synced": "synced",
+      "up_to_date": "up to date",
+      "cloning": "Cloning",
+      "running": "Running",
+      "stopped": "Stopped"
+    },
+    "prompt": {
+      "abort": "Aborted."
+    },
+    "progress": {
+      "checking_updates": "Checking for updates...",
+      "checking": "Checking..."
+    }
+  },
+  "cli": {
+    "aborted": "Aborted."
+  },
+  "error": {
+    "gh_not_found": "GitHub CLI (gh) not found. Install it from https://cli.github.com/",
+    "registry_not_found": "Registry (repos.yaml) not found. Run from a workspace directory or use --registry.",
+    "repo_not_found": "Repository not found: {{.Name}}"
+  },
+  "i18n": {
+    "count": {
+      "failed": "{{.Count}} failed"
+    },
+    "done": {
+      "sync": "Sync complete."
+    },
+    "fail": {
+      "load": "Failed to load {{.Name}}",
+      "run": "Failed to run {{.Name}}",
+      "scan": "Failed to scan {{.Name}}"
+    },
+    "progress": {
+      "check": "Checking",
+      "fetch": "Fetching"
+    }
+  }
+}
