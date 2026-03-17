@@ -34,10 +34,13 @@ package dev
 
 import (
 	"forge.lthn.ai/core/cli/pkg/cli"
+	"forge.lthn.ai/core/go-devops/locales"
 	"forge.lthn.ai/core/go-i18n"
 )
 
 func init() {
+	// Load go-devops translations (cmd.dev.*, cmd.deploy.*, cmd.docs.*, etc.)
+	i18n.LoadFS(locales.FS, ".")
 	cli.RegisterCommands(AddDevCommands)
 }
 
