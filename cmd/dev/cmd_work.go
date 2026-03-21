@@ -3,15 +3,12 @@ package dev
 import (
 	"cmp"
 	"context"
-	"os"
-	"os/exec"
 	"slices"
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	agentic "forge.lthn.ai/core/agent/pkg/lifecycle"
-	"forge.lthn.ai/core/go-scm/git"
 	"forge.lthn.ai/core/go-i18n"
+	"forge.lthn.ai/core/go-scm/git"
 )
 
 // Work command flags
@@ -57,23 +54,18 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 	defer func() { _ = bundle.Stop(ctx) }()
 
 	// Load registry and get paths
-	paths, names, err := func() ([]string, map[string]string, error) {
-		reg, _, err := loadRegistryWithConfig(registryPath)
-		if err != nil {
-			return nil, nil, err
-		}
-		var paths []string
-		names := make(map[string]string)
-		for _, repo := range reg.List() {
-			if repo.IsGitRepo() {
-				paths = append(paths, repo.Path)
-				names[repo.Path] = repo.Name
-			}
-		}
-		return paths, names, nil
-	}()
+	reg, _, err := loadRegistryWithConfig(registryPath)
 	if err != nil {
 		return err
+	}
+
+	var paths []string
+	names := make(map[string]string)
+	for _, repo := range reg.List() {
+		if repo.IsGitRepo() {
+			paths = append(paths, repo.Path)
+			names[repo.Path] = repo.Name
+		}
 	}
 
 	if len(paths) == 0 {
@@ -81,18 +73,11 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 		return nil
 	}
 
-	// QUERY git status
-	result, handled, err := bundle.Core.QUERY(git.QueryStatus{
+	// Query git status directly
+	statuses := git.Status(ctx, git.StatusOptions{
 		Paths: paths,
 		Names: names,
 	})
-	if !handled {
-		return cli.Err("git service not available")
-	}
-	if err != nil {
-		return err
-	}
-	statuses := result.([]git.RepoStatus)
 
 	// Sort by repo name for consistent output
 	slices.SortFunc(statuses, func(a, b git.RepoStatus) int {
@@ -125,15 +110,7 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 		cli.Blank()
 
 		for _, s := range dirtyRepos {
-			// PERFORM commit via agentic service
-			_, handled, err := bundle.Core.PERFORM(agentic.TaskCommit{
-				Path: s.Path,
-				Name: s.Name,
-			})
-			if !handled {
-				cli.Print("  %s %s: %s\n", warningStyle.Render("!"), s.Name, "agentic service not available")
-				continue
-			}
+			err := doCommit(ctx, s.Path, false)
 			if err != nil {
 				cli.Print("  %s %s: %s\n", errorStyle.Render("x"), s.Name, err)
 			} else {
@@ -141,12 +118,11 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 			}
 		}
 
-		// Re-QUERY status after commits
-		result, _, _ = bundle.Core.QUERY(git.QueryStatus{
+		// Re-query status after commits
+		statuses = git.Status(ctx, git.StatusOptions{
 			Paths: paths,
 			Names: names,
 		})
-		statuses = result.([]git.RepoStatus)
 
 		// Rebuild ahead repos list
 		aheadRepos = nil
@@ -187,18 +163,11 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 
 	cli.Blank()
 
-	// PERFORM push for each repo
+	// Push each repo directly
 	var divergedRepos []git.RepoStatus
 
 	for _, s := range aheadRepos {
-		_, handled, err := bundle.Core.PERFORM(git.TaskPush{
-			Path: s.Path,
-			Name: s.Name,
-		})
-		if !handled {
-			cli.Print("  %s %s: %s\n", errorStyle.Render("x"), s.Name, "git service not available")
-			continue
-		}
+		err := git.Push(ctx, s.Path)
 		if err != nil {
 			if git.IsNonFastForward(err) {
 				cli.Print("  %s %s: %s\n", warningStyle.Render("!"), s.Name, i18n.T("cmd.dev.push.diverged"))
@@ -220,8 +189,8 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 			for _, s := range divergedRepos {
 				cli.Print("  %s %s...\n", dimStyle.Render("↓"), s.Name)
 
-				// PERFORM pull
-				_, _, err := bundle.Core.PERFORM(git.TaskPull{Path: s.Path, Name: s.Name})
+				// Pull directly
+				err := git.Pull(ctx, s.Path)
 				if err != nil {
 					cli.Print("  %s %s: %s\n", errorStyle.Render("x"), s.Name, err)
 					continue
@@ -229,8 +198,8 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 
 				cli.Print("  %s %s...\n", dimStyle.Render("↑"), s.Name)
 
-				// PERFORM push
-				_, _, err = bundle.Core.PERFORM(git.TaskPush{Path: s.Path, Name: s.Name})
+				// Push directly
+				err = git.Push(ctx, s.Path)
 				if err != nil {
 					cli.Print("  %s %s: %s\n", errorStyle.Render("x"), s.Name, err)
 					continue
@@ -318,28 +287,3 @@ func printStatusTable(statuses []git.RepoStatus) {
 	}
 }
 
-// claudeCommit shells out to claude for committing (legacy helper for other commands)
-func claudeCommit(ctx context.Context, repoPath, repoName, registryPath string) error {
-	prompt := agentic.Prompt("commit")
-
-	cmd := exec.CommandContext(ctx, "claude", "-p", prompt, "--allowedTools", "Bash,Read,Glob,Grep")
-	cmd.Dir = repoPath
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-
-	return cmd.Run()
-}
-
-// claudeEditCommit shells out to claude with edit permissions (legacy helper)
-func claudeEditCommit(ctx context.Context, repoPath, repoName, registryPath string) error {
-	prompt := agentic.Prompt("commit")
-
-	cmd := exec.CommandContext(ctx, "claude", "-p", prompt, "--allowedTools", "Bash,Read,Write,Edit,Glob,Grep")
-	cmd.Dir = repoPath
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-
-	return cmd.Run()
-}

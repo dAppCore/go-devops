@@ -2,10 +2,9 @@ package dev
 
 import (
 	"context"
+	"fmt"
 
-	agentic "forge.lthn.ai/core/agent/pkg/lifecycle"
-	"forge.lthn.ai/core/go/pkg/core"
-	"forge.lthn.ai/core/go-scm/git"
+	"dappco.re/go/core"
 )
 
 // WorkBundle contains the Core instance for dev work operations.
@@ -16,71 +15,52 @@ type WorkBundle struct {
 // WorkBundleOptions configures the work bundle.
 type WorkBundleOptions struct {
 	RegistryPath string
-	AllowEdit    bool // Allow agentic to use Write/Edit tools
 }
 
 // NewWorkBundle creates a bundle for dev work operations.
-// Includes: dev (orchestration), git, agentic services.
+// Includes: dev (orchestration) service.
 func NewWorkBundle(opts WorkBundleOptions) (*WorkBundle, error) {
-	c, err := core.New(
-		core.WithService(NewService(ServiceOptions{
+	c := core.New()
+
+	svc := &Service{
+		ServiceRuntime: core.NewServiceRuntime(c, ServiceOptions{
 			RegistryPath: opts.RegistryPath,
-		})),
-		core.WithService(git.NewService(git.ServiceOptions{})),
-		core.WithService(agentic.NewService(agentic.ServiceOptions{
-			AllowEdit: opts.AllowEdit,
-		})),
-		core.WithServiceLock(),
-	)
-	if err != nil {
-		return nil, err
+		}),
 	}
+
+	c.Service("dev", core.Service{
+		OnStart: func() core.Result {
+			c.RegisterTask(svc.handleTask)
+			return core.Result{OK: true}
+		},
+	})
+
+	c.LockEnable()
+	c.LockApply()
 
 	return &WorkBundle{Core: c}, nil
 }
 
 // Start initialises the bundle services.
 func (b *WorkBundle) Start(ctx context.Context) error {
-	return b.Core.ServiceStartup(ctx, nil)
+	return resultError(b.Core.ServiceStartup(ctx, nil))
 }
 
 // Stop shuts down the bundle services.
 func (b *WorkBundle) Stop(ctx context.Context) error {
-	return b.Core.ServiceShutdown(ctx)
+	return resultError(b.Core.ServiceShutdown(ctx))
 }
 
-// StatusBundle contains the Core instance for status-only operations.
-type StatusBundle struct {
-	Core *core.Core
-}
-
-// StatusBundleOptions configures the status bundle.
-type StatusBundleOptions struct {
-	RegistryPath string
-}
-
-// NewStatusBundle creates a bundle for status-only operations.
-// Includes: dev (orchestration), git services. No agentic - commits not available.
-func NewStatusBundle(opts StatusBundleOptions) (*StatusBundle, error) {
-	c, err := core.New(
-		core.WithService(NewService(ServiceOptions(opts))),
-		core.WithService(git.NewService(git.ServiceOptions{})),
-		// No agentic service - TaskCommit will be unhandled
-		core.WithServiceLock(),
-	)
-	if err != nil {
-		return nil, err
+// resultError extracts an error from a failed core.Result, returning nil on success.
+func resultError(r core.Result) error {
+	if !r.OK {
+		if err, ok := r.Value.(error); ok {
+			return err
+		}
+		if r.Value != nil {
+			return fmt.Errorf("service operation failed: %v", r.Value)
+		}
+		return fmt.Errorf("service operation failed")
 	}
-
-	return &StatusBundle{Core: c}, nil
-}
-
-// Start initialises the bundle services.
-func (b *StatusBundle) Start(ctx context.Context) error {
-	return b.Core.ServiceStartup(ctx, nil)
-}
-
-// Stop shuts down the bundle services.
-func (b *StatusBundle) Stop(ctx context.Context) error {
-	return b.Core.ServiceShutdown(ctx)
+	return nil
 }
