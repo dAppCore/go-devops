@@ -206,7 +206,7 @@ func runPushSingleRepo(ctx context.Context, repoPath string, force bool) error {
 				// Use edit-enabled commit if only untracked files (may need .gitignore fix)
 				var err error
 				if s.Modified == 0 && s.Staged == 0 && s.Untracked > 0 {
-					err = claudeEditCommit(ctx, repoPath, repoName, "")
+					err = doCommit(ctx, repoPath, true)
 				} else {
 					err = runCommitSingleRepo(ctx, repoPath, false)
 				}

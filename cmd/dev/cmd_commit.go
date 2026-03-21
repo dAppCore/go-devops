@@ -117,7 +117,7 @@ func runCommit(registryPath string, all bool) error {
 	for _, s := range dirtyRepos {
 		cli.Print("%s %s\n", dimStyle.Render(i18n.T("cmd.dev.committing")), s.Name)
 
-		if err := claudeCommit(ctx, s.Path, s.Name, registryPath); err != nil {
+		if err := doCommit(ctx, s.Path, false); err != nil {
 			cli.Print("  %s %s\n", errorStyle.Render("x"), err)
 			failed++
 		} else {
@@ -192,7 +192,7 @@ func runCommitSingleRepo(ctx context.Context, repoPath string, all bool) error {
 	cli.Blank()
 
 	// Commit
-	if err := claudeCommit(ctx, repoPath, repoName, ""); err != nil {
+	if err := doCommit(ctx, repoPath, false); err != nil {
 		cli.Print("  %s %s\n", errorStyle.Render("x"), err)
 		return err
 	}
