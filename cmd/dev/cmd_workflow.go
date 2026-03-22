@@ -8,9 +8,9 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-i18n"
-	"forge.lthn.ai/core/go-io"
-	"forge.lthn.ai/core/go-scm/repos"
+	"dappco.re/go/core/i18n"
+	"dappco.re/go/core/io"
+	"dappco.re/go/core/scm/repos"
 )
 
 // Workflow command flags

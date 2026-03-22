@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-scm/git"
-	"forge.lthn.ai/core/go-i18n"
+	"dappco.re/go/core/scm/git"
+	"dappco.re/go/core/i18n"
 )
 
 // Push command flags

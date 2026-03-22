@@ -12,9 +12,9 @@ import (
 	"path/filepath"
 	"strings"
 
-	"forge.lthn.ai/core/go-i18n"
-	coreio "forge.lthn.ai/core/go-io"
-	log "forge.lthn.ai/core/go-log"
+	"dappco.re/go/core/i18n"
+	coreio "dappco.re/go/core/io"
+	log "dappco.re/go/core/log"
 )
 
 // runRepoSetup sets up the current repository with .core/ configuration.

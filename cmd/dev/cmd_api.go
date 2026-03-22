@@ -2,7 +2,7 @@ package dev
 
 import (
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-i18n"
+	"dappco.re/go/core/i18n"
 )
 
 // addAPICommands adds the 'api' command and its subcommands to the given parent command.

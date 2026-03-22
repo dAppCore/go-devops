@@ -15,7 +15,7 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	log "forge.lthn.ai/core/go-log"
+	log "dappco.re/go/core/log"
 )
 
 // GitHubSecurityStatus represents the security settings status of a repository.

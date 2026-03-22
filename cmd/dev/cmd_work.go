@@ -7,8 +7,8 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-i18n"
-	"forge.lthn.ai/core/go-scm/git"
+	"dappco.re/go/core/i18n"
+	"dappco.re/go/core/scm/git"
 )
 
 // Work command flags

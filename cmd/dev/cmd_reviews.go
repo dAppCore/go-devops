@@ -8,7 +8,7 @@ import (
 	"code.gitea.io/sdk/gitea"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-i18n"
+	"dappco.re/go/core/i18n"
 )
 
 // PR-specific styles (aliases to shared)

@@ -9,7 +9,7 @@ import (
 	"path/filepath"
 	"sync"
 
-	"forge.lthn.ai/core/go-log"
+	"dappco.re/go/core/log"
 	"github.com/kluctl/go-embed-python/python"
 )
 

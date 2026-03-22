@@ -4,7 +4,7 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-i18n"
+	"dappco.re/go/core/i18n"
 )
 
 // Flag variable for list command

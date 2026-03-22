@@ -13,7 +13,7 @@ import (
 	"strings"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	log "forge.lthn.ai/core/go-log"
+	log "dappco.re/go/core/log"
 )
 
 // GitHubBranchProtection represents branch protection rules from the GitHub API.

@@ -13,7 +13,7 @@ go vet ./...                     # Static analysis
 
 ## Workspace Context
 
-This module (`forge.lthn.ai/core/go-devops`) is part of a 57-module Go workspace rooted at `/Users/snider/Code/go.work`. The parent framework module `forge.lthn.ai/core/go` (at `../go`) provides core libraries: `core.E` errors, `io.Medium` filesystem abstraction, config, i18n, and logging.
+This module (`dappco.re/go/core/devops`) is part of a 57-module Go workspace rooted at `/Users/snider/Code/go.work`. The parent framework module `forge.lthn.ai/core/go` (at `../go`) provides core libraries: `core.E` errors, `io.Medium` filesystem abstraction, config, i18n, and logging.
 
 Most implementation code (ansible engine, build system, infra clients, release pipeline, devkit, SDK generators) lives in the parent framework. This repo contains CLI commands that wire those packages together, plus deployment integrations and infrastructure playbooks.
 
@@ -86,7 +86,7 @@ Configuration lives in `.core/build.yaml` (targets, ldflags) and `.core/release.
 
 ## Forge
 
-- **Repo**: `forge.lthn.ai/core/go-devops`
+- **Repo**: `dappco.re/go/core/devops` (hosted at `forge.lthn.ai/core/go-devops`)
 - **Push via SSH**: `git push forge main` (remote: `ssh://git@forge.lthn.ai:2223/core/go-devops.git`)
 - **Issues/PRs**: Managed via Forgejo SDK (`code.gitea.io/sdk/gitea`), not GitHub
 

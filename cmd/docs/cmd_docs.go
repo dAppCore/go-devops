@@ -3,7 +3,7 @@ package docs
 
 import (
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-i18n"
+	"dappco.re/go/core/i18n"
 )
 
 // Style and utility aliases from shared

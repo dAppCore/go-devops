@@ -9,8 +9,8 @@ import (
 	"text/template"
 
 	"forge.lthn.ai/core/cli/pkg/cli"  // Added
-	"forge.lthn.ai/core/go-i18n" // Added
-	coreio "forge.lthn.ai/core/go-io"
+	"dappco.re/go/core/i18n" // Added
+	coreio "dappco.re/go/core/io"
 	// Added
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"

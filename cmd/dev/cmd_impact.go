@@ -4,10 +4,10 @@ import (
 	"slices"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-i18n"
-	"forge.lthn.ai/core/go-io"
-	log "forge.lthn.ai/core/go-log"
-	"forge.lthn.ai/core/go-scm/repos"
+	"dappco.re/go/core/i18n"
+	"dappco.re/go/core/io"
+	log "dappco.re/go/core/log"
+	"dappco.re/go/core/scm/repos"
 )
 
 // Impact-specific styles (aliases to shared)

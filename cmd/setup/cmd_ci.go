@@ -7,7 +7,7 @@ import (
 	"runtime"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	coreio "forge.lthn.ai/core/go-io"
+	coreio "dappco.re/go/core/io"
 	"gopkg.in/yaml.v3"
 )
 

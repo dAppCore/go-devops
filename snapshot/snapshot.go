@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	log "forge.lthn.ai/core/go-log"
+	log "dappco.re/go/core/log"
 
-	"forge.lthn.ai/core/go-scm/manifest"
+	"dappco.re/go/core/scm/manifest"
 )
 
 // Snapshot is the frozen release manifest written as core.json.

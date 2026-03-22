@@ -34,9 +34,9 @@ package dev
 
 import (
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-i18n"
+	"dappco.re/go/core/i18n"
 
-	_ "forge.lthn.ai/core/go-devops/locales"
+	_ "dappco.re/go/core/devops/locales"
 )
 
 func init() {

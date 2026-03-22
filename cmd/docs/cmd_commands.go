@@ -11,7 +11,7 @@ package docs
 import (
 	"forge.lthn.ai/core/cli/pkg/cli"
 
-	_ "forge.lthn.ai/core/go-devops/locales"
+	_ "dappco.re/go/core/devops/locales"
 )
 
 func init() {

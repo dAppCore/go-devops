@@ -7,9 +7,9 @@ import (
 	"os"
 
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-devops/deploy/coolify"
-	"forge.lthn.ai/core/go-i18n"
-	log "forge.lthn.ai/core/go-log"
+	"dappco.re/go/core/devops/deploy/coolify"
+	"dappco.re/go/core/i18n"
+	log "dappco.re/go/core/log"
 )
 
 var (

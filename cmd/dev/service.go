@@ -6,7 +6,7 @@ import (
 	"os/exec"
 
 	"dappco.re/go/core"
-	agentic "forge.lthn.ai/core/agent/pkg/lifecycle"
+	agentic "dappco.re/go/agent/pkg/lifecycle"
 )
 
 // ServiceOptions for configuring the dev service.

@@ -12,8 +12,8 @@ import (
 	"regexp"
 	"strings"
 
-	coreio "forge.lthn.ai/core/go-io"
-	log "forge.lthn.ai/core/go-log"
+	coreio "dappco.re/go/core/io"
+	log "dappco.re/go/core/log"
 	"gopkg.in/yaml.v3"
 )
 

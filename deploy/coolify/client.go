@@ -6,9 +6,9 @@ import (
 	"os"
 	"sync"
 
-	log "forge.lthn.ai/core/go-log"
+	log "dappco.re/go/core/log"
 
-	"forge.lthn.ai/core/go-devops/deploy/python"
+	"dappco.re/go/core/devops/deploy/python"
 )
 
 // Client wraps the Python CoolifyClient for Go usage.

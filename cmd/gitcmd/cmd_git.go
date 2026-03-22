@@ -13,9 +13,9 @@
 package gitcmd
 
 import (
-	"forge.lthn.ai/core/go-devops/cmd/dev"
+	"dappco.re/go/core/devops/cmd/dev"
 	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-i18n"
+	"dappco.re/go/core/i18n"
 )
 
 func init() {
