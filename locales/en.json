@@ -400,6 +400,14 @@
         "select_packages": "Select packages to clone",
         "confirm_clone": "Clone {{.Count}} package(s) to {{.Target}}?"
       },
+      "repo": {
+        "short": "Generate .core config for a repo",
+        "long": "Detect the current project type and generate .core/build.yaml, release.yaml, and test.yaml for the repository.",
+        "setting_up": "Setting up repo",
+        "detected_type": "Detected project type",
+        "would_create": "Would create",
+        "created": "Created"
+      },
       "github": {
         "short": "Configure GitHub repo settings",
         "long": "Apply standardised GitHub settings (labels, webhooks, branch protection, security) to repos.",
@@ -429,12 +437,6 @@
         "to_create": "To create",
         "to_update": "To update",
         "to_delete": "To delete"
-      },
-      "repo": {
-        "setting_up": "Setting up repo",
-        "detected_type": "Detected project type",
-        "would_create": "Would create",
-        "created": "Created"
       }
     }
   },

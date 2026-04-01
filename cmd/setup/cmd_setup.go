@@ -2,8 +2,8 @@
 package setup
 
 import (
-	"forge.lthn.ai/core/cli/pkg/cli"
 	"dappco.re/go/core/i18n"
+	"forge.lthn.ai/core/cli/pkg/cli"
 )
 
 // Style aliases from shared package
@@ -51,6 +51,7 @@ func initSetupFlags() {
 // AddSetupCommand adds the 'setup' command to the given parent command.
 func AddSetupCommand(root *cli.Command) {
 	initSetupFlags()
+	addRepoCommand(setupCmd)
 	addGitHubCommand(setupCmd)
 	root.AddCommand(setupCmd)
 }

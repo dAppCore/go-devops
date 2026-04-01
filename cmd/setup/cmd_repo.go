@@ -8,6 +8,7 @@ package setup
 
 import (
 	"fmt"
+	"os"
 	"os/exec"
 	"path/filepath"
 	"strings"
@@ -15,7 +16,32 @@ import (
 	"dappco.re/go/core/i18n"
 	coreio "dappco.re/go/core/io"
 	log "dappco.re/go/core/log"
+	"forge.lthn.ai/core/cli/pkg/cli"
 )
+
+var repoDryRun bool
+
+// addRepoCommand adds the 'repo' subcommand to generate .core configuration.
+func addRepoCommand(parent *cli.Command) {
+	repoCmd := &cli.Command{
+		Use:   "repo",
+		Short: i18n.T("cmd.setup.repo.short"),
+		Long:  i18n.T("cmd.setup.repo.long"),
+		Args:  cli.ExactArgs(0),
+		RunE: func(cmd *cli.Command, args []string) error {
+			cwd, err := os.Getwd()
+			if err != nil {
+				return log.E("setup.repo", "failed to get working directory", err)
+			}
+
+			return runRepoSetup(cwd, repoDryRun)
+		},
+	}
+
+	repoCmd.Flags().BoolVar(&repoDryRun, "dry-run", false, i18n.T("cmd.setup.flag.dry_run"))
+
+	parent.AddCommand(repoCmd)
+}
 
 // runRepoSetup sets up the current repository with .core/ configuration.
 func runRepoSetup(repoPath string, dryRun bool) error {
