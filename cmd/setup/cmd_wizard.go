@@ -7,9 +7,9 @@ import (
 	"os"
 	"slices"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
 	"dappco.re/go/core/i18n"
 	"dappco.re/go/core/scm/repos"
+	"forge.lthn.ai/core/cli/pkg/cli"
 	"golang.org/x/term"
 )
 
@@ -39,6 +39,9 @@ func promptProjectName(defaultName string) (string, error) {
 // runPackageWizard presents an interactive multi-select UI for package selection.
 func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string, error) {
 	allRepos := reg.List()
+	if len(preselectedTypes) > 0 {
+		allRepos = filterReposByTypes(allRepos, preselectedTypes)
+	}
 
 	// Build options
 	var options []string
@@ -55,6 +58,10 @@ func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string,
 		// Format: name (type)
 		label := fmt.Sprintf("%s (%s)", repo.Name, repo.Type)
 		options = append(options, label)
+	}
+
+	if len(options) == 0 {
+		return nil, nil
 	}
 
 	fmt.Println(cli.TitleStyle.Render(i18n.T("cmd.setup.wizard.package_selection")))
@@ -85,6 +92,33 @@ func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string,
 		}
 	}
 	return selected, nil
+}
+
+func filterReposByTypes(repos []*repos.Repo, allowedTypes []string) []*repos.Repo {
+	if len(allowedTypes) == 0 {
+		return repos
+	}
+
+	allowed := make(map[string]struct{}, len(allowedTypes))
+	for _, repoType := range allowedTypes {
+		if repoType == "" {
+			continue
+		}
+		allowed[repoType] = struct{}{}
+	}
+
+	if len(allowed) == 0 {
+		return repos
+	}
+
+	filtered := make([]*repos.Repo, 0, len(repos))
+	for _, repo := range repos {
+		if _, ok := allowed[repo.Type]; ok {
+			filtered = append(filtered, repo)
+		}
+	}
+
+	return filtered
 }
 
 // confirmClone asks for confirmation before cloning.
