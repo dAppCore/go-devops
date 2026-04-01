@@ -62,3 +62,19 @@ func TestResetOutputDir_ClearsExistingFiles(t *testing.T) {
 		t.Fatalf("expected output dir to exist as a directory")
 	}
 }
+
+func TestGoHelpOutputName_Good(t *testing.T) {
+	cases := map[string]string{
+		"core":        "go",
+		"core-admin":  "admin",
+		"core-api":    "api",
+		"go-example":  "go-example",
+		"custom-repo": "custom-repo",
+	}
+
+	for input, want := range cases {
+		if got := goHelpOutputName(input); got != want {
+			t.Fatalf("goHelpOutputName(%q) = %q, want %q", input, got, want)
+		}
+	}
+}

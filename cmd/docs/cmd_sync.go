@@ -350,7 +350,7 @@ func resetOutputDir(dir string) error {
 // goHelpOutputName maps repo name to output folder name for go-help.
 func goHelpOutputName(repoName string) string {
 	if repoName == "core" {
-		return "cli"
+		return "go"
 	}
 	if strings.HasPrefix(repoName, "core-") {
 		return strings.TrimPrefix(repoName, "core-")
