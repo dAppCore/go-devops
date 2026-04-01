@@ -140,9 +140,7 @@ func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun b
 		repoOutDir := filepath.Join(outputDir, outName)
 
 		// Clear existing directory (recursively)
-		_ = io.Local.DeleteAll(repoOutDir)
-
-		if err := io.Local.EnsureDir(repoOutDir); err != nil {
+		if err := resetOutputDir(repoOutDir); err != nil {
 			cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), info.Name, err)
 			continue
 		}
@@ -275,12 +273,18 @@ func runZensicalSync(reg *repos.Registry, basePath string, outputDir string, dry
 
 	cli.Blank()
 	var synced int
+repoLoop:
 	for _, info := range docsInfo {
 		section, folder := zensicalOutputName(info.Name)
 
 		destDir := filepath.Join(outputDir, section)
 		if folder != "" {
 			destDir = filepath.Join(destDir, folder)
+		}
+
+		if err := resetOutputDir(destDir); err != nil {
+			cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), info.Name, err)
+			continue
 		}
 
 		weight := 10
@@ -304,6 +308,10 @@ func runZensicalSync(reg *repos.Registry, basePath string, outputDir string, dry
 		if len(info.KBFiles) > 0 {
 			suffix := strings.TrimPrefix(info.Name, "go-")
 			kbDestDir := filepath.Join(outputDir, "kb", suffix)
+			if err := resetOutputDir(kbDestDir); err != nil {
+				cli.Print("  %s KB: %s\n", errorStyle.Render("✗"), err)
+				continue repoLoop
+			}
 			kbDir := filepath.Join(info.Path, "KB")
 			kbWeight := 10
 			for _, f := range info.KBFiles {
@@ -329,6 +337,14 @@ func runZensicalSync(reg *repos.Registry, basePath string, outputDir string, dry
 func copyZensicalReadme(src, destDir string) error {
 	dst := filepath.Join(destDir, "index.md")
 	return copyWithFrontMatter(src, dst, 1)
+}
+
+// resetOutputDir clears and recreates a target directory before copying files into it.
+func resetOutputDir(dir string) error {
+	if err := io.Local.DeleteAll(dir); err != nil {
+		return err
+	}
+	return io.Local.EnsureDir(dir)
 }
 
 // goHelpOutputName maps repo name to output folder name for go-help.
@@ -393,9 +409,7 @@ func runGoHelpSync(reg *repos.Registry, basePath string, outputDir string, dryRu
 		repoOutDir := filepath.Join(outputDir, outName)
 
 		// Clear existing directory
-		_ = io.Local.DeleteAll(repoOutDir)
-
-		if err := io.Local.EnsureDir(repoOutDir); err != nil {
+		if err := resetOutputDir(repoOutDir); err != nil {
 			cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), info.Name, err)
 			continue
 		}

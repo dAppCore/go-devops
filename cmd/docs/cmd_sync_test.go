@@ -37,3 +37,28 @@ func TestCopyZensicalReadme_Good(t *testing.T) {
 		t.Fatalf("expected README body to be preserved, got: %q", content)
 	}
 }
+
+func TestResetOutputDir_ClearsExistingFiles(t *testing.T) {
+	dir := t.TempDir()
+
+	stale := filepath.Join(dir, "stale.md")
+	if err := os.WriteFile(stale, []byte("old content"), 0o644); err != nil {
+		t.Fatalf("write stale file: %v", err)
+	}
+
+	if err := resetOutputDir(dir); err != nil {
+		t.Fatalf("reset output dir: %v", err)
+	}
+
+	if _, err := os.Stat(stale); !os.IsNotExist(err) {
+		t.Fatalf("expected stale file to be removed, got err=%v", err)
+	}
+
+	info, err := os.Stat(dir)
+	if err != nil {
+		t.Fatalf("stat output dir: %v", err)
+	}
+	if !info.IsDir() {
+		t.Fatalf("expected output dir to exist as a directory")
+	}
+}
