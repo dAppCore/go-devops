@@ -99,11 +99,11 @@ func detectProjectType(path string) string {
 	if coreio.Local.IsFile(filepath.Join(path, "go.mod")) {
 		return "go"
 	}
-	if coreio.Local.IsFile(filepath.Join(path, "composer.json")) {
-		return "php"
-	}
 	if coreio.Local.IsFile(filepath.Join(path, "package.json")) {
 		return "node"
+	}
+	if coreio.Local.IsFile(filepath.Join(path, "composer.json")) {
+		return "php"
 	}
 	return "unknown"
 }

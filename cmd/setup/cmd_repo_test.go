@@ -20,3 +20,11 @@ func TestRunRepoSetup_CreatesCoreConfigs(t *testing.T) {
 		require.NoErrorf(t, err, "expected %s to exist", path)
 	}
 }
+
+func TestDetectProjectType_PrefersPackageOverComposer(t *testing.T) {
+	dir := t.TempDir()
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}\n"), 0o644))
+	require.NoError(t, os.WriteFile(filepath.Join(dir, "composer.json"), []byte("{}\n"), 0o644))
+
+	require.Equal(t, "node", detectProjectType(dir))
+}
