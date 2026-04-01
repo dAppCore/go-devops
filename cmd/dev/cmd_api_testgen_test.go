@@ -33,6 +33,16 @@ var Value = Example{}
 
 func Run() {}
 `))
+	require.NoError(t, io.Local.Write(filepath.Join(serviceDir, "extra.go"), `package demo
+
+type Another struct{}
+
+func Extra() {}
+`))
+	require.NoError(t, io.Local.Write(filepath.Join(serviceDir, "demo_test.go"), `package demo
+
+func Ignored() {}
+`))
 
 	require.NoError(t, runTestGen())
 
@@ -44,9 +54,12 @@ func Run() {}
 	require.Contains(t, content, `package demo`)
 	require.Contains(t, content, `impl "forge.lthn.ai/core/cli/demo"`)
 	require.Contains(t, content, `type _ = impl.Example`)
+	require.Contains(t, content, `type _ = impl.Another`)
 	require.Contains(t, content, `const _ = impl.Answer`)
 	require.Contains(t, content, `var _ = impl.Value`)
 	require.Contains(t, content, `var _ = impl.Run`)
+	require.Contains(t, content, `var _ = impl.Extra`)
+	require.NotContains(t, content, `Ignored`)
 }
 
 func TestGeneratePublicAPITestFile_Good(t *testing.T) {
@@ -67,4 +80,36 @@ func TestGeneratePublicAPITestFile_Good(t *testing.T) {
 
 	require.True(t, strings.Contains(content, `type _ = impl.Example`))
 	require.True(t, strings.Contains(content, `const _ = impl.Answer`))
+}
+
+func TestGetExportedSymbols_Good_MultiFile(t *testing.T) {
+	tmpDir := t.TempDir()
+
+	serviceDir := filepath.Join(tmpDir, "demo")
+	require.NoError(t, io.Local.EnsureDir(serviceDir))
+	require.NoError(t, io.Local.Write(filepath.Join(serviceDir, "demo.go"), `package demo
+
+type Example struct{}
+
+const Answer = 42
+`))
+	require.NoError(t, io.Local.Write(filepath.Join(serviceDir, "extra.go"), `package demo
+
+var Value = Example{}
+
+func Run() {}
+`))
+	require.NoError(t, io.Local.Write(filepath.Join(serviceDir, "demo_test.go"), `package demo
+
+type Ignored struct{}
+`))
+
+	symbols, err := getExportedSymbols(serviceDir)
+	require.NoError(t, err)
+	require.Equal(t, []symbolInfo{
+		{Name: "Answer", Kind: "const"},
+		{Name: "Example", Kind: "type"},
+		{Name: "Run", Kind: "func"},
+		{Name: "Value", Kind: "var"},
+	}, symbols)
 }

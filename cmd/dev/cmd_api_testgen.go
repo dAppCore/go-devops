@@ -40,15 +40,15 @@ func runTestGen() error {
 		}
 
 		serviceName := dir.Name()
-		internalFile := filepath.Join(pkgDir, serviceName, serviceName+".go")
+		internalDir := filepath.Join(pkgDir, serviceName)
 		publicDir := serviceName
 		publicTestFile := filepath.Join(publicDir, serviceName+"_test.go")
 
-		if !coreio.Local.IsFile(internalFile) {
+		if !coreio.Local.Exists(internalDir) {
 			continue
 		}
 
-		symbols, err := getExportedSymbols(internalFile)
+		symbols, err := getExportedSymbols(internalDir)
 		if err != nil {
 			return cli.Wrap(err, cli.Sprintf("error getting symbols for service '%s'", serviceName))
 		}

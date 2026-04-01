@@ -6,12 +6,15 @@ import (
 	"go/parser"
 	"go/token"
 	"path/filepath"
+	"sort"
+	"strings"
 	"text/template"
 
-	"forge.lthn.ai/core/cli/pkg/cli"  // Added
-	"dappco.re/go/core/i18n" // Added
+	"dappco.re/go/core/i18n"
 	coreio "dappco.re/go/core/io"
-	// Added
+
+	"forge.lthn.ai/core/cli/pkg/cli"
+
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
 )
@@ -52,15 +55,15 @@ func runSync() error {
 		}
 
 		serviceName := dir.Name()
-		internalFile := filepath.Join(pkgDir, serviceName, serviceName+".go")
+		internalDir := filepath.Join(pkgDir, serviceName)
 		publicDir := serviceName
 		publicFile := filepath.Join(publicDir, serviceName+".go")
 
-		if !coreio.Local.IsFile(internalFile) {
+		if !coreio.Local.Exists(internalDir) {
 			continue
 		}
 
-		symbols, err := getExportedSymbols(internalFile)
+		symbols, err := getExportedSymbols(internalDir)
 		if err != nil {
 			return cli.Wrap(err, cli.Sprintf("error getting symbols for service '%s'", serviceName))
 		}
@@ -74,23 +77,29 @@ func runSync() error {
 }
 
 func getExportedSymbols(path string) ([]symbolInfo, error) {
-	// ParseFile expects a filename/path and reads it using os.Open by default if content is nil.
-	// Since we want to use our Medium abstraction, we should read the file content first.
-	content, err := coreio.Local.Read(path)
+	files, err := listGoFiles(path)
 	if err != nil {
 		return nil, err
 	}
 
-	fset := token.NewFileSet()
-	// ParseFile can take content as string (src argument).
-	node, err := parser.ParseFile(fset, path, content, parser.ParseComments)
-	if err != nil {
-		return nil, err
-	}
+	symbolsByName := make(map[string]symbolInfo)
+	for _, file := range files {
+		content, err := coreio.Local.Read(file)
+		if err != nil {
+			return nil, err
+		}
 
-	var symbols []symbolInfo
-	for name, obj := range node.Scope.Objects {
-		if ast.IsExported(name) {
+		fset := token.NewFileSet()
+		node, err := parser.ParseFile(fset, file, content, parser.ParseComments)
+		if err != nil {
+			return nil, err
+		}
+
+		for name, obj := range node.Scope.Objects {
+			if !ast.IsExported(name) {
+				continue
+			}
+
 			kind := "unknown"
 			switch obj.Kind {
 			case ast.Con:
@@ -102,12 +111,57 @@ func getExportedSymbols(path string) ([]symbolInfo, error) {
 			case ast.Typ:
 				kind = "type"
 			}
-			if kind != "unknown" {
-				symbols = append(symbols, symbolInfo{Name: name, Kind: kind})
+
+			if kind == "unknown" {
+				continue
+			}
+
+			if _, exists := symbolsByName[name]; !exists {
+				symbolsByName[name] = symbolInfo{Name: name, Kind: kind}
 			}
 		}
 	}
+
+	symbols := make([]symbolInfo, 0, len(symbolsByName))
+	for _, symbol := range symbolsByName {
+		symbols = append(symbols, symbol)
+	}
+
+	sort.Slice(symbols, func(i, j int) bool {
+		if symbols[i].Name == symbols[j].Name {
+			return symbols[i].Kind < symbols[j].Kind
+		}
+		return symbols[i].Name < symbols[j].Name
+	})
+
 	return symbols, nil
+}
+
+func listGoFiles(path string) ([]string, error) {
+	entries, err := coreio.Local.List(path)
+	if err == nil {
+		files := make([]string, 0, len(entries))
+		for _, entry := range entries {
+			if entry.IsDir() {
+				continue
+			}
+
+			name := entry.Name()
+			if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+				continue
+			}
+
+			files = append(files, filepath.Join(path, name))
+		}
+		sort.Strings(files)
+		return files, nil
+	}
+
+	if coreio.Local.IsFile(path) {
+		return []string{path}, nil
+	}
+
+	return nil, err
 }
 
 const publicAPITemplate = `// package {{.ServiceName}} provides the public API for the {{.ServiceName}} service.
