@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
 	coreio "dappco.re/go/core/io"
+	"forge.lthn.ai/core/cli/pkg/cli"
 	"gopkg.in/yaml.v3"
 )
 
@@ -32,7 +32,7 @@ func DefaultCIConfig() *CIConfig {
 	return &CIConfig{
 		Tap:            "host-uk/tap",
 		Formula:        "core",
-		ScoopBucket:    "https://https://forge.lthn.ai/core/scoop-bucket.git",
+		ScoopBucket:    "https://forge.lthn.ai/core/scoop-bucket.git",
 		ChocolateyPkg:  "core-cli",
 		Repository:     "host-uk/core",
 		DefaultVersion: "dev",
