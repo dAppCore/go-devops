@@ -6,10 +6,10 @@ import (
 	"strings"
 
 	"dappco.re/go/agent/cmd/workspace"
-	"forge.lthn.ai/core/cli/pkg/cli"
 	"dappco.re/go/core/i18n"
 	"dappco.re/go/core/io"
 	"dappco.re/go/core/scm/repos"
+	"forge.lthn.ai/core/cli/pkg/cli"
 )
 
 // loadRegistryWithConfig loads the registry and applies workspace configuration.

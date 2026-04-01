@@ -5,8 +5,8 @@ import (
 	"os"
 	"os/exec"
 
-	"dappco.re/go/core"
 	agentic "dappco.re/go/agent/pkg/lifecycle"
+	"dappco.re/go/core"
 )
 
 // ServiceOptions for configuring the dev service.

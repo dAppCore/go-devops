@@ -5,11 +5,11 @@ import (
 	"os"
 	"time"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-container/devenv"
 	"dappco.re/go/core/i18n"
 	"dappco.re/go/core/io"
 	log "dappco.re/go/core/log"
+	"forge.lthn.ai/core/cli/pkg/cli"
+	"forge.lthn.ai/core/go-container/devenv"
 )
 
 // addVMCommands adds the dev environment VM commands to the dev parent command.
@@ -190,10 +190,13 @@ func runVMStop() error {
 	return nil
 }
 
-// addVMStatusCommand adds the 'devops status' command.
+// addVMStatusCommand adds the 'dev status' command.
 func addVMStatusCommand(parent *cli.Command) {
 	statusCmd := &cli.Command{
-		Use:   "vm-status",
+		Use: "status",
+		Aliases: []string{
+			"vm-status",
+		},
 		Short: i18n.T("cmd.dev.vm.status.short"),
 		Long:  i18n.T("cmd.dev.vm.status.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
