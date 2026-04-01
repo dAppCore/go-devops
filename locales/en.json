@@ -210,6 +210,7 @@
         "skipped_count": "{{.Count}} skipped",
         "synced_count": "{{.Count}} synced",
         "would_sync_count": "{{.Count}} would sync",
+        "templates": "Templates",
         "header": {
           "repo": "Repo"
         },

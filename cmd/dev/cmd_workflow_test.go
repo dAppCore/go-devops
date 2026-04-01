@@ -1,7 +1,9 @@
 package dev
 
 import (
+	"maps"
 	"path/filepath"
+	"slices"
 	"testing"
 
 	"dappco.re/go/core/io"
@@ -104,5 +106,23 @@ func TestFindTemplateWorkflow_NotFound(t *testing.T) {
 	result := findTemplateWorkflow(tmpDir, "nonexistent.yml")
 	if result != "" {
 		t.Errorf("Expected empty string for non-existent template, got %s", result)
+	}
+}
+
+func TestTemplateNames_Good(t *testing.T) {
+	templateSet := map[string]bool{
+		"z.yml": true,
+		"a.yml": true,
+		"m.yml": true,
+	}
+
+	names := slices.Sorted(maps.Keys(templateSet))
+
+	if len(names) != 3 {
+		t.Fatalf("Expected 3 template names, got %d", len(names))
+	}
+
+	if names[0] != "a.yml" || names[1] != "m.yml" || names[2] != "z.yml" {
+		t.Fatalf("Expected sorted template names, got %v", names)
 	}
 }

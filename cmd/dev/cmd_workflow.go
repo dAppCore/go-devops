@@ -7,10 +7,10 @@ import (
 	"slices"
 	"strings"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
 	"dappco.re/go/core/i18n"
 	"dappco.re/go/core/io"
 	"dappco.re/go/core/scm/repos"
+	"forge.lthn.ai/core/cli/pkg/cli"
 )
 
 // Workflow command flags
@@ -116,6 +116,10 @@ func runWorkflowList(registryPath string) error {
 	templateSet := make(map[string]bool)
 	for _, wf := range templateWorkflows {
 		templateSet[wf] = true
+	}
+	templateNames := slices.Sorted(maps.Keys(templateSet))
+	if len(templateNames) > 0 {
+		cli.Print("%s %s\n\n", i18n.T("cmd.dev.workflow.templates"), strings.Join(templateNames, ", "))
 	}
 
 	// Build table
