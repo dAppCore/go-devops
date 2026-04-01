@@ -12,14 +12,14 @@ import (
 	"os"
 	"os/exec"
 	"path/filepath"
-	"strings"
+	"sort"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
-	core "dappco.re/go/core/log"
-	"dappco.re/go/core/scm/git"
 	"dappco.re/go/core/i18n"
 	"dappco.re/go/core/io"
+	core "dappco.re/go/core/log"
+	"dappco.re/go/core/scm/git"
 	"dappco.re/go/core/scm/repos"
+	"forge.lthn.ai/core/cli/pkg/cli"
 )
 
 // Apply command flags
@@ -235,29 +235,39 @@ func getApplyTargetRepos() ([]*repos.Repo, error) {
 		return nil, core.E("dev.apply", "failed to load registry", err)
 	}
 
-	// If --repos specified, filter to those
-	if applyRepos != "" {
-		repoNames := strings.Split(applyRepos, ",")
-		nameSet := make(map[string]bool)
-		for _, name := range repoNames {
-			nameSet[strings.TrimSpace(name)] = true
-		}
+	return filterTargetRepos(registry, applyRepos), nil
+}
 
-		var matched []*repos.Repo
-		for _, repo := range registry.Repos {
-			if nameSet[repo.Name] {
+// filterTargetRepos selects repos by exact name/path or glob pattern.
+func filterTargetRepos(registry *repos.Registry, selection string) []*repos.Repo {
+	repoNames := make([]string, 0, len(registry.Repos))
+	for name := range registry.Repos {
+		repoNames = append(repoNames, name)
+	}
+	sort.Strings(repoNames)
+
+	if selection == "" {
+		matched := make([]*repos.Repo, 0, len(repoNames))
+		for _, name := range repoNames {
+			matched = append(matched, registry.Repos[name])
+		}
+		return matched
+	}
+
+	patterns := splitPatterns(selection)
+	var matched []*repos.Repo
+
+	for _, name := range repoNames {
+		repo := registry.Repos[name]
+		for _, candidate := range patterns {
+			if matchGlob(repo.Name, candidate) || matchGlob(repo.Path, candidate) {
 				matched = append(matched, repo)
+				break
 			}
 		}
-		return matched, nil
 	}
 
-	// Return all repos as slice
-	var all []*repos.Repo
-	for _, repo := range registry.Repos {
-		all = append(all, repo)
-	}
-	return all, nil
+	return matched
 }
 
 // runCommandInRepo runs a shell command in a repo directory

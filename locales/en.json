@@ -151,7 +151,7 @@
         "flag": {
           "command": "Shell command to run in each repo",
           "script": "Script file to run in each repo",
-          "repos": "Comma-separated list of repo names to target",
+          "repos": "Comma-separated list of repo names, paths, or glob patterns to target",
           "commit": "Commit changes after running",
           "message": "Commit message (required with --commit)",
           "push": "Push after committing",

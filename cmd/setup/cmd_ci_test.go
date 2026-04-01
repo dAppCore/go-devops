@@ -59,6 +59,6 @@ func TestOutputPowershellInstall_Good(t *testing.T) {
 		return outputPowershellInstall(DefaultCIConfig(), "dev")
 	})
 	require.NoError(t, err)
-	require.Contains(t, out, `scoop bucket add host-uk https://forge.lthn.ai/core/scoop-bucket.git`)
+	require.Contains(t, out, `scoop bucket add host-uk $ScoopBucket`)
 	require.NotContains(t, out, `https://https://forge.lthn.ai/core/scoop-bucket.git`)
 }

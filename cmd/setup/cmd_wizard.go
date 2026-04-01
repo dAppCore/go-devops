@@ -94,9 +94,9 @@ func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string,
 	return selected, nil
 }
 
-func filterReposByTypes(repos []*repos.Repo, allowedTypes []string) []*repos.Repo {
+func filterReposByTypes(repoList []*repos.Repo, allowedTypes []string) []*repos.Repo {
 	if len(allowedTypes) == 0 {
-		return repos
+		return repoList
 	}
 
 	allowed := make(map[string]struct{}, len(allowedTypes))
@@ -108,11 +108,11 @@ func filterReposByTypes(repos []*repos.Repo, allowedTypes []string) []*repos.Rep
 	}
 
 	if len(allowed) == 0 {
-		return repos
+		return repoList
 	}
 
-	filtered := make([]*repos.Repo, 0, len(repos))
-	for _, repo := range repos {
+	filtered := make([]*repos.Repo, 0, len(repoList))
+	for _, repo := range repoList {
 		if _, ok := allowed[repo.Type]; ok {
 			filtered = append(filtered, repo)
 		}
