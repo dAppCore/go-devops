@@ -1,8 +1,8 @@
 package dev
 
 import (
-	"forge.lthn.ai/core/cli/pkg/cli"
 	"dappco.re/go/core/i18n"
+	"forge.lthn.ai/core/cli/pkg/cli"
 )
 
 // addAPICommands adds the 'api' command and its subcommands to the given parent command.
@@ -17,6 +17,6 @@ func addAPICommands(parent *cli.Command) {
 	// Add the 'sync' command to 'api'
 	addSyncCommand(apiCmd)
 
-	// TODO: Add the 'test-gen' command to 'api'
-	// addTestGenCommand(apiCmd)
+	// Add the 'test-gen' command to 'api'
+	addTestGenCommand(apiCmd)
 }

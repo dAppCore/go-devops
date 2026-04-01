@@ -8,7 +8,11 @@
       "short": "Multi-repo development workflows",
       "long": "Development workflow commands for managing multiple repositories.\n\nIncludes git operations, forge integration, CI status, and dev environment management.",
       "api": {
-        "short": "API synchronisation tools"
+        "short": "API synchronisation tools",
+        "test_gen": {
+          "short": "Generate public API test stubs",
+          "long": "Scan internal service packages and generate compile-time tests for their public API wrappers."
+        }
       },
       "health": {
         "short": "Quick health check across all repos",

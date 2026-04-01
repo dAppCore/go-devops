@@ -19,6 +19,7 @@
 //
 // API Tools:
 //   - api sync: Synchronize public service APIs
+//   - api test-gen: Generate compile-time API test stubs
 //
 // Dev Environment (VM management):
 //   - install: Download dev environment image
@@ -33,8 +34,8 @@
 package dev
 
 import (
-	"forge.lthn.ai/core/cli/pkg/cli"
 	"dappco.re/go/core/i18n"
+	"forge.lthn.ai/core/cli/pkg/cli"
 
 	_ "dappco.re/go/core/devops/locales"
 )
