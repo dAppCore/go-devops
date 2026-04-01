@@ -24,3 +24,17 @@ func TestAddFileSyncCommand_Good(t *testing.T) {
 	require.NotNil(t, syncCmd.Flags().Lookup("dry-run"))
 	require.NotNil(t, syncCmd.Flags().Lookup("push"))
 }
+
+func TestSplitPatterns_Good(t *testing.T) {
+	patterns := splitPatterns("packages/core-*,  apps/* ,services/*,")
+	require.Equal(t, []string{"packages/core-*", "apps/*", "services/*"}, patterns)
+}
+
+func TestMatchGlob_Good(t *testing.T) {
+	require.True(t, matchGlob("packages/core-xyz", "packages/core-*"))
+	require.True(t, matchGlob("packages/core-xyz", "*/core-*"))
+	require.True(t, matchGlob("a-b", "a?b"))
+	require.True(t, matchGlob("foo", "foo"))
+	require.False(t, matchGlob("core-other", "packages/*"))
+	require.False(t, matchGlob("abc", "[]"))
+}

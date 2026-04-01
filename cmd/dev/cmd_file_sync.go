@@ -214,22 +214,48 @@ func resolveTargetRepos(pattern string) ([]*repos.Repo, error) {
 
 	// Match pattern against repo names
 	var matched []*repos.Repo
+	patterns := splitPatterns(pattern)
 	for _, repo := range registry.Repos {
-		if matchGlob(repo.Name, pattern) || matchGlob(repo.Path, pattern) {
-			matched = append(matched, repo)
+		for _, candidate := range patterns {
+			if matchGlob(repo.Name, candidate) || matchGlob(repo.Path, candidate) {
+				matched = append(matched, repo)
+				break
+			}
 		}
 	}
 
 	return matched, nil
 }
 
+// splitPatterns normalises comma-separated glob patterns.
+func splitPatterns(pattern string) []string {
+	raw := strings.Split(pattern, ",")
+	out := make([]string, 0, len(raw))
+
+	for _, p := range raw {
+		p = strings.TrimSpace(p)
+		if p == "" {
+			continue
+		}
+		out = append(out, p)
+	}
+
+	return out
+}
+
 // matchGlob performs simple glob matching with * wildcards
 func matchGlob(s, pattern string) bool {
-	// Handle exact match
+	// Handle exact match and simple glob patterns.
 	if s == pattern {
 		return true
 	}
 
+	matched, err := filepath.Match(pattern, s)
+	if err == nil {
+		return matched
+	}
+
+	// Fallback to legacy wildcard rules for invalid glob patterns.
 	// Handle * at end
 	if strings.HasSuffix(pattern, "*") {
 		prefix := strings.TrimSuffix(pattern, "*")
