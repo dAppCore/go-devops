@@ -28,3 +28,25 @@ func TestDetectProjectType_PrefersPackageOverComposer(t *testing.T) {
 
 	require.Equal(t, "node", detectProjectType(dir))
 }
+
+func TestParseGitHubRepoURL_Good(t *testing.T) {
+	cases := map[string]string{
+		"git@github.com:owner/repo.git":            "owner/repo",
+		"ssh://git@github.com/owner/repo.git":      "owner/repo",
+		"https://github.com/owner/repo.git":        "owner/repo",
+		"git://github.com/owner/repo.git":          "owner/repo",
+		"https://www.github.com/owner/repo":        "owner/repo",
+		"git@github.com:owner/nested/repo.git":     "owner/nested/repo",
+		"ssh://git@github.com/owner/nested/repo/":  "owner/nested/repo",
+		"ssh://git@github.com:443/owner/repo.git":  "owner/repo",
+		"https://example.com/owner/repo.git":       "",
+		"git@bitbucket.org:owner/repo.git":         "",
+		"   ssh://git@github.com/owner/repo.git  ": "owner/repo",
+	}
+
+	for remote, expected := range cases {
+		t.Run(remote, func(t *testing.T) {
+			require.Equal(t, expected, parseGitHubRepoURL(remote))
+		})
+	}
+}

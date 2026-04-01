@@ -8,6 +8,7 @@ package setup
 
 import (
 	"fmt"
+	"net/url"
 	"os"
 	"os/exec"
 	"path/filepath"
@@ -294,21 +295,44 @@ func detectGitHubRepo() string {
 		return ""
 	}
 
-	url := strings.TrimSpace(string(output))
+	return parseGitHubRepoURL(strings.TrimSpace(string(output)))
+}
 
-	// Handle SSH format: git@github.com:owner/repo.git
-	if strings.HasPrefix(url, "git@github.com:") {
-		repo := strings.TrimPrefix(url, "git@github.com:")
-		repo = strings.TrimSuffix(repo, ".git")
-		return repo
+// parseGitHubRepoURL extracts owner/repo from a GitHub remote URL.
+//
+// Supports the common remote formats used by git:
+// - git@github.com:owner/repo.git
+// - ssh://git@github.com/owner/repo.git
+// - https://github.com/owner/repo.git
+// - git://github.com/owner/repo.git
+func parseGitHubRepoURL(remote string) string {
+	remote = strings.TrimSpace(remote)
+	if remote == "" {
+		return ""
 	}
 
-	// Handle HTTPS format: https://github.com/owner/repo.git
-	if strings.Contains(url, "github.com/") {
-		parts := strings.Split(url, "github.com/")
-		if len(parts) == 2 {
-			repo := strings.TrimSuffix(parts[1], ".git")
+	// Handle SSH-style scp syntax first.
+	if strings.HasPrefix(remote, "git@github.com:") {
+		repo := strings.TrimPrefix(remote, "git@github.com:")
+		return strings.TrimSuffix(repo, ".git")
+	}
+
+	if parsed, err := url.Parse(remote); err == nil && parsed.Host != "" {
+		host := strings.TrimPrefix(parsed.Hostname(), "www.")
+		if host == "github.com" {
+			repo := strings.TrimPrefix(parsed.Path, "/")
+			repo = strings.TrimSuffix(repo, ".git")
+			repo = strings.TrimSuffix(repo, "/")
 			return repo
+		}
+	}
+
+	if strings.Contains(remote, "github.com/") {
+		parts := strings.SplitN(remote, "github.com/", 2)
+		if len(parts) == 2 {
+			repo := strings.TrimPrefix(parts[1], "/")
+			repo = strings.TrimSuffix(repo, ".git")
+			return strings.TrimSuffix(repo, "/")
 		}
 	}
 
