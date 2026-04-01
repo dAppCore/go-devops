@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
 	"dappco.re/go/core/i18n"
 	"dappco.re/go/core/io"
 	"dappco.re/go/core/scm/repos"
+	"forge.lthn.ai/core/cli/pkg/cli"
 )
 
 // Flag variables for sync command
@@ -295,9 +295,8 @@ func runZensicalSync(reg *repos.Registry, basePath string, outputDir string, dry
 			weight += 10
 		}
 
-		if info.Readme != "" && folder != "" {
-			dst := filepath.Join(destDir, "index.md")
-			if err := copyWithFrontMatter(info.Readme, dst, 1); err != nil {
+		if info.Readme != "" {
+			if err := copyZensicalReadme(info.Readme, destDir); err != nil {
 				cli.Print("  %s README: %s\n", errorStyle.Render("✗"), err)
 			}
 		}
@@ -324,6 +323,12 @@ func runZensicalSync(reg *repos.Registry, basePath string, outputDir string, dry
 
 	cli.Print("\n  Synced %d repos to Zensical docs\n", synced)
 	return nil
+}
+
+// copyZensicalReadme copies a repository README to index.md in the target directory.
+func copyZensicalReadme(src, destDir string) error {
+	dst := filepath.Join(destDir, "index.md")
+	return copyWithFrontMatter(src, dst, 1)
 }
 
 // goHelpOutputName maps repo name to output folder name for go-help.

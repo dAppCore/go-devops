@@ -1,0 +1,39 @@
+package docs
+
+import (
+	"os"
+	"path/filepath"
+	"strings"
+	"testing"
+)
+
+func TestCopyZensicalReadme_Good(t *testing.T) {
+	srcDir := t.TempDir()
+	destDir := t.TempDir()
+
+	src := filepath.Join(srcDir, "README.md")
+	if err := os.WriteFile(src, []byte("# Hello\n\nBody text.\n"), 0o644); err != nil {
+		t.Fatalf("write source README: %v", err)
+	}
+
+	if err := copyZensicalReadme(src, destDir); err != nil {
+		t.Fatalf("copy README: %v", err)
+	}
+
+	output := filepath.Join(destDir, "index.md")
+	data, err := os.ReadFile(output)
+	if err != nil {
+		t.Fatalf("read output index.md: %v", err)
+	}
+
+	content := string(data)
+	if !strings.HasPrefix(content, "---\n") {
+		t.Fatalf("expected Hugo front matter at start, got: %q", content)
+	}
+	if !strings.Contains(content, "title: \"README\"") {
+		t.Fatalf("expected README title in front matter, got: %q", content)
+	}
+	if !strings.Contains(content, "Body text.") {
+		t.Fatalf("expected README body to be preserved, got: %q", content)
+	}
+}
