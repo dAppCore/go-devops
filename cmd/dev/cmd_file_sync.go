@@ -14,12 +14,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
-	"dappco.re/go/core/scm/git"
 	"dappco.re/go/core/i18n"
 	coreio "dappco.re/go/core/io"
 	"dappco.re/go/core/log"
+	"dappco.re/go/core/scm/git"
 	"dappco.re/go/core/scm/repos"
+	"forge.lthn.ai/core/cli/pkg/cli"
 )
 
 // File sync command flags
@@ -29,6 +29,7 @@ var (
 	fileSyncCoAuthor string
 	fileSyncDryRun   bool
 	fileSyncPush     bool
+	fileSyncYes      bool
 )
 
 // AddFileSyncCommand adds the 'sync' command to dev for file syncing.
@@ -48,6 +49,7 @@ func AddFileSyncCommand(parent *cli.Command) {
 	syncCmd.Flags().StringVar(&fileSyncCoAuthor, "co-author", "", i18n.T("cmd.dev.file_sync.flag.co_author"))
 	syncCmd.Flags().BoolVar(&fileSyncDryRun, "dry-run", false, i18n.T("cmd.dev.file_sync.flag.dry_run"))
 	syncCmd.Flags().BoolVar(&fileSyncPush, "push", false, i18n.T("cmd.dev.file_sync.flag.push"))
+	syncCmd.Flags().BoolVarP(&fileSyncYes, "yes", "y", false, i18n.T("cmd.dev.file_sync.flag.yes"))
 
 	_ = syncCmd.MarkFlagRequired("to")
 
@@ -64,23 +66,6 @@ func runFileSync(source string) error {
 
 	// Validate source exists
 	sourceInfo, err := os.Stat(source) // Keep os.Stat for local source check or use coreio? coreio.Local.IsFile is bool.
-	// If source is local file on disk (not in medium), we can use os.Stat.
-	// But concept is everything is via Medium?
-	// User is running CLI on host. `source` is relative to CWD.
-	// coreio.Local uses absolute path or relative to root (which is "/" by default).
-	// So coreio.Local works.
-	if !coreio.Local.IsFile(source) {
-		// Might be directory
-		// IsFile returns false for directory.
-	}
-	// Let's rely on os.Stat for initial source check to distinguish dir vs file easily if coreio doesn't expose Stat.
-	// coreio doesn't expose Stat.
-
-	// Check using standard os for source determination as we are outside strict sandbox for input args potentially?
-	// But we should use coreio where possible.
-	// coreio.Local.List worked for dirs.
-	// Let's stick to os.Stat for source properties finding as typically allowed for CLI args.
-
 	if err != nil {
 		return log.E("dev.sync", i18n.T("cmd.dev.file_sync.error.source_not_found", map[string]any{"Path": source}), err)
 	}
@@ -102,6 +87,16 @@ func runFileSync(source string) error {
 		cli.Print("%s\n", warningStyle.Render(i18n.T("cmd.dev.file_sync.dry_run_mode")))
 	}
 	cli.Blank()
+
+	if !fileSyncDryRun && !fileSyncYes {
+		cli.Print("%s\n", warningStyle.Render(i18n.T("cmd.dev.file_sync.warning")))
+		cli.Blank()
+		if !cli.Confirm(i18n.T("cmd.dev.file_sync.confirm")) {
+			cli.Text(i18n.T("cli.aborted"))
+			return nil
+		}
+		cli.Blank()
+	}
 
 	var succeeded, skipped, failed int
 

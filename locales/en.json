@@ -173,6 +173,8 @@
         "long": "Copy a file or directory to matching repos, optionally committing and pushing the changes.\n\nDesigned for safe file distribution by AI agents.",
         "source": "Source",
         "targets": "Targets",
+        "warning": "This will copy files into each target repo.",
+        "confirm": "Sync these repos?",
         "dry_run_mode": "[dry-run] No changes will be made",
         "no_changes": "no changes",
         "summary": "Summary",
@@ -181,7 +183,8 @@
           "message": "Commit message (omit to leave uncommitted)",
           "push": "Push after committing",
           "co_author": "Co-author for commits",
-          "dry_run": "Preview without making changes"
+          "dry_run": "Preview without making changes",
+          "yes": "Skip confirmation prompt"
         },
         "error": {
           "source_not_found": "Source not found: {{.Path}}",
