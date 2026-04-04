@@ -10,8 +10,8 @@ require (
 	dappco.re/go/core/io v0.1.7
 	dappco.re/go/core/log v0.0.4
 	dappco.re/go/core/scm v0.3.6
-	forge.lthn.ai/core/cli v0.3.7
-	forge.lthn.ai/core/go-container v0.1.7
+	dappco.re/go/core/cli v0.3.7
+	dappco.re/go/core/container v0.1.7
 	github.com/kluctl/go-embed-python v0.0.0-3.13.1-20241219-1
 	github.com/stretchr/testify v1.11.1
 	golang.org/x/term v0.41.0
@@ -21,9 +21,9 @@ require (
 
 require (
 	codeberg.org/mvdkleijn/forgejo-sdk/forgejo/v2 v2.2.0 // indirect
-	forge.lthn.ai/core/config v0.1.8 // indirect
-	forge.lthn.ai/core/go-inference v0.1.6 // indirect
-	forge.lthn.ai/core/go-store v0.1.9 // indirect
+	dappco.re/go/core/config v0.1.8 // indirect
+	dappco.re/go/core/inference v0.1.6 // indirect
+	dappco.re/go/core/store v0.1.9 // indirect
 	github.com/42wim/httpsig v1.2.3 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/cespare/xxhash/v2 v2.3.0 // indirect
