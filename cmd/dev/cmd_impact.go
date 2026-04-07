@@ -3,7 +3,7 @@ package dev
 import (
 	"slices"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
+	"dappco.re/go/core/cli/pkg/cli"
 	"dappco.re/go/core/i18n"
 	"dappco.re/go/core/io"
 	log "dappco.re/go/core/log"

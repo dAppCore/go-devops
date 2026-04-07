@@ -17,7 +17,7 @@ import (
 	"dappco.re/go/core/i18n"
 	coreio "dappco.re/go/core/io"
 	log "dappco.re/go/core/log"
-	"forge.lthn.ai/core/cli/pkg/cli"
+	"dappco.re/go/core/cli/pkg/cli"
 )
 
 var repoDryRun bool

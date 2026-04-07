@@ -13,7 +13,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"dappco.re/go/agent/cmd/workspace"
+	"dappco.re/go/core/devops/cmd/workspace"
 	"dappco.re/go/core/i18n"
 	coreio "dappco.re/go/core/io"
 	log "dappco.re/go/core/log"

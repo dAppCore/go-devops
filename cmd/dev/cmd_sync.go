@@ -13,7 +13,7 @@ import (
 	"dappco.re/go/core/i18n"
 	coreio "dappco.re/go/core/io"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
+	"dappco.re/go/core/cli/pkg/cli"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -169,10 +169,10 @@ package {{.ServiceName}}
 
 import (
 	// Import the internal implementation with an alias.
-	impl "forge.lthn.ai/core/cli/{{.ServiceName}}"
+	impl "dappco.re/go/core/cli/{{.ServiceName}}"
 
 	// Import the core contracts to re-export the interface.
-	"forge.lthn.ai/core/cli/core"
+	"dappco.re/go/core/cli/core"
 )
 
 {{range .Symbols}}

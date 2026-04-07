@@ -30,7 +30,7 @@ func NewWorkBundle(opts WorkBundleOptions) (*WorkBundle, error) {
 
 	c.Service("dev", core.Service{
 		OnStart: func() core.Result {
-			c.RegisterTask(svc.handleTask)
+			c.RegisterAction(svc.handleAction)
 			return core.Result{OK: true}
 		},
 	})

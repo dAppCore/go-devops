@@ -5,7 +5,7 @@ import (
 	"os"
 	"path/filepath"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
+	"dappco.re/go/core/cli/pkg/cli"
 	"dappco.re/go/core/scm/git"
 	"dappco.re/go/core/i18n"
 	coreio "dappco.re/go/core/io"

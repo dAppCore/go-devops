@@ -8,8 +8,8 @@ import (
 	"dappco.re/go/core/i18n"
 	"dappco.re/go/core/io"
 	log "dappco.re/go/core/log"
-	"forge.lthn.ai/core/cli/pkg/cli"
-	"forge.lthn.ai/core/go-container/devenv"
+	"dappco.re/go/core/cli/pkg/cli"
+	"dappco.re/go/core/container/devenv"
 )
 
 // addVMCommands adds the dev environment VM commands to the dev parent command.

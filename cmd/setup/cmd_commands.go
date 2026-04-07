@@ -24,7 +24,7 @@
 package setup
 
 import (
-	"forge.lthn.ai/core/cli/pkg/cli"
+	"dappco.re/go/core/cli/pkg/cli"
 	"dappco.re/go/core/i18n"
 
 	_ "dappco.re/go/core/devops/locales"

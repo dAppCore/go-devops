@@ -13,12 +13,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"dappco.re/go/agent/cmd/workspace"
+	"dappco.re/go/core/devops/cmd/workspace"
 	"dappco.re/go/core/i18n"
 	coreio "dappco.re/go/core/io"
 	log "dappco.re/go/core/log"
 	"dappco.re/go/core/scm/repos"
-	"forge.lthn.ai/core/cli/pkg/cli"
+	"dappco.re/go/core/cli/pkg/cli"
 )
 
 // runRegistrySetup loads a registry from path and runs setup.

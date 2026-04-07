@@ -19,7 +19,7 @@ import (
 	core "dappco.re/go/core/log"
 	"dappco.re/go/core/scm/git"
 	"dappco.re/go/core/scm/repos"
-	"forge.lthn.ai/core/cli/pkg/cli"
+	"dappco.re/go/core/cli/pkg/cli"
 )
 
 // Apply command flags
