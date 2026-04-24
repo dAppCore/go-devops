@@ -3,7 +3,7 @@ module dappco.re/go/devops
 go 1.26.0
 
 require (
-	code.gitea.io/sdk/gitea v0.23.2
+	code.gitea.io/sdk/gitea v0.23.2 // Note: Gitea SDK for repository and automation API integration; no core.* equivalent.
 	dappco.re/go/agent v0.11.0
 	dappco.re/go/core v0.8.0-alpha.1
 	dappco.re/go/core/cli v0.5.2
@@ -12,10 +12,10 @@ require (
 	dappco.re/go/core/io v0.4.1
 	dappco.re/go/core/log v0.1.2
 	dappco.re/go/core/scm v0.6.1
-	github.com/kluctl/go-embed-python v0.0.0-3.13.1-20241219-1
+	github.com/kluctl/go-embed-python v0.0.0-3.13.1-20241219-1 // Note: CPython embedding for Ansible playbook execution; no go/* equivalent.
 	golang.org/x/term v0.41.0
 	golang.org/x/text v0.35.0
-	gopkg.in/yaml.v3 v3.0.1
+	gopkg.in/yaml.v3 v3.0.1 // Note: YAML parser for Ansible inventory and playbook files; no core.* YAML equivalent.
 )
 
 require (
