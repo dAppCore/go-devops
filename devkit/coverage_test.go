@@ -5,8 +5,6 @@ import (
 	"path/filepath"
 	"testing"
 	"time"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestParseCoverProfile_Good(t *testing.T) {
@@ -15,29 +13,29 @@ github.com/acme/project/foo/foo.go:1.1,3.1 2 1
 github.com/acme/project/foo/bar.go:1.1,4.1 3 0
 github.com/acme/project/baz/baz.go:1.1,2.1 4 4
 `)
-	require.NoError(t, err)
-	require.Len(t, snapshot.Packages, 2)
-	require.Equal(t, "github.com/acme/project/baz", snapshot.Packages[0].Name)
-	require.Equal(t, "github.com/acme/project/foo", snapshot.Packages[1].Name)
-	require.InDelta(t, 100.0, snapshot.Packages[0].Coverage, 0.0001)
-	require.InDelta(t, 40.0, snapshot.Packages[1].Coverage, 0.0001)
-	require.InDelta(t, 66.6667, snapshot.Total.Coverage, 0.0001)
+	mustNoError(t, err)
+	mustLen(t, snapshot.Packages, 2)
+	mustEqual(t, "github.com/acme/project/baz", snapshot.Packages[0].Name)
+	mustEqual(t, "github.com/acme/project/foo", snapshot.Packages[1].Name)
+	mustInDelta(t, 100.0, snapshot.Packages[0].Coverage, 0.0001)
+	mustInDelta(t, 40.0, snapshot.Packages[1].Coverage, 0.0001)
+	mustInDelta(t, 66.6667, snapshot.Total.Coverage, 0.0001)
 }
 
 func TestParseCoverProfile_Bad(t *testing.T) {
 	_, err := ParseCoverProfile("mode: set\nbroken line")
-	require.Error(t, err)
+	mustError(t, err)
 }
 
 func TestParseCoverOutput_Good(t *testing.T) {
 	snapshot, err := ParseCoverOutput(`ok  	github.com/acme/project/foo	0.123s	coverage: 75.0% of statements
 ok  	github.com/acme/project/bar	0.456s	coverage: 50.0% of statements
 `)
-	require.NoError(t, err)
-	require.Len(t, snapshot.Packages, 2)
-	require.Equal(t, "github.com/acme/project/bar", snapshot.Packages[0].Name)
-	require.Equal(t, "github.com/acme/project/foo", snapshot.Packages[1].Name)
-	require.InDelta(t, 62.5, snapshot.Total.Coverage, 0.0001)
+	mustNoError(t, err)
+	mustLen(t, snapshot.Packages, 2)
+	mustEqual(t, "github.com/acme/project/bar", snapshot.Packages[0].Name)
+	mustEqual(t, "github.com/acme/project/foo", snapshot.Packages[1].Name)
+	mustInDelta(t, 62.5, snapshot.Total.Coverage, 0.0001)
 }
 
 func TestCompareCoverage_Good(t *testing.T) {
@@ -58,14 +56,14 @@ func TestCompareCoverage_Good(t *testing.T) {
 	}
 
 	comparison := CompareCoverage(previous, current)
-	require.Len(t, comparison.Regressions, 1)
-	require.Len(t, comparison.Improvements, 1)
-	require.Len(t, comparison.NewPackages, 1)
-	require.Empty(t, comparison.Removed)
-	require.Equal(t, "pkg/a", comparison.Regressions[0].Name)
-	require.Equal(t, "pkg/b", comparison.Improvements[0].Name)
-	require.Equal(t, "pkg/c", comparison.NewPackages[0].Name)
-	require.InDelta(t, 4.0, comparison.TotalDelta, 0.0001)
+	mustLen(t, comparison.Regressions, 1)
+	mustLen(t, comparison.Improvements, 1)
+	mustLen(t, comparison.NewPackages, 1)
+	mustEmpty(t, comparison.Removed)
+	mustEqual(t, "pkg/a", comparison.Regressions[0].Name)
+	mustEqual(t, "pkg/b", comparison.Improvements[0].Name)
+	mustEqual(t, "pkg/c", comparison.NewPackages[0].Name)
+	mustInDelta(t, 4.0, comparison.TotalDelta, 0.0001)
 }
 
 func TestCoverageStore_Good(t *testing.T) {
@@ -83,26 +81,26 @@ func TestCoverageStore_Good(t *testing.T) {
 		Total:      CoveragePackage{Name: "total", Coverage: 82.5},
 	}
 
-	require.NoError(t, store.Append(first))
-	require.NoError(t, store.Append(second))
+	mustNoError(t, store.Append(first))
+	mustNoError(t, store.Append(second))
 
 	snapshots, err := store.Load()
-	require.NoError(t, err)
-	require.Len(t, snapshots, 2)
-	require.Equal(t, first.CapturedAt, snapshots[0].CapturedAt)
-	require.Equal(t, second.CapturedAt, snapshots[1].CapturedAt)
+	mustNoError(t, err)
+	mustLen(t, snapshots, 2)
+	mustEqual(t, first.CapturedAt, snapshots[0].CapturedAt)
+	mustEqual(t, second.CapturedAt, snapshots[1].CapturedAt)
 
 	latest, err := store.Latest()
-	require.NoError(t, err)
-	require.Equal(t, second.CapturedAt, latest.CapturedAt)
+	mustNoError(t, err)
+	mustEqual(t, second.CapturedAt, latest.CapturedAt)
 }
 
 func TestCoverageStore_Bad(t *testing.T) {
 	dir := t.TempDir()
 	path := filepath.Join(dir, "coverage.json")
-	require.NoError(t, os.WriteFile(path, []byte("{"), 0o600))
+	mustNoError(t, os.WriteFile(path, []byte("{"), 0o600))
 
 	store := NewCoverageStore(path)
 	_, err := store.Load()
-	require.Error(t, err)
+	mustError(t, err)
 }

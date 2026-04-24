@@ -3,8 +3,6 @@ package dev
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"dappco.re/go/core/scm/repos"
 )
 
@@ -19,21 +17,21 @@ func TestFilterTargetRepos_Good(t *testing.T) {
 
 	t.Run("exact names", func(t *testing.T) {
 		matched := filterTargetRepos(registry, "core-api,docs-site")
-		require.Len(t, matched, 2)
-		require.Equal(t, "core-api", matched[0].Name)
-		require.Equal(t, "docs-site", matched[1].Name)
+		mustLen(t, matched, 2)
+		mustEqual(t, "core-api", matched[0].Name)
+		mustEqual(t, "docs-site", matched[1].Name)
 	})
 
 	t.Run("glob patterns", func(t *testing.T) {
 		matched := filterTargetRepos(registry, "core-*,sites/*")
-		require.Len(t, matched, 3)
-		require.Equal(t, "core-api", matched[0].Name)
-		require.Equal(t, "core-web", matched[1].Name)
-		require.Equal(t, "docs-site", matched[2].Name)
+		mustLen(t, matched, 3)
+		mustEqual(t, "core-api", matched[0].Name)
+		mustEqual(t, "core-web", matched[1].Name)
+		mustEqual(t, "docs-site", matched[2].Name)
 	})
 
 	t.Run("all repos when empty", func(t *testing.T) {
 		matched := filterTargetRepos(registry, "")
-		require.Len(t, matched, 3)
+		mustLen(t, matched, 3)
 	})
 }

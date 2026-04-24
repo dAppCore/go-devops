@@ -1,9 +1,8 @@
 package dev
 
 import (
+	"reflect"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 
 	"dappco.re/go/core/cli/pkg/cli"
 )
@@ -14,27 +13,38 @@ func TestAddFileSyncCommand_Good(t *testing.T) {
 	AddDevCommands(root)
 
 	syncCmd, _, err := root.Find([]string{"dev", "sync"})
-	require.NoError(t, err)
-	require.NotNil(t, syncCmd)
+	mustNoError(t, err)
+	if syncCmd == nil {
+		t.Fatal("expected non-nil sync command")
+	}
 
 	yesFlag := syncCmd.Flags().Lookup("yes")
-	require.NotNil(t, yesFlag)
-	require.Equal(t, "y", yesFlag.Shorthand)
+	if yesFlag == nil {
+		t.Fatal("expected yes flag")
+	}
+	mustEqual(t, "y", yesFlag.Shorthand)
 
-	require.NotNil(t, syncCmd.Flags().Lookup("dry-run"))
-	require.NotNil(t, syncCmd.Flags().Lookup("push"))
+	if syncCmd.Flags().Lookup("dry-run") == nil {
+		t.Fatal("expected dry-run flag")
+	}
+	if syncCmd.Flags().Lookup("push") == nil {
+		t.Fatal("expected push flag")
+	}
 }
 
 func TestSplitPatterns_Good(t *testing.T) {
 	patterns := splitPatterns("packages/core-*,  apps/* ,services/*,")
-	require.Equal(t, []string{"packages/core-*", "apps/*", "services/*"}, patterns)
+	want := []string{"packages/core-*", "apps/*", "services/*"}
+	if !reflect.DeepEqual(want, patterns) {
+		t.Fatalf("want %v, got %v", want, patterns)
+	}
 }
 
 func TestMatchGlob_Good(t *testing.T) {
-	require.True(t, matchGlob("packages/core-xyz", "packages/core-*"))
-	require.True(t, matchGlob("packages/core-xyz", "*/core-*"))
-	require.True(t, matchGlob("a-b", "a?b"))
-	require.True(t, matchGlob("foo", "foo"))
-	require.False(t, matchGlob("core-other", "packages/*"))
-	require.False(t, matchGlob("abc", "[]"))
+	mustTrue(t, matchGlob("packages/core-xyz", "packages/core-*"))
+	mustTrue(t, matchGlob("packages/core-xyz", "*/core-*"))
+	mustTrue(t, matchGlob("a-b", "a?b"))
+	mustTrue(t, matchGlob("foo", "foo"))
+	mustFalse(t, matchGlob("core-other", "packages/*"))
+	mustFalse(t, matchGlob("abc", "[]"))
 }

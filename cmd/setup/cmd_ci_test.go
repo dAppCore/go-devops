@@ -5,8 +5,6 @@ import (
 	"io"
 	"os"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func captureStdout(t *testing.T, fn func() error) (string, error) {
@@ -14,7 +12,7 @@ func captureStdout(t *testing.T, fn func() error) (string, error) {
 
 	oldStdout := os.Stdout
 	r, w, err := os.Pipe()
-	require.NoError(t, err)
+	mustNoError(t, err)
 	defer func() {
 		_ = r.Close()
 	}()
@@ -36,8 +34,8 @@ func captureStdout(t *testing.T, fn func() error) (string, error) {
 
 	runErr := fn()
 
-	require.NoError(t, w.Close())
-	require.NoError(t, <-errC)
+	mustNoError(t, w.Close())
+	mustNoError(t, <-errC)
 	out := <-outC
 
 	return out, runErr
@@ -46,19 +44,19 @@ func captureStdout(t *testing.T, fn func() error) (string, error) {
 func TestDefaultCIConfig_Good(t *testing.T) {
 	cfg := DefaultCIConfig()
 
-	require.Equal(t, "host-uk/tap", cfg.Tap)
-	require.Equal(t, "core", cfg.Formula)
-	require.Equal(t, "https://forge.lthn.ai/core/scoop-bucket.git", cfg.ScoopBucket)
-	require.Equal(t, "core-cli", cfg.ChocolateyPkg)
-	require.Equal(t, "host-uk/core", cfg.Repository)
-	require.Equal(t, "dev", cfg.DefaultVersion)
+	mustEqual(t, "host-uk/tap", cfg.Tap)
+	mustEqual(t, "core", cfg.Formula)
+	mustEqual(t, "https://forge.lthn.ai/core/scoop-bucket.git", cfg.ScoopBucket)
+	mustEqual(t, "core-cli", cfg.ChocolateyPkg)
+	mustEqual(t, "host-uk/core", cfg.Repository)
+	mustEqual(t, "dev", cfg.DefaultVersion)
 }
 
 func TestOutputPowershellInstall_Good(t *testing.T) {
 	out, err := captureStdout(t, func() error {
 		return outputPowershellInstall(DefaultCIConfig(), "dev")
 	})
-	require.NoError(t, err)
-	require.Contains(t, out, `scoop bucket add host-uk $ScoopBucket`)
-	require.NotContains(t, out, `https://https://forge.lthn.ai/core/scoop-bucket.git`)
+	mustNoError(t, err)
+	mustContains(t, out, `scoop bucket add host-uk $ScoopBucket`)
+	mustNotContains(t, out, `https://https://forge.lthn.ai/core/scoop-bucket.git`)
 }

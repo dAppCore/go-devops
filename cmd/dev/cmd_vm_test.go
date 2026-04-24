@@ -3,8 +3,6 @@ package dev
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
 	"dappco.re/go/core/cli/pkg/cli"
 )
 
@@ -14,13 +12,29 @@ func TestAddVMStatusCommand_Good(t *testing.T) {
 	AddDevCommands(root)
 
 	statusCmd, _, err := root.Find([]string{"dev", "status"})
-	require.NoError(t, err)
-	require.NotNil(t, statusCmd)
-	require.Equal(t, "status", statusCmd.Use)
-	require.Contains(t, statusCmd.Aliases, "vm-status")
+	mustNoError(t, err)
+	if statusCmd == nil {
+		t.Fatal("expected non-nil status command")
+	}
+	mustEqual(t, "status", statusCmd.Use)
+	mustContainsAlias(t, statusCmd.Aliases, "vm-status")
 
 	aliasCmd, _, err := root.Find([]string{"dev", "vm-status"})
-	require.NoError(t, err)
-	require.NotNil(t, aliasCmd)
-	require.Equal(t, statusCmd, aliasCmd)
+	mustNoError(t, err)
+	if aliasCmd == nil {
+		t.Fatal("expected non-nil alias command")
+	}
+	if statusCmd != aliasCmd {
+		t.Fatalf("want alias to be same command, got %v vs %v", statusCmd, aliasCmd)
+	}
+}
+
+func mustContainsAlias(t *testing.T, haystack []string, needle string) {
+	t.Helper()
+	for _, s := range haystack {
+		if s == needle {
+			return
+		}
+	}
+	t.Fatalf("expected %v to contain %q", haystack, needle)
 }
