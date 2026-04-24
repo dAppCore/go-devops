@@ -5,7 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"dappco.re/go/core/scm/manifest"
+	"dappco.re/go/scm/manifest"
 )
 
 var fixedTime = time.Date(2026, 3, 9, 15, 0, 0, 0, time.UTC)

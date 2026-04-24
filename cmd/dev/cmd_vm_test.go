@@ -3,7 +3,7 @@ package dev
 import (
 	"testing"
 
-	"dappco.re/go/core/cli/pkg/cli"
+	"dappco.re/go/cli/pkg/cli"
 )
 
 func TestAddVMStatusCommand_Good(t *testing.T) {

@@ -6,7 +6,7 @@ import (
 	"slices"
 	"testing"
 
-	"dappco.re/go/core/io"
+	"dappco.re/go/io"
 )
 
 func TestFindWorkflows_Good(t *testing.T) {

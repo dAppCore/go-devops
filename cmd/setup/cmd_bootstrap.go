@@ -14,10 +14,10 @@ import (
 	"strings"
 
 	"dappco.re/go/devops/cmd/workspace"
-	"dappco.re/go/core/i18n"
-	coreio "dappco.re/go/core/io"
-	log "dappco.re/go/core/log"
-	"dappco.re/go/core/scm/repos"
+	"dappco.re/go/i18n"
+	coreio "dappco.re/go/io"
+	log "dappco.re/go/log"
+	"dappco.re/go/scm/repos"
 )
 
 // runSetupOrchestrator decides between registry mode and bootstrap mode.

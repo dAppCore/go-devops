@@ -6,7 +6,7 @@ import (
 	"os"
 	"sync"
 
-	log "dappco.re/go/core/log"
+	log "dappco.re/go/log"
 
 	"dappco.re/go/devops/deploy/python"
 )

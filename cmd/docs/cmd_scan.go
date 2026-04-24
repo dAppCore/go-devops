@@ -7,10 +7,10 @@ import (
 	"strings"
 
 	"dappco.re/go/devops/cmd/workspace"
-	"dappco.re/go/core/i18n"
-	"dappco.re/go/core/io"
-	"dappco.re/go/core/scm/repos"
-	"dappco.re/go/core/cli/pkg/cli"
+	"dappco.re/go/i18n"
+	"dappco.re/go/io"
+	"dappco.re/go/scm/repos"
+	"dappco.re/go/cli/pkg/cli"
 )
 
 // RepoDocInfo holds documentation info for a repo

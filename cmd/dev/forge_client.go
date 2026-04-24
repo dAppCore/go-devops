@@ -6,9 +6,9 @@ import (
 
 	"code.gitea.io/sdk/gitea"
 
-	coreio "dappco.re/go/core/io"
-	log "dappco.re/go/core/log"
-	"dappco.re/go/core/scm/forge"
+	coreio "dappco.re/go/io"
+	log "dappco.re/go/log"
+	"dappco.re/go/scm/forge"
 )
 
 // forgeAPIClient creates a Gitea SDK client configured for the Forge instance.

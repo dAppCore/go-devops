@@ -4,7 +4,7 @@ package locales
 import (
 	"embed"
 
-	"dappco.re/go/core/i18n"
+	"dappco.re/go/i18n"
 )
 
 //go:embed *.json

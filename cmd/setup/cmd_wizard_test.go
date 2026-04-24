@@ -4,7 +4,7 @@ import (
 	"reflect"
 	"testing"
 
-	"dappco.re/go/core/scm/repos"
+	"dappco.re/go/scm/repos"
 )
 
 func TestFilterReposByTypes_Good(t *testing.T) {

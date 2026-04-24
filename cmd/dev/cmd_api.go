@@ -1,8 +1,8 @@
 package dev
 
 import (
-	"dappco.re/go/core/i18n"
-	"dappco.re/go/core/cli/pkg/cli"
+	"dappco.re/go/i18n"
+	"dappco.re/go/cli/pkg/cli"
 )
 
 // addAPICommands adds the 'api' command and its subcommands to the given parent command.

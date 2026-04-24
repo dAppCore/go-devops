@@ -5,9 +5,9 @@ import (
 	"encoding/json"
 	"time"
 
-	log "dappco.re/go/core/log"
+	log "dappco.re/go/log"
 
-	"dappco.re/go/core/scm/manifest"
+	"dappco.re/go/scm/manifest"
 )
 
 // Snapshot is the frozen release manifest written as core.json.

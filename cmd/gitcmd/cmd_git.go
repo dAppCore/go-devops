@@ -14,8 +14,8 @@ package gitcmd
 
 import (
 	"dappco.re/go/devops/cmd/dev"
-	"dappco.re/go/core/cli/pkg/cli"
-	"dappco.re/go/core/i18n"
+	"dappco.re/go/cli/pkg/cli"
+	"dappco.re/go/i18n"
 )
 
 func init() {
