@@ -1,0 +1,82 @@
+version: "3"
+
+tasks:
+  default:
+    cmds:
+      - task: test
+
+  test:
+    cmds:
+      - task: test:deploy:plan
+      - task: test:deploy:ansible
+      - task: test:health
+
+  test:deploy:plan:
+    desc: Validate the deploy command surface.
+    dir: ../../..
+    cmds:
+      - |
+        export GOWORK=off
+        export GOCACHE="${GOCACHE:-/tmp/go-devops-gocache}"
+        export GOMODCACHE="${GOMODCACHE:-/tmp/go-devops-gomodcache}"
+        mkdir -p "$GOCACHE" "$GOMODCACHE"
+
+        bin="$(mktemp -t go-devops-cli.XXXXXX)"
+        out="$(mktemp -t go-devops-deploy.XXXXXX)"
+        trap 'rm -f "$bin" "$out"' EXIT
+
+        go build -o "$bin" ./tests/cli/devops
+        "$bin" deploy --help >"$out"
+        grep -Eq "servers|projects|apps|Coolify" "$out"
+        echo "deploy plan smoke passed: deploy command surface available"
+
+  test:deploy:ansible:
+    desc: Validate bundled playbook YAML for the deploy smoke path.
+    dir: ../../..
+    cmds:
+      - |
+        export GOWORK=off
+        export GOCACHE="${GOCACHE:-/tmp/go-devops-gocache}"
+        export GOMODCACHE="${GOMODCACHE:-/tmp/go-devops-gomodcache}"
+        mkdir -p "$GOCACHE" "$GOMODCACHE"
+
+        bin="$(mktemp -t go-devops-cli.XXXXXX)"
+        out="$(mktemp -t go-devops-playbooks.XXXXXX)"
+        trap 'rm -f "$bin" "$out"' EXIT
+
+        go build -o "$bin" ./tests/cli/devops
+        "$bin" playbook-smoke playbooks >"$out"
+        grep -q "playbook smoke passed" "$out"
+        echo "deploy ansible smoke passed: playbook YAML decoded"
+
+  test:health:
+    desc: Validate core dev health output against a temporary registry.
+    dir: ../../..
+    cmds:
+      - |
+        export GOWORK=off
+        export GOCACHE="${GOCACHE:-/tmp/go-devops-gocache}"
+        export GOMODCACHE="${GOMODCACHE:-/tmp/go-devops-gomodcache}"
+        mkdir -p "$GOCACHE" "$GOMODCACHE"
+
+        bin="$(mktemp -t go-devops-cli.XXXXXX)"
+        tmp="$(mktemp -d)"
+        out="$(mktemp -t go-devops-health.XXXXXX)"
+        trap 'rm -f "$bin" "$out"; rm -rf "$tmp"' EXIT
+
+        mkdir -p "$tmp/packages/alpha"
+        git -C "$tmp/packages/alpha" init -q
+        cat >"$tmp/repos.yaml" <<YAML
+        version: 1
+        org: test
+        base_path: $tmp/packages
+        repos:
+          alpha:
+            type: module
+        YAML
+
+        go build -o "$bin" ./tests/cli/devops
+        "$bin" dev health --registry "$tmp/repos.yaml" >"$out"
+        grep -q "1 repos" "$out"
+        grep -q "up to date" "$out"
+        echo "health smoke passed: dev health validated temporary registry"
