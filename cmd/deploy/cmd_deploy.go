@@ -7,7 +7,7 @@ import (
 	"os"
 
 	"dappco.re/go/core/cli/pkg/cli"
-	"dappco.re/go/core/devops/deploy/coolify"
+	"dappco.re/go/devops/deploy/coolify"
 	"dappco.re/go/core/i18n"
 	log "dappco.re/go/core/log"
 )

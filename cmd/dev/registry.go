@@ -5,7 +5,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"dappco.re/go/core/devops/cmd/workspace"
+	"dappco.re/go/devops/cmd/workspace"
 	"dappco.re/go/core/i18n"
 	"dappco.re/go/core/io"
 	"dappco.re/go/core/scm/repos"

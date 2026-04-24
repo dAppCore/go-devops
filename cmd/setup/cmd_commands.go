@@ -27,7 +27,7 @@ import (
 	"dappco.re/go/core/cli/pkg/cli"
 	"dappco.re/go/core/i18n"
 
-	_ "dappco.re/go/core/devops/locales"
+	_ "dappco.re/go/devops/locales"
 )
 
 func init() {

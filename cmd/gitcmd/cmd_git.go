@@ -13,7 +13,7 @@
 package gitcmd
 
 import (
-	"dappco.re/go/core/devops/cmd/dev"
+	"dappco.re/go/devops/cmd/dev"
 	"dappco.re/go/core/cli/pkg/cli"
 	"dappco.re/go/core/i18n"
 )

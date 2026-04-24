@@ -1,4 +1,4 @@
-module dappco.re/go/core/devops
+module dappco.re/go/devops
 
 go 1.26.0
 
