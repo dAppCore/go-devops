@@ -10,7 +10,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"dappco.re/go/cli/pkg/cli"
+	"dappco.re/go/core/cli/pkg/cli"
 	deploycmd "dappco.re/go/devops/cmd/deploy"
 	devcmd "dappco.re/go/devops/cmd/dev"
 	docscmd "dappco.re/go/devops/cmd/docs"

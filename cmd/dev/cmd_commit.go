@@ -5,10 +5,10 @@ import (
 	"os"
 	"path/filepath"
 
-	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/scm/git"
+	"dappco.re/go/core/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	coreio "dappco.re/go/io"
+	"dappco.re/go/scm/git"
 )
 
 // Commit command flags

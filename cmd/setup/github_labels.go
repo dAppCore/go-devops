@@ -12,7 +12,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"dappco.re/go/cli/pkg/cli"
+	"dappco.re/go/core/cli/pkg/cli"
 )
 
 // GitHubLabel represents a label as returned by the GitHub API.

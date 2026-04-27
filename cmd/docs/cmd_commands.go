@@ -9,7 +9,7 @@
 package docs
 
 import (
-	"dappco.re/go/cli/pkg/cli"
+	"dappco.re/go/core/cli/pkg/cli"
 
 	_ "dappco.re/go/devops/locales"
 )

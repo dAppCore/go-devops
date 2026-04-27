@@ -469,7 +469,6 @@ Each generator implements the `Generator` interface. Supported languages: TypeSc
 | `github.com/spf13/cobra` | CLI framework for `build/buildcmd/` |
 | `golang.org/x/crypto` | SSH connections in `ansible/ssh.go` |
 | `gopkg.in/yaml.v3` | Playbook and config YAML parsing |
-| `github.com/stretchr/testify` | Test assertions |
 
 ## Dependency on `forge.lthn.ai/core/go`
 

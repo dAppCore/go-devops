@@ -6,8 +6,8 @@ import (
 	"path/filepath"
 	"runtime"
 
+	"dappco.re/go/core/cli/pkg/cli"
 	coreio "dappco.re/go/io"
-	"dappco.re/go/cli/pkg/cli"
 	"gopkg.in/yaml.v3"
 )
 

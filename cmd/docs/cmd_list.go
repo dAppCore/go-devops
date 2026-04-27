@@ -3,7 +3,7 @@ package docs
 import (
 	"strings"
 
-	"dappco.re/go/cli/pkg/cli"
+	"dappco.re/go/core/cli/pkg/cli"
 	"dappco.re/go/i18n"
 )
 

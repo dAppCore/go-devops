@@ -4,6 +4,7 @@ import (
 	"bytes"
 	"io"
 	"os"
+	"strings"
 	"testing"
 )
 
@@ -12,7 +13,9 @@ func captureStdout(t *testing.T, fn func() error) (string, error) {
 
 	oldStdout := os.Stdout
 	r, w, err := os.Pipe()
-	mustNoError(t, err)
+	if err != nil {
+		t.Fatalf("create pipe: %v", err)
+	}
 	defer func() {
 		_ = r.Close()
 	}()
@@ -34,8 +37,12 @@ func captureStdout(t *testing.T, fn func() error) (string, error) {
 
 	runErr := fn()
 
-	mustNoError(t, w.Close())
-	mustNoError(t, <-errC)
+	if err := w.Close(); err != nil {
+		t.Fatalf("close pipe writer: %v", err)
+	}
+	if err := <-errC; err != nil {
+		t.Fatalf("copy stdout: %v", err)
+	}
 	out := <-outC
 
 	return out, runErr
@@ -44,19 +51,35 @@ func captureStdout(t *testing.T, fn func() error) (string, error) {
 func TestDefaultCIConfig_Good(t *testing.T) {
 	cfg := DefaultCIConfig()
 
-	mustEqual(t, "host-uk/tap", cfg.Tap)
-	mustEqual(t, "core", cfg.Formula)
-	mustEqual(t, "https://forge.lthn.ai/core/scoop-bucket.git", cfg.ScoopBucket)
-	mustEqual(t, "core-cli", cfg.ChocolateyPkg)
-	mustEqual(t, "host-uk/core", cfg.Repository)
-	mustEqual(t, "dev", cfg.DefaultVersion)
+	checks := map[string]struct {
+		got  string
+		want string
+	}{
+		"tap":             {got: cfg.Tap, want: "host-uk/tap"},
+		"formula":         {got: cfg.Formula, want: "core"},
+		"scoop bucket":    {got: cfg.ScoopBucket, want: "https://forge.lthn.ai/core/scoop-bucket.git"},
+		"chocolatey pkg":  {got: cfg.ChocolateyPkg, want: "core-cli"},
+		"repository":      {got: cfg.Repository, want: "host-uk/core"},
+		"default version": {got: cfg.DefaultVersion, want: "dev"},
+	}
+	for name, check := range checks {
+		if check.got != check.want {
+			t.Fatalf("%s = %q, want %q", name, check.got, check.want)
+		}
+	}
 }
 
 func TestOutputPowershellInstall_Good(t *testing.T) {
 	out, err := captureStdout(t, func() error {
 		return outputPowershellInstall(DefaultCIConfig(), "dev")
 	})
-	mustNoError(t, err)
-	mustContains(t, out, `scoop bucket add host-uk $ScoopBucket`)
-	mustNotContains(t, out, `https://https://forge.lthn.ai/core/scoop-bucket.git`)
+	if err != nil {
+		t.Fatalf("output powershell install: %v", err)
+	}
+	if !strings.Contains(out, `scoop bucket add host-uk $ScoopBucket`) {
+		t.Fatalf("output missing scoop bucket command: %q", out)
+	}
+	if strings.Contains(out, `https://https://forge.lthn.ai/core/scoop-bucket.git`) {
+		t.Fatalf("output contains doubled URL scheme: %q", out)
+	}
 }

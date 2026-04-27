@@ -85,21 +85,23 @@ func TestParsePlaybook_Bad(t *testing.T) { ... }
 func TestParsePlaybook_Ugly(t *testing.T) { ... }
 ```
 
-### Assertion Library
+### Assertions
 
-Use `github.com/stretchr/testify`. Prefer `require` over `assert` when subsequent assertions depend on the previous one passing:
+Use the standard `testing` package. Do not add third-party assertion libraries:
 
 ```go
 import (
     "testing"
-    "github.com/stretchr/testify/assert"
-    "github.com/stretchr/testify/require"
 )
 
 func TestSomething_Good(t *testing.T) {
     result, err := SomeFunction()
-    require.NoError(t, err)
-    assert.Equal(t, "expected", result.Field)
+    if err != nil {
+        t.Fatalf("some function: %v", err)
+    }
+    if result.Field != "expected" {
+        t.Fatalf("field = %q, want %q", result.Field, "expected")
+    }
 }
 ```
 

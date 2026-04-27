@@ -12,7 +12,9 @@ func TestScanSecrets_Good(t *testing.T) {
 	})
 
 	scanSecretsRunner = func(dir string) ([]byte, error) {
-		mustEqual(t, "/tmp/project", dir)
+		if dir != "/tmp/project" {
+			t.Fatalf("dir = %q, want /tmp/project", dir)
+		}
 		return []byte(`RuleID,File,StartLine,StartColumn,Description,Match
 github-token,config.yml,12,4,GitHub token detected,ghp_exampletoken1234567890
 aws-access-key-id,creds.txt,7,1,AWS access key detected,AKIA1234567890ABCDEF
@@ -20,20 +22,44 @@ aws-access-key-id,creds.txt,7,1,AWS access key detected,AKIA1234567890ABCDEF
 	}
 
 	findings, err := ScanSecrets("/tmp/project")
-	mustNoError(t, err)
-	mustLen(t, findings, 2)
+	if err != nil {
+		t.Fatalf("scan secrets: %v", err)
+	}
+	if len(findings) != 2 {
+		t.Fatalf("findings length = %d, want 2", len(findings))
+	}
 
-	mustEqual(t, "github-token", findings[0].Rule)
-	mustEqual(t, "config.yml", findings[0].Path)
-	mustEqual(t, 12, findings[0].Line)
-	mustEqual(t, 4, findings[0].Column)
-	mustEqual(t, "ghp_exampletoken1234567890", findings[0].Snippet)
+	if findings[0].Rule != "github-token" {
+		t.Fatalf("findings[0].Rule = %q, want github-token", findings[0].Rule)
+	}
+	if findings[0].Path != "config.yml" {
+		t.Fatalf("findings[0].Path = %q, want config.yml", findings[0].Path)
+	}
+	if findings[0].Line != 12 {
+		t.Fatalf("findings[0].Line = %d, want 12", findings[0].Line)
+	}
+	if findings[0].Column != 4 {
+		t.Fatalf("findings[0].Column = %d, want 4", findings[0].Column)
+	}
+	if findings[0].Snippet != "ghp_exampletoken1234567890" {
+		t.Fatalf("findings[0].Snippet = %q, want ghp_exampletoken1234567890", findings[0].Snippet)
+	}
 
-	mustEqual(t, "aws-access-key-id", findings[1].Rule)
-	mustEqual(t, "creds.txt", findings[1].Path)
-	mustEqual(t, 7, findings[1].Line)
-	mustEqual(t, 1, findings[1].Column)
-	mustEqual(t, "AKIA1234567890ABCDEF", findings[1].Snippet)
+	if findings[1].Rule != "aws-access-key-id" {
+		t.Fatalf("findings[1].Rule = %q, want aws-access-key-id", findings[1].Rule)
+	}
+	if findings[1].Path != "creds.txt" {
+		t.Fatalf("findings[1].Path = %q, want creds.txt", findings[1].Path)
+	}
+	if findings[1].Line != 7 {
+		t.Fatalf("findings[1].Line = %d, want 7", findings[1].Line)
+	}
+	if findings[1].Column != 1 {
+		t.Fatalf("findings[1].Column = %d, want 1", findings[1].Column)
+	}
+	if findings[1].Snippet != "AKIA1234567890ABCDEF" {
+		t.Fatalf("findings[1].Snippet = %q, want AKIA1234567890ABCDEF", findings[1].Snippet)
+	}
 }
 
 func TestScanSecrets_ReportsFindingsOnExitError_Good(t *testing.T) {
@@ -49,14 +75,26 @@ token,test.txt,3,2,Token detected,secret-value
 	}
 
 	findings, err := ScanSecrets("/tmp/project")
-	mustNoError(t, err)
-	mustLen(t, findings, 1)
-	mustEqual(t, "token", findings[0].Rule)
-	mustEqual(t, 3, findings[0].Line)
-	mustEqual(t, 2, findings[0].Column)
+	if err != nil {
+		t.Fatalf("scan secrets: %v", err)
+	}
+	if len(findings) != 1 {
+		t.Fatalf("findings length = %d, want 1", len(findings))
+	}
+	if findings[0].Rule != "token" {
+		t.Fatalf("findings[0].Rule = %q, want token", findings[0].Rule)
+	}
+	if findings[0].Line != 3 {
+		t.Fatalf("findings[0].Line = %d, want 3", findings[0].Line)
+	}
+	if findings[0].Column != 2 {
+		t.Fatalf("findings[0].Column = %d, want 2", findings[0].Column)
+	}
 }
 
 func TestParseGitleaksCSV_Bad(t *testing.T) {
 	_, err := parseGitleaksCSV([]byte("rule_id,file,start_line\nunterminated,\"broken"))
-	mustError(t, err)
+	if err == nil {
+		t.Fatal("expected parse error")
+	}
 }

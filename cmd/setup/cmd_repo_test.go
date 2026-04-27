@@ -8,23 +8,34 @@ import (
 
 func TestRunRepoSetup_CreatesCoreConfigs_Good(t *testing.T) {
 	dir := t.TempDir()
-	mustNoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n"), 0o644))
+	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n"), 0o644); err != nil {
+		t.Fatalf("write go.mod: %v", err)
+	}
 
-	mustNoError(t, runRepoSetup(dir, false))
+	if err := runRepoSetup(dir, false); err != nil {
+		t.Fatalf("run repo setup: %v", err)
+	}
 
 	for _, name := range []string{"build.yaml", "release.yaml", "test.yaml"} {
 		path := filepath.Join(dir, ".core", name)
-		_, err := os.Stat(path)
-		mustNoErrorf(t, err, "expected %s to exist", path)
+		if _, err := os.Stat(path); err != nil {
+			t.Fatalf("expected %s to exist: %v", path, err)
+		}
 	}
 }
 
 func TestDetectProjectType_PrefersPackageOverComposer_Good(t *testing.T) {
 	dir := t.TempDir()
-	mustNoError(t, os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}\n"), 0o644))
-	mustNoError(t, os.WriteFile(filepath.Join(dir, "composer.json"), []byte("{}\n"), 0o644))
+	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}\n"), 0o644); err != nil {
+		t.Fatalf("write package.json: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(dir, "composer.json"), []byte("{}\n"), 0o644); err != nil {
+		t.Fatalf("write composer.json: %v", err)
+	}
 
-	mustEqual(t, "node", detectProjectType(dir))
+	if got := detectProjectType(dir); got != "node" {
+		t.Fatalf("detectProjectType = %q, want %q", got, "node")
+	}
 }
 
 func TestParseGitHubRepoURL_Good(t *testing.T) {
@@ -44,7 +55,9 @@ func TestParseGitHubRepoURL_Good(t *testing.T) {
 
 	for remote, expected := range cases {
 		t.Run(remote, func(t *testing.T) {
-			mustEqual(t, expected, parseGitHubRepoURL(remote))
+			if got := parseGitHubRepoURL(remote); got != expected {
+				t.Fatalf("parseGitHubRepoURL(%q) = %q, want %q", remote, got, expected)
+			}
 		})
 	}
 }

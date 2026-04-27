@@ -7,9 +7,9 @@ import (
 	"os"
 	"slices"
 
+	"dappco.re/go/core/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/scm/repos"
-	"dappco.re/go/cli/pkg/cli"
 	"golang.org/x/term"
 )
 

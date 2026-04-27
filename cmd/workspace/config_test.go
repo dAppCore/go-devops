@@ -8,44 +8,43 @@ import (
 
 func TestLoadConfig_RelativeDirFindsParentConfig_Good(t *testing.T) {
 	root := t.TempDir()
-	mustNoError(t, os.MkdirAll(filepath.Join(root, ".core"), 0o755))
-	mustNoError(t, os.MkdirAll(filepath.Join(root, "packages", "app"), 0o755))
-	mustNoError(t, os.WriteFile(filepath.Join(root, ".core", "workspace.yaml"), []byte(`version: 1
+	if err := os.MkdirAll(filepath.Join(root, ".core"), 0o755); err != nil {
+		t.Fatalf("create .core dir: %v", err)
+	}
+	if err := os.MkdirAll(filepath.Join(root, "packages", "app"), 0o755); err != nil {
+		t.Fatalf("create app dir: %v", err)
+	}
+	if err := os.WriteFile(filepath.Join(root, ".core", "workspace.yaml"), []byte(`version: 1
 active: app
 packages_dir: ./packages
-`), 0o600))
+`), 0o600); err != nil {
+		t.Fatalf("write workspace config: %v", err)
+	}
 
 	originalWD, err := os.Getwd()
-	mustNoError(t, err)
+	if err != nil {
+		t.Fatalf("get working directory: %v", err)
+	}
 	t.Cleanup(func() {
-		mustNoError(t, os.Chdir(originalWD))
+		if err := os.Chdir(originalWD); err != nil {
+			t.Fatalf("restore working directory: %v", err)
+		}
 	})
-	mustNoError(t, os.Chdir(filepath.Join(root, "packages", "app")))
+	if err := os.Chdir(filepath.Join(root, "packages", "app")); err != nil {
+		t.Fatalf("change working directory: %v", err)
+	}
 
 	cfg, err := LoadConfig(".")
-	mustNoError(t, err)
-	mustNotNil(t, cfg)
-	mustEqual(t, "app", cfg.Active)
-	mustEqual(t, "./packages", cfg.PackagesDir)
-}
-
-func mustNoError(t *testing.T, err error) {
-	t.Helper()
 	if err != nil {
-		t.Fatalf("unexpected error: %v", err)
+		t.Fatalf("load config: %v", err)
 	}
-}
-
-func mustEqual[T comparable](t *testing.T, want, got T) {
-	t.Helper()
-	if want != got {
-		t.Fatalf("want %v, got %v", want, got)
+	if cfg == nil {
+		t.Fatal("expected config")
 	}
-}
-
-func mustNotNil(t *testing.T, got any) {
-	t.Helper()
-	if got == nil {
-		t.Fatal("expected non-nil")
+	if cfg.Active != "app" {
+		t.Fatalf("active = %q, want app", cfg.Active)
+	}
+	if cfg.PackagesDir != "./packages" {
+		t.Fatalf("packages dir = %q, want ./packages", cfg.PackagesDir)
 	}
 }

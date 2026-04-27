@@ -6,11 +6,11 @@ import (
 	"path/filepath"
 	"strings"
 
+	"dappco.re/go/core/cli/pkg/cli"
 	"dappco.re/go/devops/cmd/workspace"
 	"dappco.re/go/i18n"
 	"dappco.re/go/io"
 	"dappco.re/go/scm/repos"
-	"dappco.re/go/cli/pkg/cli"
 )
 
 // RepoDocInfo holds documentation info for a repo

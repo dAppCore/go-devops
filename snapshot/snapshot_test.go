@@ -2,6 +2,8 @@ package snapshot
 
 import (
 	"encoding/json"
+	"slices"
+	"strings"
 	"testing"
 	"time"
 
@@ -28,28 +30,51 @@ func TestGenerate_Good(t *testing.T) {
 	}
 
 	data, err := GenerateAt(m, "abc123def456", "v1.0.0", fixedTime)
-	mustNoError(t, err)
+	if err != nil {
+		t.Fatalf("generate snapshot: %v", err)
+	}
 
 	var snap Snapshot
-	mustNoError(t, json.Unmarshal(data, &snap))
+	if err := json.Unmarshal(data, &snap); err != nil {
+		t.Fatalf("unmarshal snapshot: %v", err)
+	}
 
-	mustEqual(t, 1, snap.Schema)
-	mustEqual(t, "test-app", snap.Code)
-	mustEqual(t, "Test App", snap.Name)
-	mustEqual(t, "1.0.0", snap.Version)
-	mustEqual(t, "A test application", snap.Description)
-	mustEqual(t, "abc123def456", snap.Commit)
-	mustEqual(t, "v1.0.0", snap.Tag)
-	mustEqual(t, "2026-03-09T15:00:00Z", snap.Built)
-	mustEqual(t, "HLCRF", snap.Layout)
-	mustEqual(t, "main-content", snap.Slots["C"])
-	mustLenMap(t, snap.Daemons, 1)
-	mustEqual(t, "core-php", snap.Daemons["serve"].Binary)
+	if snap.Schema != 1 {
+		t.Fatalf("schema = %d, want 1", snap.Schema)
+	}
+	for name, check := range map[string]struct {
+		got  string
+		want string
+	}{
+		"code":        {got: snap.Code, want: "test-app"},
+		"name":        {got: snap.Name, want: "Test App"},
+		"version":     {got: snap.Version, want: "1.0.0"},
+		"description": {got: snap.Description, want: "A test application"},
+		"commit":      {got: snap.Commit, want: "abc123def456"},
+		"tag":         {got: snap.Tag, want: "v1.0.0"},
+		"built":       {got: snap.Built, want: "2026-03-09T15:00:00Z"},
+		"layout":      {got: snap.Layout, want: "HLCRF"},
+		"slot C":      {got: snap.Slots["C"], want: "main-content"},
+	} {
+		if check.got != check.want {
+			t.Fatalf("%s = %q, want %q", name, check.got, check.want)
+		}
+	}
+	if len(snap.Daemons) != 1 {
+		t.Fatalf("daemons length = %d, want 1", len(snap.Daemons))
+	}
+	if snap.Daemons["serve"].Binary != "core-php" {
+		t.Fatalf("serve binary = %q, want core-php", snap.Daemons["serve"].Binary)
+	}
 	if snap.Permissions == nil {
 		t.Fatal("expected non-nil permissions")
 	}
-	mustDeepEqual(t, []string{"./photos/"}, snap.Permissions.Read)
-	mustDeepEqual(t, []string{"core/media"}, snap.Modules)
+	if !slices.Equal(snap.Permissions.Read, []string{"./photos/"}) {
+		t.Fatalf("permission reads = %v, want [./photos/]", snap.Permissions.Read)
+	}
+	if !slices.Equal(snap.Modules, []string{"core/media"}) {
+		t.Fatalf("modules = %v, want [core/media]", snap.Modules)
+	}
 }
 
 func TestGenerate_NoDaemons_Good(t *testing.T) {
@@ -60,13 +85,21 @@ func TestGenerate_NoDaemons_Good(t *testing.T) {
 	}
 
 	data, err := GenerateAt(m, "abc123", "v0.1.0", fixedTime)
-	mustNoError(t, err)
+	if err != nil {
+		t.Fatalf("generate snapshot: %v", err)
+	}
 
 	var snap Snapshot
-	mustNoError(t, json.Unmarshal(data, &snap))
+	if err := json.Unmarshal(data, &snap); err != nil {
+		t.Fatalf("unmarshal snapshot: %v", err)
+	}
 
-	mustEqual(t, 1, snap.Schema)
-	mustEqual(t, "simple", snap.Code)
+	if snap.Schema != 1 {
+		t.Fatalf("schema = %d, want 1", snap.Schema)
+	}
+	if snap.Code != "simple" {
+		t.Fatalf("code = %q, want simple", snap.Code)
+	}
 	if snap.Daemons != nil {
 		t.Fatalf("expected nil daemons, got %v", snap.Daemons)
 	}
@@ -77,5 +110,10 @@ func TestGenerate_NoDaemons_Good(t *testing.T) {
 
 func TestGenerate_NilManifest_Bad(t *testing.T) {
 	_, err := Generate(nil, "abc123", "v1.0.0")
-	mustErrorContains(t, err, "manifest is nil")
+	if err == nil {
+		t.Fatal("expected error")
+	}
+	if !strings.Contains(err.Error(), "manifest is nil") {
+		t.Fatalf("error = %q, want substring %q", err.Error(), "manifest is nil")
+	}
 }

@@ -24,7 +24,7 @@
 package setup
 
 import (
-	"dappco.re/go/cli/pkg/cli"
+	"dappco.re/go/core/cli/pkg/cli"
 	"dappco.re/go/i18n"
 
 	_ "dappco.re/go/devops/locales"

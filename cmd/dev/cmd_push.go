@@ -5,9 +5,9 @@ import (
 	"os"
 	"path/filepath"
 
-	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/scm/git"
+	"dappco.re/go/core/cli/pkg/cli"
 	"dappco.re/go/i18n"
+	"dappco.re/go/scm/git"
 )
 
 // Push command flags
