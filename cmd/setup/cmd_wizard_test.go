@@ -1,7 +1,6 @@
 package setup
 
 import (
-	"reflect"
 	"testing"
 
 	"dappco.re/go/scm/repos"
@@ -30,7 +29,5 @@ func TestFilterReposByTypes_EmptyFilter_Good(t *testing.T) {
 	filtered := filterReposByTypes(reposList, nil)
 
 	mustLen(t, filtered, 2)
-	if !reflect.DeepEqual(reposList, filtered) {
-		t.Fatalf("want %v, got %v", reposList, filtered)
-	}
+	mustDeepEqual(t, reposList, filtered)
 }

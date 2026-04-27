@@ -52,7 +52,7 @@ func TestGenerate_Good(t *testing.T) {
 	mustDeepEqual(t, []string{"core/media"}, snap.Modules)
 }
 
-func TestGenerate_Good_NoDaemons(t *testing.T) {
+func TestGenerate_NoDaemons_Good(t *testing.T) {
 	m := &manifest.Manifest{
 		Code:    "simple",
 		Name:    "Simple",
@@ -75,7 +75,7 @@ func TestGenerate_Good_NoDaemons(t *testing.T) {
 	}
 }
 
-func TestGenerate_Bad_NilManifest(t *testing.T) {
+func TestGenerate_NilManifest_Bad(t *testing.T) {
 	_, err := Generate(nil, "abc123", "v1.0.0")
 	mustErrorContains(t, err, "manifest is nil")
 }

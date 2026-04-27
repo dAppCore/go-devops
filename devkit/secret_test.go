@@ -29,7 +29,7 @@ api_key: "ghp_abcdefghijklmnopqrstuvwxyz1234"
 	mustEqual(t, "creds.txt", filepath.Base(findings[1].Path))
 }
 
-func TestScanDir_SkipsBinaryAndIgnoredDirs(t *testing.T) {
+func TestScanDir_SkipsBinaryAndIgnoredDirs_Good(t *testing.T) {
 	root := t.TempDir()
 
 	mustNoError(t, os.Mkdir(filepath.Join(root, ".git"), 0o755))
@@ -41,7 +41,7 @@ func TestScanDir_SkipsBinaryAndIgnoredDirs(t *testing.T) {
 	mustEmpty(t, findings)
 }
 
-func TestScanDir_ReportsGenericAssignments(t *testing.T) {
+func TestScanDir_ReportsGenericAssignments_Bad(t *testing.T) {
 	root := t.TempDir()
 
 	mustNoError(t, os.WriteFile(filepath.Join(root, "secrets.env"), []byte("client_secret: abcdefghijklmnop\n"), 0o600))

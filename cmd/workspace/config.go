@@ -9,6 +9,7 @@
 package workspace
 
 import (
+	"fmt"
 	"os"
 	"path/filepath"
 
@@ -36,24 +37,33 @@ func DefaultConfig() *WorkspaceConfig {
 // LoadConfig reads .core/workspace.yaml from the given directory, walking up to parent dirs.
 // Returns nil (no error) if no config file is found.
 func LoadConfig(dir string) (*WorkspaceConfig, error) {
+	absDir, err := filepath.Abs(dir)
+	if err != nil {
+		return nil, fmt.Errorf("workspace.LoadConfig: resolve %q: %w", dir, err)
+	}
+
+	return loadConfig(filepath.Clean(absDir))
+}
+
+func loadConfig(dir string) (*WorkspaceConfig, error) {
 	path := filepath.Join(dir, ".core", "workspace.yaml")
 
 	if !coreio.Local.IsFile(path) {
 		parent := filepath.Dir(dir)
 		if parent != dir {
-			return LoadConfig(parent)
+			return loadConfig(parent)
 		}
 		return nil, nil
 	}
 
 	data, err := coreio.Local.Read(path)
 	if err != nil {
-		return nil, log.E("workspace.LoadConfig", "failed to read workspace config", err)
+		return nil, fmt.Errorf("workspace.LoadConfig: failed to read workspace config: %w", err)
 	}
 
 	cfg := DefaultConfig()
 	if err := yaml.Unmarshal([]byte(data), cfg); err != nil {
-		return nil, log.E("workspace.LoadConfig", "failed to parse workspace config", err)
+		return nil, fmt.Errorf("workspace.LoadConfig: failed to parse workspace config: %w", err)
 	}
 
 	return cfg, nil

@@ -54,7 +54,7 @@ func runPlaybookSmoke(cmd *cli.Command, args []string) error {
 	count := 0
 	err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: %w", path, err)
 		}
 		if entry.IsDir() || !isYAML(path) {
 			return nil
@@ -62,7 +62,7 @@ func runPlaybookSmoke(cmd *cli.Command, args []string) error {
 
 		raw, err := os.ReadFile(path)
 		if err != nil {
-			return err
+			return fmt.Errorf("%s: %w", path, err)
 		}
 
 		var document any
@@ -73,7 +73,7 @@ func runPlaybookSmoke(cmd *cli.Command, args []string) error {
 		return nil
 	})
 	if err != nil {
-		return err
+		return fmt.Errorf("walk %s: %w", dir, err)
 	}
 	if count == 0 {
 		return fmt.Errorf("no playbook YAML files found in %s", dir)

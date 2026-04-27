@@ -4,7 +4,7 @@
 
 | Tool | Minimum version | Purpose |
 |------|----------------|---------|
-| Go | 1.25 | Build and test |
+| Go | 1.26 | Build and test |
 | Task | any | Taskfile automation (optional, used by some builders) |
 | `govulncheck` | latest | Vulnerability scanning (`devkit.VulnCheck`) |
 | `gitleaks` | any | Secret scanning (`devkit.ScanSecrets`) |

@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/sdk/gitea"
-
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
+
+	"code.gitea.io/sdk/gitea"
 )
 
 // PR-specific styles (aliases to shared)

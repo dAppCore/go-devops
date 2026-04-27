@@ -6,7 +6,7 @@ import (
 	"testing"
 )
 
-func TestRunRepoSetup_CreatesCoreConfigs(t *testing.T) {
+func TestRunRepoSetup_CreatesCoreConfigs_Good(t *testing.T) {
 	dir := t.TempDir()
 	mustNoError(t, os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n"), 0o644))
 
@@ -19,7 +19,7 @@ func TestRunRepoSetup_CreatesCoreConfigs(t *testing.T) {
 	}
 }
 
-func TestDetectProjectType_PrefersPackageOverComposer(t *testing.T) {
+func TestDetectProjectType_PrefersPackageOverComposer_Good(t *testing.T) {
 	dir := t.TempDir()
 	mustNoError(t, os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}\n"), 0o644))
 	mustNoError(t, os.WriteFile(filepath.Join(dir, "composer.json"), []byte("{}\n"), 0o644))

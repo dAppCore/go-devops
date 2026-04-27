@@ -4,7 +4,7 @@ Infrastructure and build automation library for the Lethean ecosystem. Provides 
 
 **Module**: `forge.lthn.ai/core/go-devops`
 **Licence**: EUPL-1.2
-**Language**: Go 1.25
+**Language**: Go 1.26
 
 ## Quick Start
 

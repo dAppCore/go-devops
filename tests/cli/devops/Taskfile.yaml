@@ -16,6 +16,9 @@ tasks:
     dir: ../../..
     cmds:
       - |
+        set -euo pipefail
+        IFS=$'\n\t'
+
         export GOWORK=off
         export GOCACHE="${GOCACHE:-/tmp/go-devops-gocache}"
         export GOMODCACHE="${GOMODCACHE:-/tmp/go-devops-gomodcache}"
@@ -35,6 +38,9 @@ tasks:
     dir: ../../..
     cmds:
       - |
+        set -euo pipefail
+        IFS=$'\n\t'
+
         export GOWORK=off
         export GOCACHE="${GOCACHE:-/tmp/go-devops-gocache}"
         export GOMODCACHE="${GOMODCACHE:-/tmp/go-devops-gomodcache}"
@@ -54,6 +60,9 @@ tasks:
     dir: ../../..
     cmds:
       - |
+        set -euo pipefail
+        IFS=$'\n\t'
+
         export GOWORK=off
         export GOCACHE="${GOCACHE:-/tmp/go-devops-gocache}"
         export GOMODCACHE="${GOMODCACHE:-/tmp/go-devops-gomodcache}"

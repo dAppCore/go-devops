@@ -1,7 +1,6 @@
 package dev
 
 import (
-	"reflect"
 	"testing"
 
 	"dappco.re/go/cli/pkg/cli"
@@ -14,30 +13,20 @@ func TestAddFileSyncCommand_Good(t *testing.T) {
 
 	syncCmd, _, err := root.Find([]string{"dev", "sync"})
 	mustNoError(t, err)
-	if syncCmd == nil {
-		t.Fatal("expected non-nil sync command")
-	}
+	mustNotNil(t, syncCmd)
 
 	yesFlag := syncCmd.Flags().Lookup("yes")
-	if yesFlag == nil {
-		t.Fatal("expected yes flag")
-	}
+	mustNotNil(t, yesFlag)
 	mustEqual(t, "y", yesFlag.Shorthand)
 
-	if syncCmd.Flags().Lookup("dry-run") == nil {
-		t.Fatal("expected dry-run flag")
-	}
-	if syncCmd.Flags().Lookup("push") == nil {
-		t.Fatal("expected push flag")
-	}
+	mustNotNil(t, syncCmd.Flags().Lookup("dry-run"))
+	mustNotNil(t, syncCmd.Flags().Lookup("push"))
 }
 
 func TestSplitPatterns_Good(t *testing.T) {
 	patterns := splitPatterns("packages/core-*,  apps/* ,services/*,")
 	want := []string{"packages/core-*", "apps/*", "services/*"}
-	if !reflect.DeepEqual(want, patterns) {
-		t.Fatalf("want %v, got %v", want, patterns)
-	}
+	mustDeepEqual(t, want, patterns)
 }
 
 func TestMatchGlob_Good(t *testing.T) {

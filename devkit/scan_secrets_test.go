@@ -36,7 +36,7 @@ aws-access-key-id,creds.txt,7,1,AWS access key detected,AKIA1234567890ABCDEF
 	mustEqual(t, "AKIA1234567890ABCDEF", findings[1].Snippet)
 }
 
-func TestScanSecrets_ReportsFindingsOnExitError(t *testing.T) {
+func TestScanSecrets_ReportsFindingsOnExitError_Good(t *testing.T) {
 	originalRunner := scanSecretsRunner
 	t.Cleanup(func() {
 		scanSecretsRunner = originalRunner

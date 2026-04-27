@@ -38,7 +38,7 @@ func TestCopyZensicalReadme_Good(t *testing.T) {
 	}
 }
 
-func TestResetOutputDir_ClearsExistingFiles(t *testing.T) {
+func TestResetOutputDir_ClearsExistingFiles_Good(t *testing.T) {
 	dir := t.TempDir()
 
 	stale := filepath.Join(dir, "stale.md")

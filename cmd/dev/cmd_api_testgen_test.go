@@ -3,7 +3,6 @@ package dev
 import (
 	"os"
 	"path/filepath"
-	"reflect"
 	"strings"
 	"testing"
 
@@ -81,7 +80,7 @@ func TestGeneratePublicAPITestFile_Good(t *testing.T) {
 	mustTrue(t, strings.Contains(content, `const _ = impl.Answer`))
 }
 
-func TestGetExportedSymbols_Good_MultiFile(t *testing.T) {
+func TestGetExportedSymbols_MultiFile_Good(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	serviceDir := filepath.Join(tmpDir, "demo")
@@ -111,7 +110,5 @@ type Ignored struct{}
 		{Name: "Run", Kind: "func"},
 		{Name: "Value", Kind: "var"},
 	}
-	if !reflect.DeepEqual(want, symbols) {
-		t.Fatalf("want %v, got %v", want, symbols)
-	}
+	mustDeepEqual(t, want, symbols)
 }
