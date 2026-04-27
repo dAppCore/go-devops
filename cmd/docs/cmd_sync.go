@@ -6,10 +6,10 @@ import (
 	"path/filepath"
 	"strings"
 
-	"dappco.re/go/core/i18n"
-	"dappco.re/go/core/io"
-	"dappco.re/go/core/scm/repos"
-	"forge.lthn.ai/core/cli/pkg/cli"
+	"dappco.re/go/i18n"
+	"dappco.re/go/io"
+	"dappco.re/go/scm/repos"
+	"dappco.re/go/cli/pkg/cli"
 )
 
 // Flag variables for sync command

@@ -5,10 +5,10 @@ import (
 	"strings"
 	"time"
 
-	"code.gitea.io/sdk/gitea"
+	"dappco.re/go/cli/pkg/cli"
+	"dappco.re/go/i18n"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
-	"dappco.re/go/core/i18n"
+	"code.gitea.io/sdk/gitea"
 )
 
 // Issue-specific styles (aliases to shared)

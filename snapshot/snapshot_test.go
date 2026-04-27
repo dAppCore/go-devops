@@ -5,9 +5,7 @@ import (
 	"testing"
 	"time"
 
-	"dappco.re/go/core/scm/manifest"
-	"github.com/stretchr/testify/assert"
-	"github.com/stretchr/testify/require"
+	"dappco.re/go/scm/manifest"
 )
 
 var fixedTime = time.Date(2026, 3, 9, 15, 0, 0, 0, time.UTC)
@@ -30,29 +28,31 @@ func TestGenerate_Good(t *testing.T) {
 	}
 
 	data, err := GenerateAt(m, "abc123def456", "v1.0.0", fixedTime)
-	require.NoError(t, err)
+	mustNoError(t, err)
 
 	var snap Snapshot
-	require.NoError(t, json.Unmarshal(data, &snap))
+	mustNoError(t, json.Unmarshal(data, &snap))
 
-	assert.Equal(t, 1, snap.Schema)
-	assert.Equal(t, "test-app", snap.Code)
-	assert.Equal(t, "Test App", snap.Name)
-	assert.Equal(t, "1.0.0", snap.Version)
-	assert.Equal(t, "A test application", snap.Description)
-	assert.Equal(t, "abc123def456", snap.Commit)
-	assert.Equal(t, "v1.0.0", snap.Tag)
-	assert.Equal(t, "2026-03-09T15:00:00Z", snap.Built)
-	assert.Equal(t, "HLCRF", snap.Layout)
-	assert.Equal(t, "main-content", snap.Slots["C"])
-	assert.Len(t, snap.Daemons, 1)
-	assert.Equal(t, "core-php", snap.Daemons["serve"].Binary)
-	require.NotNil(t, snap.Permissions)
-	assert.Equal(t, []string{"./photos/"}, snap.Permissions.Read)
-	assert.Equal(t, []string{"core/media"}, snap.Modules)
+	mustEqual(t, 1, snap.Schema)
+	mustEqual(t, "test-app", snap.Code)
+	mustEqual(t, "Test App", snap.Name)
+	mustEqual(t, "1.0.0", snap.Version)
+	mustEqual(t, "A test application", snap.Description)
+	mustEqual(t, "abc123def456", snap.Commit)
+	mustEqual(t, "v1.0.0", snap.Tag)
+	mustEqual(t, "2026-03-09T15:00:00Z", snap.Built)
+	mustEqual(t, "HLCRF", snap.Layout)
+	mustEqual(t, "main-content", snap.Slots["C"])
+	mustLenMap(t, snap.Daemons, 1)
+	mustEqual(t, "core-php", snap.Daemons["serve"].Binary)
+	if snap.Permissions == nil {
+		t.Fatal("expected non-nil permissions")
+	}
+	mustDeepEqual(t, []string{"./photos/"}, snap.Permissions.Read)
+	mustDeepEqual(t, []string{"core/media"}, snap.Modules)
 }
 
-func TestGenerate_Good_NoDaemons(t *testing.T) {
+func TestGenerate_NoDaemons_Good(t *testing.T) {
 	m := &manifest.Manifest{
 		Code:    "simple",
 		Name:    "Simple",
@@ -60,19 +60,22 @@ func TestGenerate_Good_NoDaemons(t *testing.T) {
 	}
 
 	data, err := GenerateAt(m, "abc123", "v0.1.0", fixedTime)
-	require.NoError(t, err)
+	mustNoError(t, err)
 
 	var snap Snapshot
-	require.NoError(t, json.Unmarshal(data, &snap))
+	mustNoError(t, json.Unmarshal(data, &snap))
 
-	assert.Equal(t, 1, snap.Schema)
-	assert.Equal(t, "simple", snap.Code)
-	assert.Nil(t, snap.Daemons)
-	assert.Nil(t, snap.Permissions)
+	mustEqual(t, 1, snap.Schema)
+	mustEqual(t, "simple", snap.Code)
+	if snap.Daemons != nil {
+		t.Fatalf("expected nil daemons, got %v", snap.Daemons)
+	}
+	if snap.Permissions != nil {
+		t.Fatalf("expected nil permissions, got %v", snap.Permissions)
+	}
 }
 
-func TestGenerate_Bad_NilManifest(t *testing.T) {
+func TestGenerate_NilManifest_Bad(t *testing.T) {
 	_, err := Generate(nil, "abc123", "v1.0.0")
-	assert.Error(t, err)
-	assert.Contains(t, err.Error(), "manifest is nil")
+	mustErrorContains(t, err, "manifest is nil")
 }

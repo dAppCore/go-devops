@@ -12,8 +12,8 @@ import (
 	"regexp"
 	"strings"
 
-	coreio "dappco.re/go/core/io"
-	log "dappco.re/go/core/log"
+	coreio "dappco.re/go/io"
+	log "dappco.re/go/log"
 	"gopkg.in/yaml.v3"
 )
 

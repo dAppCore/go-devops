@@ -14,12 +14,12 @@ import (
 	"path/filepath"
 	"strings"
 
-	"dappco.re/go/core/i18n"
-	coreio "dappco.re/go/core/io"
-	"dappco.re/go/core/log"
-	"dappco.re/go/core/scm/git"
-	"dappco.re/go/core/scm/repos"
-	"forge.lthn.ai/core/cli/pkg/cli"
+	"dappco.re/go/i18n"
+	coreio "dappco.re/go/io"
+	"dappco.re/go/log"
+	"dappco.re/go/scm/git"
+	"dappco.re/go/scm/repos"
+	"dappco.re/go/cli/pkg/cli"
 )
 
 // File sync command flags

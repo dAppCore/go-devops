@@ -6,9 +6,9 @@ import (
 	"os"
 	"sync"
 
-	log "dappco.re/go/core/log"
+	log "dappco.re/go/log"
 
-	"dappco.re/go/core/devops/deploy/python"
+	"dappco.re/go/devops/deploy/python"
 )
 
 // Client wraps the Python CoolifyClient for Go usage.

@@ -6,34 +6,25 @@ import (
 	"slices"
 	"testing"
 
-	"dappco.re/go/core/io"
+	"dappco.re/go/io"
 )
 
 func TestFindWorkflows_Good(t *testing.T) {
 	// Create a temp directory with workflow files
 	tmpDir := t.TempDir()
 	workflowsDir := filepath.Join(tmpDir, ".github", "workflows")
-	if err := io.Local.EnsureDir(workflowsDir); err != nil {
-		t.Fatalf("Failed to create workflows dir: %v", err)
-	}
+	mustNoError(t, io.Local.EnsureDir(workflowsDir))
 
 	// Create some workflow files
 	for _, name := range []string{"qa.yml", "tests.yml", "codeql.yaml"} {
-		if err := io.Local.Write(filepath.Join(workflowsDir, name), "name: Test"); err != nil {
-			t.Fatalf("Failed to create workflow file: %v", err)
-		}
+		mustNoError(t, io.Local.Write(filepath.Join(workflowsDir, name), "name: Test"))
 	}
 
 	// Create a non-workflow file (should be ignored)
-	if err := io.Local.Write(filepath.Join(workflowsDir, "readme.md"), "# Workflows"); err != nil {
-		t.Fatalf("Failed to create readme file: %v", err)
-	}
+	mustNoError(t, io.Local.Write(filepath.Join(workflowsDir, "readme.md"), "# Workflows"))
 
 	workflows := findWorkflows(tmpDir)
-
-	if len(workflows) != 3 {
-		t.Errorf("Expected 3 workflows, got %d", len(workflows))
-	}
+	mustLen(t, workflows, 3)
 
 	// Check that all expected workflows are found
 	found := make(map[string]bool)
@@ -42,71 +33,51 @@ func TestFindWorkflows_Good(t *testing.T) {
 	}
 
 	for _, expected := range []string{"qa.yml", "tests.yml", "codeql.yaml"} {
-		if !found[expected] {
-			t.Errorf("Expected to find workflow %s", expected)
-		}
+		mustTrue(t, found[expected])
 	}
 }
 
-func TestFindWorkflows_NoWorkflowsDir(t *testing.T) {
+func TestFindWorkflows_NoWorkflowsDir_Bad(t *testing.T) {
 	tmpDir := t.TempDir()
 	workflows := findWorkflows(tmpDir)
 
-	if len(workflows) != 0 {
-		t.Errorf("Expected 0 workflows for non-existent dir, got %d", len(workflows))
-	}
+	mustLen(t, workflows, 0)
 }
 
 func TestFindTemplateWorkflow_Good(t *testing.T) {
 	tmpDir := t.TempDir()
 	templatesDir := filepath.Join(tmpDir, ".github", "workflow-templates")
-	if err := io.Local.EnsureDir(templatesDir); err != nil {
-		t.Fatalf("Failed to create templates dir: %v", err)
-	}
+	mustNoError(t, io.Local.EnsureDir(templatesDir))
 
 	templateContent := "name: QA\non: [push]"
-	if err := io.Local.Write(filepath.Join(templatesDir, "qa.yml"), templateContent); err != nil {
-		t.Fatalf("Failed to create template file: %v", err)
-	}
+	mustNoError(t, io.Local.Write(filepath.Join(templatesDir, "qa.yml"), templateContent))
 
 	// Test finding with .yml extension
 	result := findTemplateWorkflow(tmpDir, "qa.yml")
-	if result == "" {
-		t.Error("Expected to find qa.yml template")
-	}
+	mustTrue(t, result != "")
 
 	// Test finding without extension (should auto-add .yml)
 	result = findTemplateWorkflow(tmpDir, "qa")
-	if result == "" {
-		t.Error("Expected to find qa template without extension")
-	}
+	mustTrue(t, result != "")
 }
 
-func TestFindTemplateWorkflow_FallbackToWorkflows(t *testing.T) {
+func TestFindTemplateWorkflow_FallbackToWorkflows_Good(t *testing.T) {
 	tmpDir := t.TempDir()
 	workflowsDir := filepath.Join(tmpDir, ".github", "workflows")
-	if err := io.Local.EnsureDir(workflowsDir); err != nil {
-		t.Fatalf("Failed to create workflows dir: %v", err)
-	}
+	mustNoError(t, io.Local.EnsureDir(workflowsDir))
 
 	templateContent := "name: Tests\non: [push]"
-	if err := io.Local.Write(filepath.Join(workflowsDir, "tests.yml"), templateContent); err != nil {
-		t.Fatalf("Failed to create workflow file: %v", err)
-	}
+	mustNoError(t, io.Local.Write(filepath.Join(workflowsDir, "tests.yml"), templateContent))
 
 	result := findTemplateWorkflow(tmpDir, "tests.yml")
-	if result == "" {
-		t.Error("Expected to find tests.yml in workflows dir")
-	}
+	mustTrue(t, result != "")
 }
 
-func TestFindTemplateWorkflow_NotFound(t *testing.T) {
+func TestFindTemplateWorkflow_NotFound_Bad(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	result := findTemplateWorkflow(tmpDir, "nonexistent.yml")
-	if result != "" {
-		t.Errorf("Expected empty string for non-existent template, got %s", result)
-	}
+	mustEqual(t, "", result)
 }
 
 func TestTemplateNames_Good(t *testing.T) {
@@ -118,11 +89,8 @@ func TestTemplateNames_Good(t *testing.T) {
 
 	names := slices.Sorted(maps.Keys(templateSet))
 
-	if len(names) != 3 {
-		t.Fatalf("Expected 3 template names, got %d", len(names))
-	}
-
-	if names[0] != "a.yml" || names[1] != "m.yml" || names[2] != "z.yml" {
-		t.Fatalf("Expected sorted template names, got %v", names)
-	}
+	mustLen(t, names, 3)
+	mustEqual(t, "a.yml", names[0])
+	mustEqual(t, "m.yml", names[1])
+	mustEqual(t, "z.yml", names[2])
 }

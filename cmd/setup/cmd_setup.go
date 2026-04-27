@@ -2,8 +2,8 @@
 package setup
 
 import (
-	"dappco.re/go/core/i18n"
-	"forge.lthn.ai/core/cli/pkg/cli"
+	"dappco.re/go/i18n"
+	"dappco.re/go/cli/pkg/cli"
 )
 
 // Style aliases from shared package

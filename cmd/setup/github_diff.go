@@ -8,8 +8,8 @@ import (
 	"slices"
 	"strings"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
-	"dappco.re/go/core/i18n"
+	"dappco.re/go/cli/pkg/cli"
+	"dappco.re/go/i18n"
 )
 
 // ChangeType indicates the type of change being made.

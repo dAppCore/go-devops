@@ -12,8 +12,8 @@ import (
 	"os/exec"
 	"strings"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
-	log "dappco.re/go/core/log"
+	"dappco.re/go/cli/pkg/cli"
+	log "dappco.re/go/log"
 )
 
 // GitHubWebhook represents a webhook as returned by the GitHub API.

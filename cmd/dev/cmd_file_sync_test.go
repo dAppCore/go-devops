@@ -3,9 +3,7 @@ package dev
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
-	"forge.lthn.ai/core/cli/pkg/cli"
+	"dappco.re/go/cli/pkg/cli"
 )
 
 func TestAddFileSyncCommand_Good(t *testing.T) {
@@ -14,27 +12,28 @@ func TestAddFileSyncCommand_Good(t *testing.T) {
 	AddDevCommands(root)
 
 	syncCmd, _, err := root.Find([]string{"dev", "sync"})
-	require.NoError(t, err)
-	require.NotNil(t, syncCmd)
+	mustNoError(t, err)
+	mustNotNil(t, syncCmd)
 
 	yesFlag := syncCmd.Flags().Lookup("yes")
-	require.NotNil(t, yesFlag)
-	require.Equal(t, "y", yesFlag.Shorthand)
+	mustNotNil(t, yesFlag)
+	mustEqual(t, "y", yesFlag.Shorthand)
 
-	require.NotNil(t, syncCmd.Flags().Lookup("dry-run"))
-	require.NotNil(t, syncCmd.Flags().Lookup("push"))
+	mustNotNil(t, syncCmd.Flags().Lookup("dry-run"))
+	mustNotNil(t, syncCmd.Flags().Lookup("push"))
 }
 
 func TestSplitPatterns_Good(t *testing.T) {
 	patterns := splitPatterns("packages/core-*,  apps/* ,services/*,")
-	require.Equal(t, []string{"packages/core-*", "apps/*", "services/*"}, patterns)
+	want := []string{"packages/core-*", "apps/*", "services/*"}
+	mustDeepEqual(t, want, patterns)
 }
 
 func TestMatchGlob_Good(t *testing.T) {
-	require.True(t, matchGlob("packages/core-xyz", "packages/core-*"))
-	require.True(t, matchGlob("packages/core-xyz", "*/core-*"))
-	require.True(t, matchGlob("a-b", "a?b"))
-	require.True(t, matchGlob("foo", "foo"))
-	require.False(t, matchGlob("core-other", "packages/*"))
-	require.False(t, matchGlob("abc", "[]"))
+	mustTrue(t, matchGlob("packages/core-xyz", "packages/core-*"))
+	mustTrue(t, matchGlob("packages/core-xyz", "*/core-*"))
+	mustTrue(t, matchGlob("a-b", "a?b"))
+	mustTrue(t, matchGlob("foo", "foo"))
+	mustFalse(t, matchGlob("core-other", "packages/*"))
+	mustFalse(t, matchGlob("abc", "[]"))
 }

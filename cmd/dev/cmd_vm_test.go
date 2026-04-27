@@ -3,9 +3,7 @@ package dev
 import (
 	"testing"
 
-	"github.com/stretchr/testify/require"
-
-	"forge.lthn.ai/core/cli/pkg/cli"
+	"dappco.re/go/cli/pkg/cli"
 )
 
 func TestAddVMStatusCommand_Good(t *testing.T) {
@@ -14,13 +12,13 @@ func TestAddVMStatusCommand_Good(t *testing.T) {
 	AddDevCommands(root)
 
 	statusCmd, _, err := root.Find([]string{"dev", "status"})
-	require.NoError(t, err)
-	require.NotNil(t, statusCmd)
-	require.Equal(t, "status", statusCmd.Use)
-	require.Contains(t, statusCmd.Aliases, "vm-status")
+	mustNoError(t, err)
+	mustNotNil(t, statusCmd)
+	mustEqual(t, "status", statusCmd.Use)
+	mustContainsString(t, statusCmd.Aliases, "vm-status")
 
 	aliasCmd, _, err := root.Find([]string{"dev", "vm-status"})
-	require.NoError(t, err)
-	require.NotNil(t, aliasCmd)
-	require.Equal(t, statusCmd, aliasCmd)
+	mustNoError(t, err)
+	mustNotNil(t, aliasCmd)
+	mustTrue(t, statusCmd == aliasCmd)
 }

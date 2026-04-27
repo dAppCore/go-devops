@@ -7,8 +7,8 @@ import (
 
 	"code.gitea.io/sdk/gitea"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
-	"dappco.re/go/core/i18n"
+	"dappco.re/go/cli/pkg/cli"
+	"dappco.re/go/i18n"
 )
 
 // CI-specific styles (aliases to shared)

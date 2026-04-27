@@ -5,7 +5,7 @@ import (
 	"os"
 	"os/exec"
 
-	agentic "dappco.re/go/agent/pkg/lifecycle"
+	"dappco.re/go/agent/pkg/lib"
 	"dappco.re/go/core"
 )
 
@@ -19,13 +19,20 @@ type Service struct {
 	*core.ServiceRuntime[ServiceOptions]
 }
 
-func (s *Service) handleTask(_ *core.Core, _ core.Task) core.Result {
-	return core.Result{}
+func (s *Service) handleAction(_ *core.Core, _ core.Message) core.Result {
+	return core.Result{OK: true}
 }
 
 // doCommit shells out to claude for AI-assisted commit.
 func doCommit(ctx context.Context, repoPath string, allowEdit bool) error {
-	prompt := agentic.Prompt("commit")
+	prompt := ""
+	if r := lib.Prompt("commit"); r.OK {
+		value, ok := r.Value.(string)
+		if !ok {
+			return core.E("dev.commit", "commit prompt was not a string", nil)
+		}
+		prompt = value
+	}
 
 	tools := "Bash,Read,Glob,Grep"
 	if allowEdit {

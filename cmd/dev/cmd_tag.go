@@ -9,9 +9,9 @@ import (
 	"strconv"
 	"strings"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
-	"dappco.re/go/core/i18n"
-	log "dappco.re/go/core/log"
+	"dappco.re/go/cli/pkg/cli"
+	"dappco.re/go/i18n"
+	log "dappco.re/go/log"
 )
 
 // Tag command flags

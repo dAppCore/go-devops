@@ -3,8 +3,6 @@ package devkit
 import (
 	"errors"
 	"testing"
-
-	"github.com/stretchr/testify/require"
 )
 
 func TestScanSecrets_Good(t *testing.T) {
@@ -14,7 +12,7 @@ func TestScanSecrets_Good(t *testing.T) {
 	})
 
 	scanSecretsRunner = func(dir string) ([]byte, error) {
-		require.Equal(t, "/tmp/project", dir)
+		mustEqual(t, "/tmp/project", dir)
 		return []byte(`RuleID,File,StartLine,StartColumn,Description,Match
 github-token,config.yml,12,4,GitHub token detected,ghp_exampletoken1234567890
 aws-access-key-id,creds.txt,7,1,AWS access key detected,AKIA1234567890ABCDEF
@@ -22,23 +20,23 @@ aws-access-key-id,creds.txt,7,1,AWS access key detected,AKIA1234567890ABCDEF
 	}
 
 	findings, err := ScanSecrets("/tmp/project")
-	require.NoError(t, err)
-	require.Len(t, findings, 2)
+	mustNoError(t, err)
+	mustLen(t, findings, 2)
 
-	require.Equal(t, "github-token", findings[0].Rule)
-	require.Equal(t, "config.yml", findings[0].Path)
-	require.Equal(t, 12, findings[0].Line)
-	require.Equal(t, 4, findings[0].Column)
-	require.Equal(t, "ghp_exampletoken1234567890", findings[0].Snippet)
+	mustEqual(t, "github-token", findings[0].Rule)
+	mustEqual(t, "config.yml", findings[0].Path)
+	mustEqual(t, 12, findings[0].Line)
+	mustEqual(t, 4, findings[0].Column)
+	mustEqual(t, "ghp_exampletoken1234567890", findings[0].Snippet)
 
-	require.Equal(t, "aws-access-key-id", findings[1].Rule)
-	require.Equal(t, "creds.txt", findings[1].Path)
-	require.Equal(t, 7, findings[1].Line)
-	require.Equal(t, 1, findings[1].Column)
-	require.Equal(t, "AKIA1234567890ABCDEF", findings[1].Snippet)
+	mustEqual(t, "aws-access-key-id", findings[1].Rule)
+	mustEqual(t, "creds.txt", findings[1].Path)
+	mustEqual(t, 7, findings[1].Line)
+	mustEqual(t, 1, findings[1].Column)
+	mustEqual(t, "AKIA1234567890ABCDEF", findings[1].Snippet)
 }
 
-func TestScanSecrets_ReportsFindingsOnExitError(t *testing.T) {
+func TestScanSecrets_ReportsFindingsOnExitError_Good(t *testing.T) {
 	originalRunner := scanSecretsRunner
 	t.Cleanup(func() {
 		scanSecretsRunner = originalRunner
@@ -51,14 +49,14 @@ token,test.txt,3,2,Token detected,secret-value
 	}
 
 	findings, err := ScanSecrets("/tmp/project")
-	require.NoError(t, err)
-	require.Len(t, findings, 1)
-	require.Equal(t, "token", findings[0].Rule)
-	require.Equal(t, 3, findings[0].Line)
-	require.Equal(t, 2, findings[0].Column)
+	mustNoError(t, err)
+	mustLen(t, findings, 1)
+	mustEqual(t, "token", findings[0].Rule)
+	mustEqual(t, 3, findings[0].Line)
+	mustEqual(t, 2, findings[0].Column)
 }
 
 func TestParseGitleaksCSV_Bad(t *testing.T) {
 	_, err := parseGitleaksCSV([]byte("rule_id,file,start_line\nunterminated,\"broken"))
-	require.Error(t, err)
+	mustError(t, err)
 }

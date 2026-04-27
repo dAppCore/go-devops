@@ -6,9 +6,9 @@ import (
 	"slices"
 	"strings"
 
-	"forge.lthn.ai/core/cli/pkg/cli"
-	"dappco.re/go/core/i18n"
-	"dappco.re/go/core/scm/git"
+	"dappco.re/go/cli/pkg/cli"
+	"dappco.re/go/i18n"
+	"dappco.re/go/scm/git"
 )
 
 // Work command flags
