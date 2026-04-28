@@ -1,5 +1,7 @@
 code.gitea.io/sdk/gitea v0.24.1 h1:hpaqcdGcBmfMpV7JSbBJVwE99qo+WqGreJYKrDKEyW8=
 code.gitea.io/sdk/gitea v0.24.1/go.mod h1:5/77BL3sHneCMEiZaMT9lfTvnnibsYxyO48mceCF3qA=
+dappco.re/go/core v0.8.0-alpha.1 h1:gj7+Scv+L63Z7wMxbJYHhaRFkHJo2u4MMPuUSv/Dhtk=
+dappco.re/go/core v0.8.0-alpha.1/go.mod h1:f2/tBZ3+3IqDrg2F5F598llv0nmb/4gJVCFzM5geE4A=
 dappco.re/go/core/cli v0.5.2 h1:mo+PERo3lUytE+r3ArHr8o2nTftXjgPPsU/rn3ETXDM=
 dappco.re/go/core/cli v0.5.2/go.mod h1:D4zfn3ec/hb72AWX/JWDvkW+h2WDKQcxGUrzoss7q2s=
 dappco.re/go/core/i18n v0.2.3 h1:GqFaTR1I0SfSEc4WtsAkgao+jp8X5qcMPqrX0eMAOrY=

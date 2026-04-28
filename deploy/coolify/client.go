@@ -17,6 +17,7 @@ type Client struct {
 	apiToken  string
 	timeout   int
 	verifySSL bool
+	call      func(context.Context, string, map[string]any) (map[string]any, error)
 
 	mu sync.Mutex
 }
@@ -28,6 +29,8 @@ type Config struct {
 	Timeout   int
 	VerifySSL bool
 }
+
+var initEmbeddedPython = python.Init
 
 // DefaultConfig returns default configuration from environment.
 func DefaultConfig() Config {
@@ -49,7 +52,7 @@ func NewClient(cfg Config) (*Client, error) {
 	}
 
 	// Initialize Python runtime
-	if err := python.Init(); err != nil {
+	if err := initEmbeddedPython(); err != nil {
 		return nil, log.E("coolify", "failed to initialize Python", err)
 	}
 
@@ -63,11 +66,18 @@ func NewClient(cfg Config) (*Client, error) {
 
 // Call invokes a Coolify API operation by operationId.
 func (c *Client) Call(ctx context.Context, operationID string, params map[string]any) (map[string]any, error) {
+	if c == nil {
+		return nil, log.E("coolify", "client is nil", nil)
+	}
+
 	c.mu.Lock()
 	defer c.mu.Unlock()
 
 	if params == nil {
 		params = map[string]any{}
+	}
+	if c.call != nil {
+		return c.call(ctx, operationID, params)
 	}
 
 	// Generate and run Python script

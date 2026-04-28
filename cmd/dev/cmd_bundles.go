@@ -4,7 +4,7 @@ import (
 	"context"
 	"fmt"
 
-	"dappco.re/go/core"
+	"dappco.re/go"
 )
 
 // WorkBundle contains the Core instance for dev work operations.
@@ -31,7 +31,7 @@ func NewWorkBundle(opts WorkBundleOptions) (*WorkBundle, error) {
 	c.Service("dev", core.Service{
 		OnStart: func() core.Result {
 			c.RegisterAction(svc.handleAction)
-			return core.Result{OK: true}
+			return core.Ok(nil)
 		},
 	})
 

@@ -5,8 +5,8 @@ import (
 	"os"
 	"os/exec"
 
+	"dappco.re/go"
 	"dappco.re/go/agent/pkg/lib"
-	"dappco.re/go/core"
 )
 
 // ServiceOptions for configuring the dev service.
@@ -20,7 +20,7 @@ type Service struct {
 }
 
 func (s *Service) handleAction(_ *core.Core, _ core.Message) core.Result {
-	return core.Result{OK: true}
+	return core.Ok(nil)
 }
 
 // doCommit shells out to claude for AI-assisted commit.

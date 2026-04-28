@@ -6,7 +6,7 @@ import (
 	"fmt"
 	"os"
 
-	"dappco.re/go/core/cli/pkg/cli"
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/devops/deploy/coolify"
 	"dappco.re/go/i18n"
 	log "dappco.re/go/log"

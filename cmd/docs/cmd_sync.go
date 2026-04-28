@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"dappco.re/go/core/cli/pkg/cli"
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/io"
 	"dappco.re/go/scm/repos"

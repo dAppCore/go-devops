@@ -6,7 +6,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"dappco.re/go/core/cli/pkg/cli"
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/devops/cmd/workspace"
 	"dappco.re/go/i18n"
 	"dappco.re/go/io"
@@ -118,7 +118,7 @@ func scanRepoDocs(repo *repos.Repo) RepoDocInfo {
 	docsDir := filepath.Join(repo.Path, "docs")
 	// Check if directory exists by listing it
 	if _, err := io.Local.List(docsDir); err == nil {
-		_ = filepath.WalkDir(docsDir, func(path string, d fs.DirEntry, err error) error {
+		if err := filepath.WalkDir(docsDir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return nil
 			}
@@ -131,28 +131,38 @@ func scanRepoDocs(repo *repos.Repo) RepoDocInfo {
 				return nil
 			}
 			// Get relative path from docs/
-			relPath, _ := filepath.Rel(docsDir, path)
+			relPath, err := filepath.Rel(docsDir, path)
+			if err != nil {
+				return err
+			}
 			info.DocsFiles = append(info.DocsFiles, relPath)
 			info.HasDocs = true
 			return nil
-		})
+		}); err != nil {
+			return info
+		}
 	}
 
 	// Recursively scan KB/ directory for .md files
 	kbDir := filepath.Join(repo.Path, "KB")
 	if _, err := io.Local.List(kbDir); err == nil {
-		_ = filepath.WalkDir(kbDir, func(path string, d fs.DirEntry, err error) error {
+		if err := filepath.WalkDir(kbDir, func(path string, d fs.DirEntry, err error) error {
 			if err != nil {
 				return nil
 			}
 			if d.IsDir() || !strings.HasSuffix(d.Name(), ".md") {
 				return nil
 			}
-			relPath, _ := filepath.Rel(kbDir, path)
+			relPath, err := filepath.Rel(kbDir, path)
+			if err != nil {
+				return err
+			}
 			info.KBFiles = append(info.KBFiles, relPath)
 			info.HasDocs = true
 			return nil
-		})
+		}); err != nil {
+			return info
+		}
 	}
 
 	return info

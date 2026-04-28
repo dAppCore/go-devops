@@ -5,7 +5,7 @@ import (
 	"strings"
 	"time"
 
-	"dappco.re/go/core/cli/pkg/cli"
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 
 	"code.gitea.io/sdk/gitea"

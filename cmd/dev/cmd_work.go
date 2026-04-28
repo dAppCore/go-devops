@@ -6,7 +6,7 @@ import (
 	"slices"
 	"strings"
 
-	"dappco.re/go/core/cli/pkg/cli"
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/scm/git"
 )
@@ -51,7 +51,11 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 	if err := bundle.Start(ctx); err != nil {
 		return err
 	}
-	defer func() { _ = bundle.Stop(ctx) }()
+	defer func() {
+		if err := bundle.Stop(ctx); err != nil {
+			cli.Print("  %s %s\n", errorStyle.Render("x"), err)
+		}
+	}()
 
 	// Load registry and get paths
 	reg, _, err := loadRegistryWithConfig(registryPath)

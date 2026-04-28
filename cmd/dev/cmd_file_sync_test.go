@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"dappco.re/go/core/cli/pkg/cli"
+	"dappco.re/go/cli/pkg/cli"
 )
 
 func TestAddFileSyncCommand_Good(t *testing.T) {

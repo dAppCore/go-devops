@@ -12,7 +12,7 @@ import (
 	"os/exec"
 	"strings"
 
-	"dappco.re/go/core/cli/pkg/cli"
+	"dappco.re/go/cli/pkg/cli"
 	log "dappco.re/go/log"
 )
 

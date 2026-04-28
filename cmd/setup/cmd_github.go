@@ -21,7 +21,7 @@ import (
 	"os/exec"
 	"path/filepath"
 
-	"dappco.re/go/core/cli/pkg/cli"
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	coreio "dappco.re/go/io"
 	log "dappco.re/go/log"

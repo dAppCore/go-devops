@@ -5,8 +5,8 @@ import (
 	"os"
 	"time"
 
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/container/devenv"
-	"dappco.re/go/core/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/io"
 	log "dappco.re/go/log"
@@ -482,10 +482,15 @@ func runVMUpdate(apply bool) error {
 	}
 
 	// Stop if running
-	running, _ := d.IsRunning(ctx)
+	running, err := d.IsRunning(ctx)
+	if err != nil {
+		return cli.Wrap(err, "failed to check VM state")
+	}
 	if running {
 		cli.Text(i18n.T("cmd.dev.vm.stopping_current"))
-		_ = d.Stop(ctx)
+		if err := d.Stop(ctx); err != nil {
+			return cli.Wrap(err, "failed to stop current VM")
+		}
 	}
 
 	cli.Text(i18n.T("cmd.dev.vm.downloading_update"))

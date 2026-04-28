@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"strings"
 
-	"dappco.re/go/core/cli/pkg/cli"
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	coreio "dappco.re/go/io"
 	"dappco.re/go/log"
@@ -51,7 +51,9 @@ func AddFileSyncCommand(parent *cli.Command) {
 	syncCmd.Flags().BoolVar(&fileSyncPush, "push", false, i18n.T("cmd.dev.file_sync.flag.push"))
 	syncCmd.Flags().BoolVarP(&fileSyncYes, "yes", "y", false, i18n.T("cmd.dev.file_sync.flag.yes"))
 
-	_ = syncCmd.MarkFlagRequired("to")
+	if err := syncCmd.MarkFlagRequired("to"); err != nil {
+		panic(err)
+	}
 
 	parent.AddCommand(syncCmd)
 }

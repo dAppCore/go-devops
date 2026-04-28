@@ -17,12 +17,18 @@ var (
 	once    sync.Once
 	ep      *python.EmbeddedPython
 	initErr error
+
+	newEmbeddedPython = python.NewEmbeddedPython
+	initRuntime       = Init
+	pythonCommand     = func(args ...string) (*exec.Cmd, error) {
+		return ep.PythonCmd(args...)
+	}
 )
 
 // Init initializes the embedded Python runtime.
 func Init() error {
 	once.Do(func() {
-		ep, initErr = python.NewEmbeddedPython("core-deploy")
+		ep, initErr = newEmbeddedPython("core-deploy")
 	})
 	return initErr
 }
@@ -34,7 +40,7 @@ func GetPython() *python.EmbeddedPython {
 
 // RunScript runs a Python script with the given code and returns stdout.
 func RunScript(ctx context.Context, code string, args ...string) (string, error) {
-	if err := Init(); err != nil {
+	if err := initRuntime(); err != nil {
 		return "", err
 	}
 
@@ -43,19 +49,27 @@ func RunScript(ctx context.Context, code string, args ...string) (string, error)
 	if err != nil {
 		return "", log.E("python", "create temp file", err)
 	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	defer func() {
+		if err := os.Remove(tmpFile.Name()); err != nil && !os.IsNotExist(err) {
+			log.Warn("failed to remove temporary Python script", "path", tmpFile.Name(), "error", err)
+		}
+	}()
 
 	if _, err := tmpFile.WriteString(code); err != nil {
-		_ = tmpFile.Close()
+		if closeErr := tmpFile.Close(); closeErr != nil {
+			return "", log.E("python", "close script", closeErr)
+		}
 		return "", log.E("python", "write script", err)
 	}
-	_ = tmpFile.Close()
+	if err := tmpFile.Close(); err != nil {
+		return "", log.E("python", "close script", err)
+	}
 
 	// Build args: script path + any additional args
 	cmdArgs := append([]string{tmpFile.Name()}, args...)
 
 	// Get the command
-	cmd, err := ep.PythonCmd(cmdArgs...)
+	cmd, err := pythonCommand(cmdArgs...)
 	if err != nil {
 		return "", log.E("python", "create command", err)
 	}
@@ -75,12 +89,12 @@ func RunScript(ctx context.Context, code string, args ...string) (string, error)
 
 // RunModule runs a Python module (python -m module_name).
 func RunModule(ctx context.Context, module string, args ...string) (string, error) {
-	if err := Init(); err != nil {
+	if err := initRuntime(); err != nil {
 		return "", err
 	}
 
 	cmdArgs := append([]string{"-m", module}, args...)
-	cmd, err := ep.PythonCmd(cmdArgs...)
+	cmd, err := pythonCommand(cmdArgs...)
 	if err != nil {
 		return "", log.E("python", "create command", err)
 	}

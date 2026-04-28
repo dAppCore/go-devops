@@ -14,7 +14,7 @@ import (
 	"path/filepath"
 	"sort"
 
-	"dappco.re/go/core/cli/pkg/cli"
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/io"
 	core "dappco.re/go/log"
