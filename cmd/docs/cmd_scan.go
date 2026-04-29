@@ -21,7 +21,7 @@ type RepoDocInfo struct {
 	KBFiles   []string // All files in KB/ directory (recursive)
 }
 
-func loadRegistry(registryPath string) (*repos.Registry, string, coreFailure) {
+func loadRegistry(registryPath string) (*repos.Registry, string, core.Result) {
 	var reg *repos.Registry
 	var err error
 	var registryDir string
@@ -29,7 +29,7 @@ func loadRegistry(registryPath string) (*repos.Registry, string, coreFailure) {
 	if registryPath != "" {
 		reg, err = repos.LoadRegistry(io.Local, registryPath)
 		if err != nil {
-			return nil, "", cli.Wrap(err, i18n.T("i18n.fail.load", "registry"))
+			return nil, "", core.Fail(cli.Wrap(err, i18n.T("i18n.fail.load", "registry")))
 		}
 		registryDir = core.PathDir(registryPath)
 	} else {
@@ -37,7 +37,7 @@ func loadRegistry(registryPath string) (*repos.Registry, string, coreFailure) {
 		if err == nil {
 			reg, err = repos.LoadRegistry(io.Local, registryPath)
 			if err != nil {
-				return nil, "", cli.Wrap(err, i18n.T("i18n.fail.load", "registry"))
+				return nil, "", core.Fail(cli.Wrap(err, i18n.T("i18n.fail.load", "registry")))
 			}
 			registryDir = core.PathDir(registryPath)
 		} else {
@@ -47,16 +47,16 @@ func loadRegistry(registryPath string) (*repos.Registry, string, coreFailure) {
 			}
 			reg, err = repos.ScanDirectory(io.Local, cwd)
 			if err != nil {
-				return nil, "", cli.Wrap(err, i18n.T("i18n.fail.scan", "directory"))
+				return nil, "", core.Fail(cli.Wrap(err, i18n.T("i18n.fail.scan", "directory")))
 			}
 			registryDir = cwd
 		}
 	}
 
 	// Load workspace config to respect packages_dir
-	wsConfig, err := workspace.LoadConfig(registryDir)
-	if err != nil {
-		return nil, "", cli.Wrap(err, i18n.T("i18n.fail.load", "workspace config"))
+	wsConfig, r := workspace.LoadConfig(registryDir)
+	if !r.OK {
+		return nil, "", core.Fail(cli.Wrap(r.Value.(error), i18n.T("i18n.fail.load", "workspace config")))
 	}
 
 	basePath := registryDir
@@ -84,7 +84,7 @@ func loadRegistry(registryPath string) (*repos.Registry, string, coreFailure) {
 		}
 	}
 
-	return reg, basePath, nil
+	return reg, basePath, core.Ok(nil)
 }
 
 func scanRepoDocs(repo *repos.Repo) RepoDocInfo {

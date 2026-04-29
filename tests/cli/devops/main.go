@@ -37,11 +37,17 @@ func playbookSmokeCommand() *cli.Command {
 		Use:   "playbook-smoke [dir]",
 		Short: "Validate bundled playbook YAML can be decoded",
 		Args:  cli.RangeArgs(0, 1),
-		RunE:  runPlaybookSmoke,
+		RunE: func(cmd *cli.Command, args []string) error {
+			r := runPlaybookSmoke(cmd, args)
+			if !r.OK {
+				return r.Value.(error)
+			}
+			return nil
+		},
 	}
 }
 
-func runPlaybookSmoke(cmd *cli.Command, args []string) (_ coreFailure) {
+func runPlaybookSmoke(cmd *cli.Command, args []string) (_ core.Result) {
 	dir := "playbooks"
 	if len(args) > 0 {
 		dir = args[0]
@@ -70,16 +76,16 @@ func runPlaybookSmoke(cmd *cli.Command, args []string) (_ coreFailure) {
 		return nil
 	})
 	if err != nil {
-		return core.Errorf("walk %s: %w", dir, err)
+		return core.Fail(core.Errorf("walk %s: %w", dir, err))
 	}
 	if count == 0 {
-		return core.Errorf("no playbook YAML files found in %s", dir)
+		return core.Fail(core.Errorf("no playbook YAML files found in %s", dir))
 	}
 
 	if result := core.WriteString(cmd.OutOrStdout(), core.Sprintf("playbook smoke passed: %d YAML files decoded\n", count)); !result.OK {
-		return result.Value.(error)
+		return result
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 func isYAML(path string) bool {

@@ -14,8 +14,8 @@ func TestCopyZensicalReadme_Good(t *testing.T) {
 		t.Fatalf("write source README: %v", r.Error())
 	}
 
-	if err := copyZensicalReadme(src, destDir); err != nil {
-		t.Fatalf("copy README: %v", err)
+	if r := copyZensicalReadme(src, destDir); !r.OK {
+		t.Fatalf("copy README: %v", r.Error())
 	}
 
 	output := PathJoin(destDir, "index.md")
@@ -44,8 +44,8 @@ func TestResetOutputDirClearsExistingFiles(t *testing.T) {
 		t.Fatalf("write stale file: %v", r.Error())
 	}
 
-	if err := resetOutputDir(dir); err != nil {
-		t.Fatalf("reset output dir: %v", err)
+	if r := resetOutputDir(dir); !r.OK {
+		t.Fatalf("reset output dir: %v", r.Error())
 	}
 
 	if r := Stat(stale); r.OK || !IsNotExist(r.Value.(error)) {

@@ -11,7 +11,7 @@ func TestRunRepoSetupCreatesCoreConfigs(t *testing.T) {
 		t.Fatalf("write go.mod: %v", r.Error())
 	}
 
-	if err := runRepoSetup(dir, false); err != nil {
+	if err := runRepoSetup(dir, false); !err.OK {
 		t.Fatalf("run repo setup: %v", err)
 	}
 

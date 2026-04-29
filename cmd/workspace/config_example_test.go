@@ -14,8 +14,8 @@ func ExampleLoadConfig() {
 	MkdirAll(PathJoin(dir, ".core"), 0o755)
 	WriteFile(PathJoin(dir, ".core", "workspace.yaml"), []byte("version: 1\nactive: app\npackages_dir: repos\n"), 0o600)
 
-	cfg, err := LoadConfig(dir)
-	Println(err == nil, cfg.Active)
+	cfg, r := LoadConfig(dir)
+	Println(r.OK, cfg.Active)
 	// Output: true app
 }
 
@@ -28,7 +28,7 @@ func ExampleFindRoot() {
 	WriteFile(PathJoin(dir, ".core", "workspace.yaml"), []byte("version: 1\n"), 0o600)
 	Chdir(dir)
 
-	root, err := FindRoot()
-	Println(err == nil, root != "")
+	root, r := FindRoot()
+	Println(r.OK, root != "")
 	// Output: true true
 }

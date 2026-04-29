@@ -2,6 +2,7 @@
 package docs
 
 import (
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 )
@@ -17,6 +18,13 @@ var (
 	docsFoundStyle = cli.SuccessStyle
 	docsFileStyle  = cli.InfoStyle
 )
+
+var resultError = func(r core.Result) error {
+	if !r.OK {
+		return r.Value.(error)
+	}
+	return nil
+}
 
 var docsCmd = &cli.Command{
 	Use: "docs",

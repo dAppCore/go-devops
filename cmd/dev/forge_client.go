@@ -11,15 +11,19 @@ import (
 
 // forgeAPIClient creates a Gitea SDK client configured for the Forge instance.
 // Forgejo is API-compatible with Gitea, so the Gitea SDK works directly.
-func forgeAPIClient() (*gitea.Client, coreFailure) {
+func forgeAPIClient() (*gitea.Client, core.Result) {
 	forgeURL, token, err := forge.ResolveConfig("", "")
 	if err != nil {
-		return nil, err
+		return nil, core.Fail(err)
 	}
 	if token == "" {
-		return nil, log.E("dev.forge", "no Forge API token configured (set FORGE_TOKEN or run: core forge config --token TOKEN)", nil)
+		return nil, core.Fail(log.E("dev.forge", "no Forge API token configured (set FORGE_TOKEN or run: core forge config --token TOKEN)", nil))
 	}
-	return gitea.NewClient(forgeURL, gitea.SetToken(token))
+	client, err := gitea.NewClient(forgeURL, gitea.SetToken(token))
+	if err != nil {
+		return nil, core.Fail(err)
+	}
+	return client, core.Ok(nil)
 }
 
 // forgeRepoIdentity extracts the Forge owner/repo from a repo's git remote.

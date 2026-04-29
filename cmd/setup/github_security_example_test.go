@@ -22,7 +22,7 @@ func ExampleGetSecuritySettings() {
 	cleanup := securityExampleHappyGH()
 	defer cleanup()
 	status, err := GetSecuritySettings("owner/repo")
-	Println(err == nil, status.DependabotAlerts)
+	Println(err.OK, status.DependabotAlerts)
 	// Output: true true
 }
 
@@ -30,7 +30,7 @@ func ExampleEnableDependabotAlerts() {
 	cleanup := securityExampleHappyGH()
 	defer cleanup()
 	err := EnableDependabotAlerts("owner/repo")
-	Println(err == nil)
+	Println(err.OK)
 	// Output: true
 }
 
@@ -38,7 +38,7 @@ func ExampleEnableDependabotSecurityUpdates() {
 	cleanup := securityExampleHappyGH()
 	defer cleanup()
 	err := EnableDependabotSecurityUpdates("owner/repo")
-	Println(err == nil)
+	Println(err.OK)
 	// Output: true
 }
 
@@ -46,7 +46,7 @@ func ExampleDisableDependabotSecurityUpdates() {
 	cleanup := securityExampleHappyGH()
 	defer cleanup()
 	err := DisableDependabotSecurityUpdates("owner/repo")
-	Println(err == nil)
+	Println(err.OK)
 	// Output: true
 }
 
@@ -54,7 +54,7 @@ func ExampleUpdateSecurityAndAnalysis() {
 	cleanup := securityExampleHappyGH()
 	defer cleanup()
 	err := UpdateSecurityAndAnalysis("owner/repo", true, true)
-	Println(err == nil)
+	Println(err.OK)
 	// Output: true
 }
 
@@ -62,6 +62,6 @@ func ExampleSyncSecuritySettings() {
 	cleanup := securityExampleHappyGH()
 	defer cleanup()
 	changes, err := SyncSecuritySettings("owner/repo", &GitHubConfig{Security: SecurityConfig{SecretScanning: true}}, true)
-	Println(err == nil, changes.HasChanges())
+	Println(err.OK, changes.HasChanges())
 	// Output: true true
 }

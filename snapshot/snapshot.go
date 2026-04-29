@@ -29,14 +29,14 @@ type Snapshot struct {
 
 // Generate creates a core.json snapshot from a manifest.
 // The built timestamp is set to the current time.
-func Generate(m *manifest.Manifest, commit, tag string) ([]byte, coreFailure) {
+func Generate(m *manifest.Manifest, commit, tag string) ([]byte, core.Result) {
 	return GenerateAt(m, commit, tag, time.Now().UTC())
 }
 
 // GenerateAt creates a core.json snapshot with an explicit build timestamp.
-func GenerateAt(m *manifest.Manifest, commit, tag string, built time.Time) ([]byte, coreFailure) {
+func GenerateAt(m *manifest.Manifest, commit, tag string, built time.Time) ([]byte, core.Result) {
 	if m == nil {
-		return nil, log.E("snapshot", "manifest is nil", nil)
+		return nil, core.Fail(log.E("snapshot", "manifest is nil", nil))
 	}
 
 	snap := Snapshot{
@@ -61,7 +61,7 @@ func GenerateAt(m *manifest.Manifest, commit, tag string, built time.Time) ([]by
 
 	r := core.JSONMarshalIndent(snap, "", "  ")
 	if !r.OK {
-		return nil, r.Value.(error)
+		return nil, r
 	}
-	return r.Value.([]byte), nil
+	return r.Value.([]byte), core.Ok(nil)
 }

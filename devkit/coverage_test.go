@@ -17,7 +17,7 @@ func TestCoverage_NewCoverageStore_Bad(t *T) {
 	AssertNotNil(t, store)
 
 	AssertEqual(t, "", store.path)
-	AssertError(t, store.Append(CoverageSnapshot{}))
+	AssertFalse(t, store.Append(CoverageSnapshot{}).OK)
 }
 
 func TestCoverage_NewCoverageStore_Ugly(t *T) {
@@ -32,34 +32,34 @@ func TestCoverage_CoverageStore_Append_Good(t *T) {
 	store := NewCoverageStore(Path(t.TempDir(), "coverage.json"))
 	snapshot := CoverageSnapshot{CapturedAt: UnixTime(1770000000), Total: CoveragePackage{Name: "total", Coverage: 80}}
 
-	err := store.Append(snapshot)
-	AssertNoError(t, err)
+	r := store.Append(snapshot)
+	AssertTrue(t, r.OK)
 	AssertTrue(t, Stat(store.path).OK)
 }
 
 func TestCoverage_CoverageStore_Append_Bad(t *T) {
 	dir := t.TempDir()
 	store := NewCoverageStore(dir)
-	err := store.Append(CoverageSnapshot{})
+	r := store.Append(CoverageSnapshot{})
 
-	AssertError(t, err)
-	AssertContains(t, err.Error(), "is a directory")
+	AssertFalse(t, r.OK)
+	AssertContains(t, r.Error(), "is a directory")
 }
 
 func TestCoverage_CoverageStore_Append_Ugly(t *T) {
 	store := NewCoverageStore(Path(t.TempDir(), "coverage.json"))
-	err := store.Append(CoverageSnapshot{})
+	r := store.Append(CoverageSnapshot{})
 
-	AssertNoError(t, err)
+	AssertTrue(t, r.OK)
 	AssertTrue(t, Stat(store.path).OK)
 }
 
 func TestCoverage_CoverageStore_Load_Good(t *T) {
 	store := NewCoverageStore(Path(t.TempDir(), "coverage.json"))
-	RequireNoError(t, store.Append(CoverageSnapshot{CapturedAt: UnixTime(1)}))
+	RequireTrue(t, store.Append(CoverageSnapshot{CapturedAt: UnixTime(1)}).OK)
 
-	snapshots, err := store.Load()
-	AssertNoError(t, err)
+	snapshots, r := store.Load()
+	AssertTrue(t, r.OK)
 	AssertLen(t, snapshots, 1)
 }
 
@@ -68,8 +68,8 @@ func TestCoverage_CoverageStore_Load_Bad(t *T) {
 	RequireTrue(t, WriteFile(path, []byte("{"), 0o600).OK)
 	store := NewCoverageStore(path)
 
-	snapshots, err := store.Load()
-	AssertError(t, err)
+	snapshots, r := store.Load()
+	AssertFalse(t, r.OK)
 	AssertNil(t, snapshots)
 }
 
@@ -78,81 +78,81 @@ func TestCoverage_CoverageStore_Load_Ugly(t *T) {
 	RequireTrue(t, WriteFile(path, []byte(" \n "), 0o600).OK)
 	store := NewCoverageStore(path)
 
-	snapshots, err := store.Load()
-	AssertNoError(t, err)
+	snapshots, r := store.Load()
+	AssertTrue(t, r.OK)
 	AssertNil(t, snapshots)
 }
 
 func TestCoverage_CoverageStore_Latest_Good(t *T) {
 	store := NewCoverageStore(Path(t.TempDir(), "coverage.json"))
-	RequireNoError(t, store.Append(CoverageSnapshot{CapturedAt: UnixTime(1)}))
-	RequireNoError(t, store.Append(CoverageSnapshot{CapturedAt: UnixTime(2)}))
+	RequireTrue(t, store.Append(CoverageSnapshot{CapturedAt: UnixTime(1)}).OK)
+	RequireTrue(t, store.Append(CoverageSnapshot{CapturedAt: UnixTime(2)}).OK)
 
-	latest, err := store.Latest()
-	AssertNoError(t, err)
+	latest, r := store.Latest()
+	AssertTrue(t, r.OK)
 	AssertTrue(t, latest.CapturedAt.Equal(UnixTime(2)))
 }
 
 func TestCoverage_CoverageStore_Latest_Bad(t *T) {
 	store := NewCoverageStore(Path(t.TempDir(), "coverage.json"))
-	latest, err := store.Latest()
+	latest, r := store.Latest()
 
-	AssertError(t, err)
+	AssertFalse(t, r.OK)
 	AssertEqual(t, CoverageSnapshot{}, latest)
 }
 
 func TestCoverage_CoverageStore_Latest_Ugly(t *T) {
 	store := NewCoverageStore(Path(t.TempDir(), "coverage.json"))
-	RequireNoError(t, store.Append(CoverageSnapshot{}))
+	RequireTrue(t, store.Append(CoverageSnapshot{}).OK)
 
-	latest, err := store.Latest()
-	AssertNoError(t, err)
+	latest, r := store.Latest()
+	AssertTrue(t, r.OK)
 	AssertEqual(t, CoverageSnapshot{}, latest)
 }
 
 func TestCoverage_ParseCoverProfile_Good(t *T) {
-	snapshot, err := ParseCoverProfile("mode: set\npkg/a.go:1.1,2.1 2 1\n")
-	AssertNoError(t, err)
+	snapshot, r := ParseCoverProfile("mode: set\npkg/a.go:1.1,2.1 2 1\n")
+	AssertTrue(t, r.OK)
 
 	AssertLen(t, snapshot.Packages, 1)
 	AssertEqual(t, 100.0, snapshot.Total.Coverage)
 }
 
 func TestCoverage_ParseCoverProfile_Bad(t *T) {
-	snapshot, err := ParseCoverProfile("mode: set\nbroken line\n")
-	AssertError(t, err)
+	snapshot, r := ParseCoverProfile("mode: set\nbroken line\n")
+	AssertFalse(t, r.OK)
 
 	AssertEqual(t, CoverageSnapshot{}, snapshot)
-	AssertContains(t, err.Error(), "invalid cover profile line")
+	AssertContains(t, r.Error(), "invalid cover profile line")
 }
 
 func TestCoverage_ParseCoverProfile_Ugly(t *T) {
-	snapshot, err := ParseCoverProfile(" \n ")
-	AssertNoError(t, err)
+	snapshot, r := ParseCoverProfile(" \n ")
+	AssertTrue(t, r.OK)
 
 	AssertEmpty(t, snapshot.Packages)
 	AssertEqual(t, 0.0, snapshot.Total.Coverage)
 }
 
 func TestCoverage_ParseCoverOutput_Good(t *T) {
-	snapshot, err := ParseCoverOutput("ok  \tpkg/a\t0.1s\tcoverage: 75.0% of statements\n")
-	AssertNoError(t, err)
+	snapshot, r := ParseCoverOutput("ok  \tpkg/a\t0.1s\tcoverage: 75.0% of statements\n")
+	AssertTrue(t, r.OK)
 
 	AssertLen(t, snapshot.Packages, 1)
 	AssertEqual(t, 75.0, snapshot.Total.Coverage)
 }
 
 func TestCoverage_ParseCoverOutput_Bad(t *T) {
-	snapshot, err := ParseCoverOutput("no coverage here\n")
-	AssertNoError(t, err)
+	snapshot, r := ParseCoverOutput("no coverage here\n")
+	AssertTrue(t, r.OK)
 
 	AssertEmpty(t, snapshot.Packages)
 	AssertEqual(t, 0.0, snapshot.Total.Coverage)
 }
 
 func TestCoverage_ParseCoverOutput_Ugly(t *T) {
-	snapshot, err := ParseCoverOutput("?   \tpkg/a\t0.1s\tcoverage: 0.0% of statements\n")
-	AssertNoError(t, err)
+	snapshot, r := ParseCoverOutput("?   \tpkg/a\t0.1s\tcoverage: 0.0% of statements\n")
+	AssertTrue(t, r.OK)
 
 	AssertLen(t, snapshot.Packages, 1)
 	AssertEqual(t, 0.0, snapshot.Total.Coverage)

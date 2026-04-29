@@ -2,15 +2,138 @@ package dev
 
 import (
 	"context"
+	"runtime"
 	"time"
 
 	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/container/devenv"
 	"dappco.re/go/i18n"
-	"dappco.re/go/io"
 	log "dappco.re/go/log"
 )
+
+const vmDefaultSSHPort = 2222
+
+// DevEnv provides the local development VM backend used by dev VM commands.
+type DevEnv struct{}
+
+type vmBootOptions struct {
+	Memory int
+	CPUs   int
+	Name   string
+	Fresh  bool
+}
+
+type vmShellOptions struct {
+	Console bool
+	Command []string
+}
+
+type vmServeOptions struct {
+	Port int
+	Path string
+}
+
+type vmTestOptions struct {
+	Name    string
+	Command []string
+}
+
+type vmClaudeOptions struct {
+	NoAuth bool
+	Model  string
+	Auth   []string
+}
+
+type vmStatus struct {
+	Installed    bool
+	Running      bool
+	ImageVersion string
+	ContainerID  string
+	Memory       int
+	CPUs         int
+	SSHPort      int
+	Uptime       time.Duration
+}
+
+func newVMDevEnv() (*DevEnv, core.Result) {
+	return &DevEnv{}, core.Ok(nil)
+}
+
+func vmImageName() string {
+	return core.Sprintf("core-devops-%s-%s.qcow2", runtime.GOOS, runtime.GOARCH)
+}
+
+func vmImagePath() core.Result {
+	if dir := core.Getenv("CORE_IMAGES_DIR"); dir != "" {
+		return core.Ok(core.PathJoin(dir, vmImageName()))
+	}
+	home := core.UserHomeDir()
+	if !home.OK {
+		return home
+	}
+	return core.Ok(core.PathJoin(home.Value.(string), ".core", "images", vmImageName()))
+}
+
+func defaultVMBootOptions() vmBootOptions {
+	return vmBootOptions{
+		Memory: 4096,
+		CPUs:   2,
+		Name:   "core-dev",
+	}
+}
+
+func (d *DevEnv) IsInstalled() bool {
+	path := vmImagePath()
+	return path.OK && core.Stat(path.Value.(string)).OK
+}
+
+func (d *DevEnv) Install(context.Context, func(downloaded, total int64)) core.Result {
+	return core.Fail(core.Errorf("dev VM image installer backend is unavailable"))
+}
+
+func (d *DevEnv) Boot(context.Context, vmBootOptions) core.Result {
+	if !d.IsInstalled() {
+		return core.Fail(log.E("dev.vm", i18n.T("cmd.dev.vm.not_installed"), nil))
+	}
+	return core.Fail(core.Errorf("dev VM boot backend is unavailable"))
+}
+
+func (d *DevEnv) Stop(context.Context) core.Result {
+	return core.Fail(core.Errorf("dev VM stop backend is unavailable"))
+}
+
+func (d *DevEnv) IsRunning(context.Context) (bool, core.Result) {
+	return false, core.Ok(nil)
+}
+
+func (d *DevEnv) Status(context.Context) (vmStatus, core.Result) {
+	return vmStatus{
+		Installed: d.IsInstalled(),
+		SSHPort:   vmDefaultSSHPort,
+		Memory:    4096,
+		CPUs:      2,
+	}, core.Ok(nil)
+}
+
+func (d *DevEnv) Shell(context.Context, vmShellOptions) core.Result {
+	return core.Fail(core.Errorf("dev VM shell backend is unavailable"))
+}
+
+func (d *DevEnv) Serve(context.Context, string, vmServeOptions) core.Result {
+	return core.Fail(core.Errorf("dev VM serve backend is unavailable"))
+}
+
+func (d *DevEnv) Test(context.Context, string, vmTestOptions) core.Result {
+	return core.Fail(core.Errorf("dev VM test backend is unavailable"))
+}
+
+func (d *DevEnv) Claude(context.Context, string, vmClaudeOptions) core.Result {
+	return core.Fail(core.Errorf("dev VM Claude backend is unavailable"))
+}
+
+func (d *DevEnv) CheckUpdate(context.Context) (string, string, bool, core.Result) {
+	return "unknown", "unknown", false, core.Ok(nil)
+}
 
 // addVMCommands adds the dev environment VM commands to the dev parent command.
 // These are added as direct subcommands: core dev install, core dev boot, etc.
@@ -33,27 +156,27 @@ func addVMInstallCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.vm.install.short"),
 		Long:  i18n.T("cmd.dev.vm.install.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runVMInstall()
+			return resultToError(runVMInstall())
 		},
 	}
 
 	parent.AddCommand(installCmd)
 }
 
-func runVMInstall() (_ coreFailure) {
-	d, err := devenv.New(io.Local)
-	if err != nil {
-		return err
+func runVMInstall() (_ core.Result) {
+	d, r := newVMDevEnv()
+	if !r.OK {
+		return r
 	}
 
 	if d.IsInstalled() {
 		cli.Text(successStyle.Render(i18n.T("cmd.dev.vm.already_installed")))
 		cli.Blank()
 		cli.Text(i18n.T("cmd.dev.vm.check_updates", map[string]any{"Command": dimStyle.Render("core dev update")}))
-		return nil
+		return core.Ok(nil)
 	}
 
-	cli.Print("%s %s\n", dimStyle.Render(i18n.Label("image")), devenv.ImageName())
+	cli.Print("%s %s\n", dimStyle.Render(i18n.Label("image")), vmImageName())
 	cli.Blank()
 	cli.Text(i18n.T("cmd.dev.vm.downloading"))
 	cli.Blank()
@@ -62,7 +185,7 @@ func runVMInstall() (_ coreFailure) {
 	start := time.Now()
 	var lastProgress int64
 
-	err = d.Install(ctx, func(downloaded, total int64) {
+	r = d.Install(ctx, func(downloaded, total int64) {
 		if total > 0 {
 			pct := int(float64(downloaded) / float64(total) * 100)
 			if pct != int(float64(lastProgress)/float64(total)*100) {
@@ -74,8 +197,8 @@ func runVMInstall() (_ coreFailure) {
 
 	cli.Blank() // Clear progress line
 
-	if err != nil {
-		return cli.Wrap(err, "install failed")
+	if !r.OK {
+		return core.Fail(cli.Wrap(r.Value.(error), "install failed"))
 	}
 
 	elapsed := time.Since(start).Round(time.Second)
@@ -84,7 +207,7 @@ func runVMInstall() (_ coreFailure) {
 	cli.Blank()
 	cli.Text(i18n.T("cmd.dev.vm.start_with", map[string]any{"Command": dimStyle.Render("core dev boot")}))
 
-	return nil
+	return core.Ok(nil)
 }
 
 // VM boot command flags
@@ -101,7 +224,7 @@ func addVMBootCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.vm.boot.short"),
 		Long:  i18n.T("cmd.dev.vm.boot.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runVMBoot(vmBootMemory, vmBootCPUs, vmBootFresh)
+			return resultToError(runVMBoot(vmBootMemory, vmBootCPUs, vmBootFresh))
 		},
 	}
 
@@ -112,17 +235,17 @@ func addVMBootCommand(parent *cli.Command) {
 	parent.AddCommand(bootCmd)
 }
 
-func runVMBoot(memory, cpus int, fresh bool) (_ coreFailure) {
-	d, err := devenv.New(io.Local)
-	if err != nil {
-		return err
+func runVMBoot(memory, cpus int, fresh bool) (_ core.Result) {
+	d, r := newVMDevEnv()
+	if !r.OK {
+		return r
 	}
 
 	if !d.IsInstalled() {
-		return log.E("dev.vm", i18n.T("cmd.dev.vm.not_installed"), nil)
+		return core.Fail(log.E("dev.vm", i18n.T("cmd.dev.vm.not_installed"), nil))
 	}
 
-	opts := devenv.DefaultBootOptions()
+	opts := defaultVMBootOptions()
 	if memory > 0 {
 		opts.Memory = memory
 	}
@@ -136,8 +259,8 @@ func runVMBoot(memory, cpus int, fresh bool) (_ coreFailure) {
 	cli.Text(i18n.T("cmd.dev.vm.booting"))
 
 	ctx := context.Background()
-	if err := d.Boot(ctx, opts); err != nil {
-		return err
+	if r := d.Boot(ctx, opts); !r.OK {
+		return r
 	}
 
 	cli.Blank()
@@ -146,7 +269,7 @@ func runVMBoot(memory, cpus int, fresh bool) (_ coreFailure) {
 	cli.Text(i18n.T("cmd.dev.vm.connect_with", map[string]any{"Command": dimStyle.Render("core dev shell")}))
 	cli.Print("%s %s\n", i18n.T("cmd.dev.vm.ssh_port"), dimStyle.Render("2222"))
 
-	return nil
+	return core.Ok(nil)
 }
 
 // addVMStopCommand adds the 'devops stop' command.
@@ -156,38 +279,38 @@ func addVMStopCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.vm.stop.short"),
 		Long:  i18n.T("cmd.dev.vm.stop.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runVMStop()
+			return resultToError(runVMStop())
 		},
 	}
 
 	parent.AddCommand(stopCmd)
 }
 
-func runVMStop() (_ coreFailure) {
-	d, err := devenv.New(io.Local)
-	if err != nil {
-		return err
+func runVMStop() (_ core.Result) {
+	d, r := newVMDevEnv()
+	if !r.OK {
+		return r
 	}
 
 	ctx := context.Background()
-	running, err := d.IsRunning(ctx)
-	if err != nil {
-		return err
+	running, r := d.IsRunning(ctx)
+	if !r.OK {
+		return r
 	}
 
 	if !running {
 		cli.Text(dimStyle.Render(i18n.T("cmd.dev.vm.not_running")))
-		return nil
+		return core.Ok(nil)
 	}
 
 	cli.Text(i18n.T("cmd.dev.vm.stopping"))
 
-	if err := d.Stop(ctx); err != nil {
-		return err
+	if r := d.Stop(ctx); !r.OK {
+		return r
 	}
 
 	cli.Text(successStyle.Render(i18n.T("common.status.stopped")))
-	return nil
+	return core.Ok(nil)
 }
 
 // addVMStatusCommand adds the 'dev status' command.
@@ -200,23 +323,23 @@ func addVMStatusCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.vm.status.short"),
 		Long:  i18n.T("cmd.dev.vm.status.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runVMStatus()
+			return resultToError(runVMStatus())
 		},
 	}
 
 	parent.AddCommand(statusCmd)
 }
 
-func runVMStatus() (_ coreFailure) {
-	d, err := devenv.New(io.Local)
-	if err != nil {
-		return err
+func runVMStatus() (_ core.Result) {
+	d, r := newVMDevEnv()
+	if !r.OK {
+		return r
 	}
 
 	ctx := context.Background()
-	status, err := d.Status(ctx)
-	if err != nil {
-		return err
+	status, r := d.Status(ctx)
+	if !r.OK {
+		return r
 	}
 
 	cli.Text(headerStyle.Render(i18n.T("cmd.dev.vm.status_title")))
@@ -232,7 +355,7 @@ func runVMStatus() (_ coreFailure) {
 		cli.Print("%s %s\n", dimStyle.Render(i18n.T("cmd.dev.vm.installed_label")), errorStyle.Render(i18n.T("cmd.dev.vm.installed_no")))
 		cli.Blank()
 		cli.Text(i18n.T("cmd.dev.vm.install_with", map[string]any{"Command": dimStyle.Render("core dev install")}))
-		return nil
+		return core.Ok(nil)
 	}
 
 	cli.Blank()
@@ -251,7 +374,7 @@ func runVMStatus() (_ coreFailure) {
 		cli.Text(i18n.T("cmd.dev.vm.start_with", map[string]any{"Command": dimStyle.Render("core dev boot")}))
 	}
 
-	return nil
+	return core.Ok(nil)
 }
 
 func formatVMUptime(d time.Duration) string {
@@ -277,7 +400,7 @@ func addVMShellCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.vm.shell.short"),
 		Long:  i18n.T("cmd.dev.vm.shell.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runVMShell(vmShellConsole, args)
+			return resultToError(runVMShell(vmShellConsole, args))
 		},
 	}
 
@@ -286,13 +409,13 @@ func addVMShellCommand(parent *cli.Command) {
 	parent.AddCommand(shellCmd)
 }
 
-func runVMShell(console bool, command []string) (_ coreFailure) {
-	d, err := devenv.New(io.Local)
-	if err != nil {
-		return err
+func runVMShell(console bool, command []string) (_ core.Result) {
+	d, r := newVMDevEnv()
+	if !r.OK {
+		return r
 	}
 
-	opts := devenv.ShellOptions{
+	opts := vmShellOptions{
 		Console: console,
 		Command: command,
 	}
@@ -314,7 +437,7 @@ func addVMServeCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.vm.serve.short"),
 		Long:  i18n.T("cmd.dev.vm.serve.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runVMServe(vmServePort, vmServePath)
+			return resultToError(runVMServe(vmServePort, vmServePath))
 		},
 	}
 
@@ -324,19 +447,19 @@ func addVMServeCommand(parent *cli.Command) {
 	parent.AddCommand(serveCmd)
 }
 
-func runVMServe(port int, path string) (_ coreFailure) {
-	d, err := devenv.New(io.Local)
-	if err != nil {
-		return err
+func runVMServe(port int, path string) (_ core.Result) {
+	d, r := newVMDevEnv()
+	if !r.OK {
+		return r
 	}
 
 	projectDirResult := core.Getwd()
 	if !projectDirResult.OK {
-		return projectDirResult.Value.(error)
+		return projectDirResult
 	}
 	projectDir := projectDirResult.Value.(string)
 
-	opts := devenv.ServeOptions{
+	opts := vmServeOptions{
 		Port: port,
 		Path: path,
 	}
@@ -355,7 +478,7 @@ func addVMTestCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.vm.test.short"),
 		Long:  i18n.T("cmd.dev.vm.test.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runVMTest(vmTestName, args)
+			return resultToError(runVMTest(vmTestName, args))
 		},
 	}
 
@@ -364,19 +487,19 @@ func addVMTestCommand(parent *cli.Command) {
 	parent.AddCommand(testCmd)
 }
 
-func runVMTest(name string, command []string) (_ coreFailure) {
-	d, err := devenv.New(io.Local)
-	if err != nil {
-		return err
+func runVMTest(name string, command []string) (_ core.Result) {
+	d, r := newVMDevEnv()
+	if !r.OK {
+		return r
 	}
 
 	projectDirResult := core.Getwd()
 	if !projectDirResult.OK {
-		return projectDirResult.Value.(error)
+		return projectDirResult
 	}
 	projectDir := projectDirResult.Value.(string)
 
-	opts := devenv.TestOptions{
+	opts := vmTestOptions{
 		Name:    name,
 		Command: command,
 	}
@@ -399,7 +522,7 @@ func addVMClaudeCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.vm.claude.short"),
 		Long:  i18n.T("cmd.dev.vm.claude.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runVMClaude(vmClaudeNoAuth, vmClaudeModel, vmClaudeAuthFlags)
+			return resultToError(runVMClaude(vmClaudeNoAuth, vmClaudeModel, vmClaudeAuthFlags))
 		},
 	}
 
@@ -410,19 +533,19 @@ func addVMClaudeCommand(parent *cli.Command) {
 	parent.AddCommand(claudeCmd)
 }
 
-func runVMClaude(noAuth bool, model string, authFlags []string) (_ coreFailure) {
-	d, err := devenv.New(io.Local)
-	if err != nil {
-		return err
+func runVMClaude(noAuth bool, model string, authFlags []string) (_ core.Result) {
+	d, r := newVMDevEnv()
+	if !r.OK {
+		return r
 	}
 
 	projectDirResult := core.Getwd()
 	if !projectDirResult.OK {
-		return projectDirResult.Value.(error)
+		return projectDirResult
 	}
 	projectDir := projectDirResult.Value.(string)
 
-	opts := devenv.ClaudeOptions{
+	opts := vmClaudeOptions{
 		NoAuth: noAuth,
 		Model:  model,
 		Auth:   authFlags,
@@ -442,7 +565,7 @@ func addVMUpdateCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.vm.update.short"),
 		Long:  i18n.T("cmd.dev.vm.update.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runVMUpdate(vmUpdateApply)
+			return resultToError(runVMUpdate(vmUpdateApply))
 		},
 	}
 
@@ -451,10 +574,10 @@ func addVMUpdateCommand(parent *cli.Command) {
 	parent.AddCommand(updateCmd)
 }
 
-func runVMUpdate(apply bool) (_ coreFailure) {
-	d, err := devenv.New(io.Local)
-	if err != nil {
-		return err
+func runVMUpdate(apply bool) (_ core.Result) {
+	d, r := newVMDevEnv()
+	if !r.OK {
+		return r
 	}
 
 	ctx := context.Background()
@@ -462,9 +585,9 @@ func runVMUpdate(apply bool) (_ coreFailure) {
 	cli.Text(i18n.T("common.progress.checking_updates"))
 	cli.Blank()
 
-	current, latest, hasUpdate, err := d.CheckUpdate(ctx)
-	if err != nil {
-		return cli.Wrap(err, "failed to check for updates")
+	current, latest, hasUpdate, r := d.CheckUpdate(ctx)
+	if !r.OK {
+		return core.Fail(cli.Wrap(r.Value.(error), "failed to check for updates"))
 	}
 
 	cli.Print("%s %s\n", dimStyle.Render(i18n.Label("current")), valueStyle.Render(current))
@@ -473,7 +596,7 @@ func runVMUpdate(apply bool) (_ coreFailure) {
 
 	if !hasUpdate {
 		cli.Text(successStyle.Render(i18n.T("cmd.dev.vm.up_to_date")))
-		return nil
+		return core.Ok(nil)
 	}
 
 	cli.Text(warningStyle.Render(i18n.T("cmd.dev.vm.update_available")))
@@ -481,18 +604,18 @@ func runVMUpdate(apply bool) (_ coreFailure) {
 
 	if !apply {
 		cli.Text(i18n.T("cmd.dev.vm.run_to_update", map[string]any{"Command": dimStyle.Render("core dev update --apply")}))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Stop if running
-	running, err := d.IsRunning(ctx)
-	if err != nil {
-		return cli.Wrap(err, "failed to check VM state")
+	running, r := d.IsRunning(ctx)
+	if !r.OK {
+		return core.Fail(cli.Wrap(r.Value.(error), "failed to check VM state"))
 	}
 	if running {
 		cli.Text(i18n.T("cmd.dev.vm.stopping_current"))
-		if err := d.Stop(ctx); err != nil {
-			return cli.Wrap(err, "failed to stop current VM")
+		if r := d.Stop(ctx); !r.OK {
+			return core.Fail(cli.Wrap(r.Value.(error), "failed to stop current VM"))
 		}
 	}
 
@@ -500,7 +623,7 @@ func runVMUpdate(apply bool) (_ coreFailure) {
 	cli.Blank()
 
 	start := time.Now()
-	err = d.Install(ctx, func(downloaded, total int64) {
+	r = d.Install(ctx, func(downloaded, total int64) {
 		if total > 0 {
 			pct := int(float64(downloaded) / float64(total) * 100)
 			cli.Print("\r%s %d%%", dimStyle.Render(i18n.T("cmd.dev.vm.progress_label")), pct)
@@ -509,13 +632,13 @@ func runVMUpdate(apply bool) (_ coreFailure) {
 
 	cli.Blank()
 
-	if err != nil {
-		return cli.Wrap(err, "update failed")
+	if !r.OK {
+		return core.Fail(cli.Wrap(r.Value.(error), "update failed"))
 	}
 
 	elapsed := time.Since(start).Round(time.Second)
 	cli.Blank()
 	cli.Text(i18n.T("cmd.dev.vm.updated_in", map[string]any{"Duration": elapsed}))
 
-	return nil
+	return core.Ok(nil)
 }

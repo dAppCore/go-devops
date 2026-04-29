@@ -32,18 +32,18 @@ func TestConfig_LoadConfig_Good(t *T) {
 	RequireTrue(t, MkdirAll(Path(dir, ".core"), 0o755).OK)
 	RequireTrue(t, WriteFile(Path(dir, ".core", "workspace.yaml"), []byte("version: 1\nactive: devops\npackages_dir: repos\n"), 0o644).OK)
 
-	cfg, err := LoadConfig(dir)
-	AssertNoError(t, err)
+	cfg, r := LoadConfig(dir)
+	AssertTrue(t, r.OK)
 	AssertEqual(t, "devops", cfg.Active)
 	AssertEqual(t, "repos", cfg.PackagesDir)
 }
 
 func TestConfig_LoadConfig_Bad(t *T) {
-	cfg, err := LoadConfig(t.TempDir())
-	AssertNoError(t, err)
+	cfg, r := LoadConfig(t.TempDir())
+	AssertTrue(t, r.OK)
 
 	AssertNil(t, cfg)
-	AssertNoError(t, err)
+	AssertTrue(t, r.OK)
 }
 
 func TestConfig_LoadConfig_Ugly(t *T) {
@@ -53,8 +53,8 @@ func TestConfig_LoadConfig_Ugly(t *T) {
 	RequireTrue(t, MkdirAll(child, 0o755).OK)
 	RequireTrue(t, WriteFile(Path(dir, ".core", "workspace.yaml"), []byte("version: 1\npackages_dir: nested\n"), 0o644).OK)
 
-	cfg, err := LoadConfig(child)
-	AssertNoError(t, err)
+	cfg, r := LoadConfig(child)
+	AssertTrue(t, r.OK)
 	AssertEqual(t, "nested", cfg.PackagesDir)
 }
 
@@ -64,8 +64,8 @@ func TestConfig_FindRoot_Good(t *T) {
 	RequireTrue(t, WriteFile(Path(dir, ".core", "workspace.yaml"), []byte("version: 1\n"), 0o644).OK)
 	t.Chdir(dir)
 
-	root, err := FindRoot()
-	AssertNoError(t, err)
+	root, r := FindRoot()
+	AssertTrue(t, r.OK)
 	AssertEqual(t, dir, root)
 }
 
@@ -73,8 +73,8 @@ func TestConfig_FindRoot_Bad(t *T) {
 	dir := t.TempDir()
 	t.Chdir(dir)
 
-	root, err := FindRoot()
-	AssertError(t, err)
+	root, r := FindRoot()
+	AssertFalse(t, r.OK)
 	AssertEqual(t, "", root)
 }
 
@@ -86,7 +86,7 @@ func TestConfig_FindRoot_Ugly(t *T) {
 	RequireTrue(t, WriteFile(Path(dir, ".core", "workspace.yaml"), []byte("version: 1\n"), 0o644).OK)
 	t.Chdir(child)
 
-	root, err := FindRoot()
-	AssertNoError(t, err)
+	root, r := FindRoot()
+	AssertTrue(t, r.OK)
 	AssertEqual(t, dir, root)
 }

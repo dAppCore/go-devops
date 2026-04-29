@@ -24,7 +24,7 @@ func AddHealthCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.health.short"),
 		Long:  i18n.T("cmd.dev.health.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runHealth(healthRegistryPath, healthVerbose)
+			return resultToError(runHealth(healthRegistryPath, healthVerbose))
 		},
 	}
 
@@ -34,13 +34,13 @@ func AddHealthCommand(parent *cli.Command) {
 	parent.AddCommand(healthCmd)
 }
 
-func runHealth(registryPath string, verbose bool) (_ coreFailure) {
+func runHealth(registryPath string, verbose bool) (_ core.Result) {
 	ctx := context.Background()
 
 	// Load registry and get paths
-	reg, _, err := loadRegistryWithConfig(registryPath)
-	if err != nil {
-		return err
+	reg, _, r := loadRegistryWithConfig(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	// Build paths and names for git operations
@@ -56,7 +56,7 @@ func runHealth(registryPath string, verbose bool) (_ coreFailure) {
 
 	if len(paths) == 0 {
 		cli.Text(i18n.T("cmd.dev.no_git_repos"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Get status for all repos
@@ -117,7 +117,7 @@ func runHealth(registryPath string, verbose bool) (_ coreFailure) {
 		cli.Blank()
 	}
 
-	return nil
+	return core.Ok(nil)
 }
 
 func printHealthSummary(total int, dirty, ahead, behind, errors []string) {

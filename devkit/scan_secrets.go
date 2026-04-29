@@ -11,20 +11,20 @@ import (
 var scanSecretsRunner = runGitleaksDetect
 
 // ScanSecrets runs gitleaks against the supplied directory and parses the CSV report.
-func ScanSecrets(dir string) ([]Finding, coreFailure) {
-	output, err := scanSecretsRunner(dir)
-	findings, parseErr := parseGitleaksCSV(output)
-	if parseErr != nil {
-		return nil, parseErr
+func ScanSecrets(dir string) ([]Finding, core.Result) {
+	output, r := scanSecretsRunner(dir)
+	findings, parse := parseGitleaksCSV(output)
+	if !parse.OK {
+		return nil, parse
 	}
-	if err != nil && len(findings) == 0 {
-		return nil, err
+	if !r.OK && len(findings) == 0 {
+		return nil, r
 	}
-	return findings, nil
+	return findings, core.Ok(nil)
 }
 
-func runGitleaksDetect(dir string) ([]byte, coreFailure) {
-	return coreexec.Command(core.Background(), "gitleaks",
+func runGitleaksDetect(dir string) ([]byte, core.Result) {
+	r := coreexec.Command(core.Background(), "gitleaks",
 		"detect",
 		"--no-banner",
 		"--no-color",
@@ -33,11 +33,15 @@ func runGitleaksDetect(dir string) ([]byte, coreFailure) {
 		"--report-format", "csv",
 		"--report-path", "-",
 	).Output()
+	if !r.OK {
+		return nil, r
+	}
+	return r.Value.([]byte), core.Ok(nil)
 }
 
-func parseGitleaksCSV(data []byte) ([]Finding, coreFailure) {
+func parseGitleaksCSV(data []byte) ([]Finding, core.Result) {
 	if len(data) == 0 {
-		return nil, nil
+		return nil, core.Ok(nil)
 	}
 
 	reader := csv.NewReader(core.NewReader(string(data)))
@@ -45,10 +49,10 @@ func parseGitleaksCSV(data []byte) ([]Finding, coreFailure) {
 
 	rows, err := reader.ReadAll()
 	if err != nil {
-		return nil, err
+		return nil, core.Fail(err)
 	}
 	if len(rows) == 0 {
-		return nil, nil
+		return nil, core.Ok(nil)
 	}
 
 	header := make(map[string]int, len(rows[0]))
@@ -72,7 +76,7 @@ func parseGitleaksCSV(data []byte) ([]Finding, coreFailure) {
 		findings = append(findings, finding)
 	}
 
-	return findings, nil
+	return findings, core.Ok(nil)
 }
 
 func normalizeCSVHeader(name string) string {

@@ -24,8 +24,8 @@ func addSyncCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.sync.short"),
 		Long:  i18n.T("cmd.dev.sync.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			if err := runSync(); err != nil {
-				return cli.Wrap(err, i18n.Label("error"))
+			if r := runSync(); !r.OK {
+				return cli.Wrap(r.Value.(error), i18n.Label("error"))
 			}
 			cli.Text(i18n.T("i18n.done.sync", "public APIs"))
 			return nil
@@ -40,11 +40,11 @@ type symbolInfo struct {
 	Kind string // "var", "func", "type", "const"
 }
 
-func runSync() (_ coreFailure) {
+func runSync() (_ core.Result) {
 	pkgDir := "pkg"
 	internalDirs, err := coreio.Local.List(pkgDir)
 	if err != nil {
-		return cli.Wrap(err, "failed to read pkg directory")
+		return core.Fail(cli.Wrap(err, "failed to read pkg directory"))
 	}
 
 	for _, dir := range internalDirs {
@@ -61,36 +61,36 @@ func runSync() (_ coreFailure) {
 			continue
 		}
 
-		symbols, err := getExportedSymbols(internalDir)
-		if err != nil {
-			return cli.Wrap(err, cli.Sprintf("error getting symbols for service '%s'", serviceName))
+		symbols, r := getExportedSymbols(internalDir)
+		if !r.OK {
+			return core.Fail(cli.Wrap(r.Value.(error), cli.Sprintf("error getting symbols for service '%s'", serviceName)))
 		}
 
-		if err := generatePublicAPIFile(publicDir, publicFile, serviceName, symbols); err != nil {
-			return cli.Wrap(err, cli.Sprintf("error generating public API file for service '%s'", serviceName))
+		if r := generatePublicAPIFile(publicDir, publicFile, serviceName, symbols); !r.OK {
+			return core.Fail(cli.Wrap(r.Value.(error), cli.Sprintf("error generating public API file for service '%s'", serviceName)))
 		}
 	}
 
-	return nil
+	return core.Ok(nil)
 }
 
-func getExportedSymbols(path string) ([]symbolInfo, coreFailure) {
-	files, err := listGoFiles(path)
-	if err != nil {
-		return nil, err
+func getExportedSymbols(path string) ([]symbolInfo, core.Result) {
+	files, r := listGoFiles(path)
+	if !r.OK {
+		return nil, r
 	}
 
 	symbolsByName := make(map[string]symbolInfo)
 	for _, file := range files {
 		content, err := coreio.Local.Read(file)
 		if err != nil {
-			return nil, err
+			return nil, core.Fail(err)
 		}
 
 		fset := token.NewFileSet()
 		node, err := parser.ParseFile(fset, file, content, parser.ParseComments)
 		if err != nil {
-			return nil, err
+			return nil, core.Fail(err)
 		}
 
 		for name, obj := range node.Scope.Objects {
@@ -132,10 +132,10 @@ func getExportedSymbols(path string) ([]symbolInfo, coreFailure) {
 		return symbols[i].Name < symbols[j].Name
 	})
 
-	return symbols, nil
+	return symbols, core.Ok(nil)
 }
 
-func listGoFiles(path string) ([]string, coreFailure) {
+func listGoFiles(path string) ([]string, core.Result) {
 	entries, err := coreio.Local.List(path)
 	if err == nil {
 		files := make([]string, 0, len(entries))
@@ -152,14 +152,14 @@ func listGoFiles(path string) ([]string, coreFailure) {
 			files = append(files, core.PathJoin(path, name))
 		}
 		sort.Strings(files)
-		return files, nil
+		return files, core.Ok(nil)
 	}
 
 	if coreio.Local.IsFile(path) {
-		return []string{path}, nil
+		return []string{path}, core.Ok(nil)
 	}
 
-	return nil, err
+	return nil, core.Fail(err)
 }
 
 const publicAPITemplate = `// package {{.ServiceName}} provides the public API for the {{.ServiceName}} service.
@@ -194,14 +194,14 @@ var {{.Name}} = impl.{{.Name}}
 type {{.InterfaceName}} = core.{{.InterfaceName}}
 `
 
-func generatePublicAPIFile(dir, path, serviceName string, symbols []symbolInfo) (_ coreFailure) {
+func generatePublicAPIFile(dir, path, serviceName string, symbols []symbolInfo) (_ core.Result) {
 	if err := coreio.Local.EnsureDir(dir); err != nil {
-		return err
+		return core.Fail(err)
 	}
 
 	tmpl, err := template.New("publicAPI").Parse(publicAPITemplate)
 	if err != nil {
-		return err
+		return core.Fail(err)
 	}
 
 	tcaser := cases.Title(language.English)
@@ -219,8 +219,8 @@ func generatePublicAPIFile(dir, path, serviceName string, symbols []symbolInfo) 
 
 	buf := core.NewBuffer()
 	if err := tmpl.Execute(buf, data); err != nil {
-		return err
+		return core.Fail(err)
 	}
 
-	return coreio.Local.Write(path, buf.String())
+	return core.ResultOf(nil, coreio.Local.Write(path, buf.String()))
 }

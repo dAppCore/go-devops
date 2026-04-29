@@ -12,8 +12,8 @@ func ExampleCoverageStore_Append() {
 	dir := MustCast[string](MkdirTemp("", "coverage-store-*"))
 	defer RemoveAll(dir)
 	store := NewCoverageStore(PathJoin(dir, "coverage.json"))
-	err := store.Append(CoverageSnapshot{Total: CoveragePackage{Name: "total", Coverage: 80}})
-	Println(err == nil)
+	r := store.Append(CoverageSnapshot{Total: CoveragePackage{Name: "total", Coverage: 80}})
+	Println(r.OK)
 	// Output: true
 }
 
@@ -22,8 +22,8 @@ func ExampleCoverageStore_Load() {
 	defer RemoveAll(dir)
 	store := NewCoverageStore(PathJoin(dir, "coverage.json"))
 	store.Append(CoverageSnapshot{Total: CoveragePackage{Name: "total", Coverage: 80}})
-	snapshots, err := store.Load()
-	Println(err == nil, len(snapshots))
+	snapshots, r := store.Load()
+	Println(r.OK, len(snapshots))
 	// Output: true 1
 }
 
@@ -32,20 +32,20 @@ func ExampleCoverageStore_Latest() {
 	defer RemoveAll(dir)
 	store := NewCoverageStore(PathJoin(dir, "coverage.json"))
 	store.Append(CoverageSnapshot{Total: CoveragePackage{Name: "total", Coverage: 80}})
-	latest, err := store.Latest()
-	Println(err == nil, latest.Total.Coverage)
+	latest, r := store.Latest()
+	Println(r.OK, latest.Total.Coverage)
 	// Output: true 80
 }
 
 func ExampleParseCoverProfile() {
-	snapshot, err := ParseCoverProfile("mode: set\npkg/a.go:1.1,2.1 2 1\n")
-	Println(err == nil, snapshot.Total.Coverage)
+	snapshot, r := ParseCoverProfile("mode: set\npkg/a.go:1.1,2.1 2 1\n")
+	Println(r.OK, snapshot.Total.Coverage)
 	// Output: true 100
 }
 
 func ExampleParseCoverOutput() {
-	snapshot, err := ParseCoverOutput("ok  \tpkg/a\t0.1s\tcoverage: 75.0% of statements\n")
-	Println(err == nil, snapshot.Total.Coverage)
+	snapshot, r := ParseCoverOutput("ok  \tpkg/a\t0.1s\tcoverage: 75.0% of statements\n")
+	Println(r.OK, snapshot.Total.Coverage)
 	// Output: true 75
 }
 

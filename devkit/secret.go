@@ -59,7 +59,7 @@ var textExts = map[string]struct{}{
 }
 
 // ScanDir recursively scans a directory for secret-like patterns.
-func ScanDir(root string) ([]Finding, coreFailure) {
+func ScanDir(root string) ([]Finding, core.Result) {
 	var findings []Finding
 
 	if err := core.PathWalkDir(root, func(path string, d fs.DirEntry, err error) error {
@@ -79,26 +79,27 @@ func ScanDir(root string) ([]Finding, coreFailure) {
 			return nil
 		}
 
-		fileFindings, err := scanFile(path)
-		if err != nil {
-			return err
+		fileFindings, r := scanFile(path)
+		if !r.OK {
+			return r.Value.(error)
 		}
 		findings = append(findings, fileFindings...)
 		return nil
 	}); err != nil {
-		return nil, err
+		return nil, core.Fail(err)
 	}
 
-	return findings, nil
+	return findings, core.Ok(nil)
 }
 
-func scanFile(path string) ([]Finding, coreFailure) {
-	data, err := fileRead(path)
-	if err != nil {
-		return nil, err
+func scanFile(path string) ([]Finding, core.Result) {
+	read := fileRead(path)
+	if !read.OK {
+		return nil, read
 	}
+	data := read.Value.([]byte)
 	if len(data) == 0 || hasNUL(data) {
-		return nil, nil
+		return nil, core.Ok(nil)
 	}
 
 	var findings []Finding
@@ -127,10 +128,10 @@ func scanFile(path string) ([]Finding, coreFailure) {
 		}
 	}
 	if err := scanner.Err(); err != nil {
-		return nil, err
+		return nil, core.Fail(err)
 	}
 
-	return findings, nil
+	return findings, core.Ok(nil)
 }
 
 func isTextCandidate(name string) bool {
@@ -147,13 +148,7 @@ func isTextCandidate(name string) bool {
 }
 
 // fileRead is factored out for tests.
-var fileRead = func(path string) ([]byte, error) {
-	r := core.ReadFile(path)
-	if !r.OK {
-		return nil, r.Value.(error)
-	}
-	return r.Value.([]byte), nil
-}
+var fileRead = func(path string) core.Result { return core.ReadFile(path) }
 
 func hasNUL(data []byte) bool {
 	for _, b := range data {

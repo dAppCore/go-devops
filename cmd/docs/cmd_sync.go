@@ -19,7 +19,7 @@ var (
 var docsSyncCmd = &cli.Command{
 	Use: "sync",
 	RunE: func(cmd *cli.Command, args []string) error {
-		return runDocsSync(docsSyncRegistryPath, docsSyncOutputDir, docsSyncDryRun, docsSyncTarget)
+		return resultError(runDocsSync(docsSyncRegistryPath, docsSyncOutputDir, docsSyncDryRun, docsSyncTarget))
 	},
 }
 
@@ -56,10 +56,10 @@ func shouldSyncRepo(repoName string) bool {
 	return true
 }
 
-func runDocsSync(registryPath string, outputDir string, dryRun bool, target string) (_ coreFailure) {
-	reg, basePath, err := loadRegistry(registryPath)
-	if err != nil {
-		return err
+func runDocsSync(registryPath string, outputDir string, dryRun bool, target string) (_ core.Result) {
+	reg, basePath, r := loadRegistry(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	switch target {
@@ -72,7 +72,7 @@ func runDocsSync(registryPath string, outputDir string, dryRun bool, target stri
 	}
 }
 
-func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) (_ coreFailure) {
+func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) (_ core.Result) {
 	// Default output to core-php/docs/packages relative to registry
 	if outputDir == "" {
 		outputDir = core.PathJoin(basePath, "core-php", "docs", "packages")
@@ -92,7 +92,7 @@ func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun b
 
 	if len(docsInfo) == 0 {
 		cli.Text(i18n.T("cmd.docs.sync.no_docs_found"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	cli.Print("\n%s %s\n\n", dimStyle.Render(i18n.T("cmd.docs.sync.found_label")), i18n.T("cmd.docs.sync.repos_with_docs", map[string]any{"Count": len(docsInfo)}))
@@ -118,14 +118,14 @@ func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun b
 
 	if dryRun {
 		cli.Print("\n%s\n", dimStyle.Render(i18n.T("cmd.docs.sync.dry_run_notice")))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Confirm
 	cli.Blank()
 	if !confirm(i18n.T("cmd.docs.sync.confirm")) {
 		cli.Text(i18n.T("common.prompt.abort"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Sync docs
@@ -136,8 +136,8 @@ func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun b
 		repoOutDir := core.PathJoin(outputDir, outName)
 
 		// Clear existing directory (recursively)
-		if err := resetOutputDir(repoOutDir); err != nil {
-			cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), info.Name, err)
+		if r := resetOutputDir(repoOutDir); !r.OK {
+			cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), info.Name, r.Error())
 			continue
 		}
 
@@ -163,7 +163,7 @@ func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun b
 
 	cli.Print("\n%s %s\n", successStyle.Render(i18n.T("i18n.done.sync")), i18n.T("cmd.docs.sync.synced_packages", map[string]any{"Count": synced}))
 
-	return nil
+	return core.Ok(nil)
 }
 
 // zensicalOutputName maps repo name to Zensical content section and folder.
@@ -218,20 +218,20 @@ func splitFields(s string) []string {
 }
 
 // copyWithFrontMatter copies a markdown file, injecting front matter if missing.
-func copyWithFrontMatter(src, dst string, weight int) (_ coreFailure) {
+func copyWithFrontMatter(src, dst string, weight int) (_ core.Result) {
 	if err := io.Local.EnsureDir(core.PathDir(dst)); err != nil {
-		return err
+		return core.Fail(err)
 	}
 	content, err := io.Local.Read(src)
 	if err != nil {
-		return err
+		return core.Fail(err)
 	}
 	title := titleFromFilename(src)
 	result := injectFrontMatter([]byte(content), title, weight)
-	return io.Local.Write(dst, string(result))
+	return core.ResultOf(nil, io.Local.Write(dst, string(result)))
 }
 
-func runZensicalSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) (_ coreFailure) {
+func runZensicalSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) (_ core.Result) {
 	if outputDir == "" {
 		outputDir = core.PathJoin(basePath, "docs-site", "docs")
 	}
@@ -249,7 +249,7 @@ func runZensicalSync(reg *repos.Registry, basePath string, outputDir string, dry
 
 	if len(docsInfo) == 0 {
 		cli.Text("No documentation found")
-		return nil
+		return core.Ok(nil)
 	}
 
 	cli.Print("\n  Zensical sync: %d repos with docs → %s\n\n", len(docsInfo), outputDir)
@@ -269,13 +269,13 @@ func runZensicalSync(reg *repos.Registry, basePath string, outputDir string, dry
 
 	if dryRun {
 		cli.Print("\n  Dry run — no files written\n")
-		return nil
+		return core.Ok(nil)
 	}
 
 	cli.Blank()
 	if !confirm("Sync to Zensical docs directory?") {
 		cli.Text("Aborted")
-		return nil
+		return core.Ok(nil)
 	}
 
 	cli.Blank()
@@ -289,8 +289,8 @@ repoLoop:
 			destDir = core.PathJoin(destDir, folder)
 		}
 
-		if err := resetOutputDir(destDir); err != nil {
-			cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), info.Name, err)
+		if r := resetOutputDir(destDir); !r.OK {
+			cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), info.Name, r.Error())
 			continue
 		}
 
@@ -299,24 +299,24 @@ repoLoop:
 		for _, f := range info.DocsFiles {
 			src := core.PathJoin(docsDir, f)
 			dst := core.PathJoin(destDir, f)
-			if err := copyWithFrontMatter(src, dst, weight); err != nil {
-				cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), f, err)
+			if r := copyWithFrontMatter(src, dst, weight); !r.OK {
+				cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), f, r.Error())
 				continue
 			}
 			weight += 10
 		}
 
 		if info.Readme != "" {
-			if err := copyZensicalReadme(info.Readme, destDir); err != nil {
-				cli.Print("  %s README: %s\n", errorStyle.Render("✗"), err)
+			if r := copyZensicalReadme(info.Readme, destDir); !r.OK {
+				cli.Print("  %s README: %s\n", errorStyle.Render("✗"), r.Error())
 			}
 		}
 
 		if len(info.KBFiles) > 0 {
 			suffix := core.TrimPrefix(info.Name, "go-")
 			kbDestDir := core.PathJoin(outputDir, "kb", suffix)
-			if err := resetOutputDir(kbDestDir); err != nil {
-				cli.Print("  %s KB: %s\n", errorStyle.Render("✗"), err)
+			if r := resetOutputDir(kbDestDir); !r.OK {
+				cli.Print("  %s KB: %s\n", errorStyle.Render("✗"), r.Error())
 				continue repoLoop
 			}
 			kbDir := core.PathJoin(info.Path, "KB")
@@ -324,8 +324,8 @@ repoLoop:
 			for _, f := range info.KBFiles {
 				src := core.PathJoin(kbDir, f)
 				dst := core.PathJoin(kbDestDir, f)
-				if err := copyWithFrontMatter(src, dst, kbWeight); err != nil {
-					cli.Print("  %s KB/%s: %s\n", errorStyle.Render("✗"), f, err)
+				if r := copyWithFrontMatter(src, dst, kbWeight); !r.OK {
+					cli.Print("  %s KB/%s: %s\n", errorStyle.Render("✗"), f, r.Error())
 					continue
 				}
 				kbWeight += 10
@@ -337,21 +337,21 @@ repoLoop:
 	}
 
 	cli.Print("\n  Synced %d repos to Zensical docs\n", synced)
-	return nil
+	return core.Ok(nil)
 }
 
 // copyZensicalReadme copies a repository README to index.md in the target directory.
-func copyZensicalReadme(src, destDir string) (_ coreFailure) {
+func copyZensicalReadme(src, destDir string) (_ core.Result) {
 	dst := core.PathJoin(destDir, "index.md")
 	return copyWithFrontMatter(src, dst, 1)
 }
 
 // resetOutputDir clears and recreates a target directory before copying files into it.
-func resetOutputDir(dir string) (_ coreFailure) {
+func resetOutputDir(dir string) (_ core.Result) {
 	if err := io.Local.DeleteAll(dir); err != nil {
-		return err
+		return core.Fail(err)
 	}
-	return io.Local.EnsureDir(dir)
+	return core.ResultOf(nil, io.Local.EnsureDir(dir))
 }
 
 // goHelpOutputName maps repo name to output folder name for go-help.
@@ -365,7 +365,7 @@ func goHelpOutputName(repoName string) string {
 	return repoName
 }
 
-func runGoHelpSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) (_ coreFailure) {
+func runGoHelpSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) (_ core.Result) {
 	if outputDir == "" {
 		outputDir = core.PathJoin(basePath, "docs", "content")
 	}
@@ -383,7 +383,7 @@ func runGoHelpSync(reg *repos.Registry, basePath string, outputDir string, dryRu
 
 	if len(docsInfo) == 0 {
 		cli.Text("No documentation found")
-		return nil
+		return core.Ok(nil)
 	}
 
 	cli.Print("\n  Go-help sync: %d repos with docs → %s\n\n", len(docsInfo), outputDir)
@@ -400,13 +400,13 @@ func runGoHelpSync(reg *repos.Registry, basePath string, outputDir string, dryRu
 
 	if dryRun {
 		cli.Print("\n  Dry run — no files written\n")
-		return nil
+		return core.Ok(nil)
 	}
 
 	cli.Blank()
 	if !confirm("Sync to go-help content directory?") {
 		cli.Text("Aborted")
-		return nil
+		return core.Ok(nil)
 	}
 
 	cli.Blank()
@@ -416,8 +416,8 @@ func runGoHelpSync(reg *repos.Registry, basePath string, outputDir string, dryRu
 		repoOutDir := core.PathJoin(outputDir, outName)
 
 		// Clear existing directory
-		if err := resetOutputDir(repoOutDir); err != nil {
-			cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), info.Name, err)
+		if r := resetOutputDir(repoOutDir); !r.OK {
+			cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), info.Name, r.Error())
 			continue
 		}
 
@@ -440,5 +440,5 @@ func runGoHelpSync(reg *repos.Registry, basePath string, outputDir string, dryRu
 	}
 
 	cli.Print("\n  Synced %d repos to go-help content\n", synced)
-	return nil
+	return core.Ok(nil)
 }

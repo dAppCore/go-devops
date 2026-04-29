@@ -26,11 +26,14 @@ var (
 )
 
 // Init initializes the embedded Python runtime.
-func Init() (_ coreFailure) {
+func Init() (_ core.Result) {
 	once.Do(func() {
 		ep, initErr = newEmbeddedPython("core-deploy")
 	})
-	return initErr
+	if initErr != nil {
+		return core.Fail(initErr)
+	}
+	return core.Ok(ep)
 }
 
 // GetPython returns the embedded Python instance.
@@ -39,15 +42,15 @@ func GetPython() *python.EmbeddedPython {
 }
 
 // RunScript runs a Python script with the given code and returns stdout.
-func RunScript(ctx context.Context, code string, args ...string) (string, coreFailure) {
-	if err := initRuntime(); err != nil {
-		return "", err
+func RunScript(ctx context.Context, code string, args ...string) (string, core.Result) {
+	if r := initRuntime(); !r.OK {
+		return "", r
 	}
 
 	// Write code to temp file
 	tmpResult := core.MkdirTemp("", "core-python-*")
 	if !tmpResult.OK {
-		return "", log.E("python", "create temp dir", nil)
+		return "", core.Fail(log.E("python", "create temp dir", tmpResult.Value.(error)))
 	}
 	tmpDir := tmpResult.Value.(string)
 	defer func() {
@@ -58,7 +61,7 @@ func RunScript(ctx context.Context, code string, args ...string) (string, coreFa
 
 	tmpPath := core.PathJoin(tmpDir, "script.py")
 	if r := core.WriteFile(tmpPath, []byte(code), 0o600); !r.OK {
-		return "", log.E("python", "write script", r.Value.(error))
+		return "", core.Fail(log.E("python", "write script", r.Value.(error)))
 	}
 
 	// Build args: script path + any additional args
@@ -67,69 +70,69 @@ func RunScript(ctx context.Context, code string, args ...string) (string, coreFa
 	// Get the command
 	cmd, err := pythonCommand(cmdArgs...)
 	if err != nil {
-		return "", log.E("python", "create command", err)
+		return "", core.Fail(log.E("python", "create command", err))
 	}
 
 	// Run with context
 	output, err := cmd.Output()
 	if err != nil {
-		return "", log.E("python", "run script", err)
+		return "", core.Fail(log.E("python", "run script", err))
 	}
 
-	return string(output), nil
+	return string(output), core.Ok(nil)
 }
 
 // RunModule runs a Python module (python -m module_name).
-func RunModule(ctx context.Context, module string, args ...string) (string, coreFailure) {
-	if err := initRuntime(); err != nil {
-		return "", err
+func RunModule(ctx context.Context, module string, args ...string) (string, core.Result) {
+	if r := initRuntime(); !r.OK {
+		return "", r
 	}
 
 	cmdArgs := append([]string{"-m", module}, args...)
 	cmd, err := pythonCommand(cmdArgs...)
 	if err != nil {
-		return "", log.E("python", "create command", err)
+		return "", core.Fail(log.E("python", "create command", err))
 	}
 
 	output, err := cmd.Output()
 	if err != nil {
-		return "", log.E("python", "run module "+module, err)
+		return "", core.Fail(log.E("python", "run module "+module, err))
 	}
 
-	return string(output), nil
+	return string(output), core.Ok(nil)
 }
 
 // DevOpsPath returns the path to the DevOps repo.
-func DevOpsPath() (string, coreFailure) {
+func DevOpsPath() (string, core.Result) {
 	if path := core.Getenv("DEVOPS_PATH"); path != "" {
-		return path, nil
+		return path, core.Ok(nil)
 	}
 	r := core.UserHomeDir()
 	if !r.OK {
-		return "", log.E("python", "get user home", r.Value.(error))
+		return "", core.Fail(log.E("python", "get user home", r.Value.(error)))
 	}
-	return core.PathJoin(r.Value.(string), "Code", "DevOps"), nil
+	return core.PathJoin(r.Value.(string), "Code", "DevOps"), core.Ok(nil)
 }
 
 // CoolifyModulePath returns the path to the Coolify module_utils.
-func CoolifyModulePath() (string, coreFailure) {
-	path, err := DevOpsPath()
-	if err != nil {
-		return "", err
+func CoolifyModulePath() (string, core.Result) {
+	path, r := DevOpsPath()
+	if !r.OK {
+		return "", r
 	}
-	return core.PathJoin(path, "playbooks", "roles", "coolify", "module_utils"), nil
+	return core.PathJoin(path, "playbooks", "roles", "coolify", "module_utils"), core.Ok(nil)
 }
 
 // CoolifyScript generates Python code to call the Coolify API.
-func CoolifyScript(baseURL, apiToken, operation string, params map[string]any) (string, coreFailure) {
+func CoolifyScript(baseURL, apiToken, operation string, params map[string]any) (string, core.Result) {
 	paramsResult := core.JSONMarshal(params)
 	if !paramsResult.OK {
-		return "", log.E("python", "marshal params", paramsResult.Value.(error))
+		return "", core.Fail(log.E("python", "marshal params", paramsResult.Value.(error)))
 	}
 
-	modulePath, err := CoolifyModulePath()
-	if err != nil {
-		return "", err
+	modulePath, r := CoolifyModulePath()
+	if !r.OK {
+		return "", r
 	}
 
 	return core.Sprintf(`
@@ -149,5 +152,5 @@ client = CoolifyClient(
 params = json.loads(%q)
 result = client._call(%q, params, check_response=False)
 print(json.dumps(result))
-`, modulePath, baseURL, apiToken, string(paramsResult.Value.([]byte)), operation), nil
+`, modulePath, baseURL, apiToken, string(paramsResult.Value.([]byte)), operation), core.Ok(nil)
 }

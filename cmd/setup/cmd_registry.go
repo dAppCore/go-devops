@@ -19,16 +19,16 @@ import (
 )
 
 // runRegistrySetup loads a registry from path and runs setup.
-func runRegistrySetup(ctx context.Context, registryPath, only string, dryRun, all, runBuild bool) (_ coreFailure) {
+func runRegistrySetup(ctx context.Context, registryPath, only string, dryRun, all, runBuild bool) (_ core.Result) {
 	reg, err := repos.LoadRegistry(coreio.Local, registryPath)
 	if err != nil {
-		return log.E("setup.registry", "failed to load registry", err)
+		return core.Fail(log.E("setup.registry", "failed to load registry", err))
 	}
 
 	// Check workspace config for default_only if no filter specified
 	if only == "" {
 		registryDir := core.PathDir(registryPath)
-		if wsConfig, err := workspace.LoadConfig(registryDir); err == nil && wsConfig != nil && len(wsConfig.DefaultOnly) > 0 {
+		if wsConfig, r := workspace.LoadConfig(registryDir); r.OK && wsConfig != nil && len(wsConfig.DefaultOnly) > 0 {
 			only = core.Join(",", wsConfig.DefaultOnly...)
 		}
 	}
@@ -37,7 +37,7 @@ func runRegistrySetup(ctx context.Context, registryPath, only string, dryRun, al
 }
 
 // runRegistrySetupWithReg runs setup with an already-loaded registry.
-func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryPath, only string, dryRun, all, runBuild bool) (_ coreFailure) {
+func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryPath, only string, dryRun, all, runBuild bool) (_ core.Result) {
 	cli.Print("%s %s\n", dimStyle.Render(i18n.Label("registry")), registryPath)
 	cli.Print("%s %s\n", dimStyle.Render(i18n.T("cmd.setup.org_label")), reg.Org)
 
@@ -82,7 +82,7 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 	// Ensure base path exists
 	if !dryRun {
 		if err := coreio.Local.EnsureDir(basePath); err != nil {
-			return log.E("setup.registry", "failed to create packages directory", err)
+			return core.Fail(log.E("setup.registry", "failed to create packages directory", err))
 		}
 	}
 
@@ -97,9 +97,9 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 	useWizard := isTerminal() && !all && !dryRun
 
 	if useWizard {
-		selected, err := runPackageWizard(reg, typeFilter)
-		if err != nil {
-			return log.E("setup.registry", "wizard error", err)
+		selected, r := runPackageWizard(reg, typeFilter)
+		if !r.OK {
+			return core.Fail(log.E("setup.registry", "wizard error", r.Value.(error)))
 		}
 
 		// Build set of selected repos
@@ -165,7 +165,7 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 
 	if len(toClone) == 0 {
 		cli.Print("\n%s\n", i18n.T("cmd.setup.nothing_to_clone"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	if dryRun {
@@ -173,18 +173,18 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 		for _, repo := range toClone {
 			cli.Print("  %s (%s)\n", repoNameStyle.Render(repo.Name), repo.Type)
 		}
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Confirm in interactive mode
 	if useWizard {
-		confirmed, err := confirmClone(len(toClone), basePath)
-		if err != nil {
-			return err
+		confirmed, r := confirmClone(len(toClone), basePath)
+		if !r.OK {
+			return r
 		}
 		if !confirmed {
 			cli.Text(i18n.T("cmd.setup.cancelled"))
-			return nil
+			return core.Ok(nil)
 		}
 	}
 
@@ -197,9 +197,9 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 
 		repoPath := core.PathJoin(basePath, repo.Name)
 
-		err := gitClone(ctx, reg.Org, repo.Name, repoPath)
-		if err != nil {
-			cli.Print("%s\n", errorStyle.Render("x "+err.Error()))
+		r := gitClone(ctx, reg.Org, repo.Name, repoPath)
+		if !r.OK {
+			cli.Print("%s\n", errorStyle.Render("x "+r.Error()))
 			failed++
 		} else {
 			cli.Print("%s\n", successStyle.Render(i18n.T("cmd.setup.done")))
@@ -226,39 +226,46 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 			WithDir(basePath).
 			WithStdout(core.Stdout()).
 			WithStderr(core.Stderr())
-		if err := commandResultError(buildCmd.Run()); err != nil {
-			return log.E("setup.registry", i18n.T("i18n.fail.run", "build"), err)
+		if r := buildCmd.Run(); !r.OK {
+			return core.Fail(log.E("setup.registry", i18n.T("i18n.fail.run", "build"), r.Value.(error)))
 		}
 	}
 
-	return nil
+	return core.Ok(nil)
 }
 
 // gitClone clones a repository using gh CLI or git.
-func gitClone(ctx context.Context, org, repo, path string) (_ coreFailure) {
+func gitClone(ctx context.Context, org, repo, path string) (_ core.Result) {
 	// Try gh clone first with HTTPS (works without SSH keys)
 	if cli.GhAuthenticated() {
 		// Use HTTPS URL directly to bypass git_protocol config
 		httpsURL := core.Sprintf("https://github.com/%s/%s.git", org, repo)
 		cmd := coreexec.Command(ctx, "gh", "repo", "clone", httpsURL, path)
-		output, err := cmd.CombinedOutput()
-		if err == nil {
-			return nil
+		output, r := commandCombinedOutput(cmd)
+		if r.OK {
+			return core.Ok(nil)
 		}
 		errStr := core.Trim(string(output))
+		if errStr == "" {
+			errStr = r.Error()
+		}
 		// Only fall through to SSH if it's an auth error
 		if !core.Contains(errStr, "Permission denied") &&
 			!core.Contains(errStr, "could not read") {
-			return log.E("setup.registry", errStr, nil)
+			return core.Fail(log.E("setup.registry", errStr, nil))
 		}
 	}
 
 	// Fallback to git clone via SSH
 	url := core.Sprintf("git@github.com:%s/%s.git", org, repo)
 	cmd := coreexec.Command(ctx, "git", "clone", url, path)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return log.E("setup.registry", core.Trim(string(output)), nil)
+	output, r := commandCombinedOutput(cmd)
+	if !r.OK {
+		errStr := core.Trim(string(output))
+		if errStr == "" {
+			errStr = r.Error()
+		}
+		return core.Fail(log.E("setup.registry", errStr, nil))
 	}
-	return nil
+	return core.Ok(nil)
 }

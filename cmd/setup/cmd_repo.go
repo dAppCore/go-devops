@@ -32,7 +32,7 @@ func addRepoCommand(parent *cli.Command) {
 				return log.E("setup.repo", "failed to get working directory", cwdResult.Value.(error))
 			}
 
-			return runRepoSetup(cwdResult.Value.(string), repoDryRun)
+			return resultError(runRepoSetup(cwdResult.Value.(string), repoDryRun))
 		},
 	}
 
@@ -42,7 +42,7 @@ func addRepoCommand(parent *cli.Command) {
 }
 
 // runRepoSetup sets up the current repository with .core/ configuration.
-func runRepoSetup(repoPath string, dryRun bool) (_ coreFailure) {
+func runRepoSetup(repoPath string, dryRun bool) (_ core.Result) {
 	cli.Print("%s %s: %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.repo.setting_up"), repoPath)
 
 	// Detect project type
@@ -53,7 +53,7 @@ func runRepoSetup(repoPath string, dryRun bool) (_ coreFailure) {
 	coreDir := core.PathJoin(repoPath, ".core")
 	if !dryRun {
 		if err := coreio.Local.EnsureDir(coreDir); err != nil {
-			return log.E("setup.repo", "failed to create .core directory", err)
+			return core.Fail(log.E("setup.repo", "failed to create .core directory", err))
 		}
 	}
 
@@ -74,18 +74,18 @@ func runRepoSetup(repoPath string, dryRun bool) (_ coreFailure) {
 				cli.Print("    %s\n", line)
 			}
 		}
-		return nil
+		return core.Ok(nil)
 	}
 
 	for filename, content := range configs {
 		configPath := core.PathJoin(coreDir, filename)
 		if err := coreio.Local.Write(configPath, content); err != nil {
-			return log.E("setup.repo", core.Sprintf("failed to write %s", filename), err)
+			return core.Fail(log.E("setup.repo", core.Sprintf("failed to write %s", filename), err))
 		}
 		cli.Print("%s %s %s\n", successStyle.Render(">>"), i18n.T("cmd.setup.repo.created"), configPath)
 	}
 
-	return nil
+	return core.Ok(nil)
 }
 
 // detectProjectType identifies the project type from files present.
@@ -287,12 +287,12 @@ commands:
 // detectGitHubRepo tries to extract owner/repo from git remote.
 func detectGitHubRepo() string {
 	cmd := coreexec.Command(core.Background(), "git", "remote", "get-url", "origin")
-	output, err := cmd.Output()
-	if err != nil {
+	r := cmd.Output()
+	if !r.OK {
 		return ""
 	}
 
-	return parseGitHubRepoURL(core.Trim(string(output)))
+	return parseGitHubRepoURL(core.Trim(string(r.Value.([]byte))))
 }
 
 // parseGitHubRepoURL extracts owner/repo from a GitHub remote URL.

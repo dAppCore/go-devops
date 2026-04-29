@@ -33,16 +33,16 @@ func DefaultConfig() *WorkspaceConfig {
 
 // LoadConfig reads .core/workspace.yaml from the given directory, walking up to parent dirs.
 // Returns nil (no error) if no config file is found.
-func LoadConfig(dir string) (*WorkspaceConfig, coreFailure) {
+func LoadConfig(dir string) (*WorkspaceConfig, core.Result) {
 	absDirResult := core.PathAbs(dir)
 	if !absDirResult.OK {
-		return nil, core.Errorf("workspace.LoadConfig: resolve %q: %w", dir, absDirResult.Value.(error))
+		return nil, core.Fail(core.Errorf("workspace.LoadConfig: resolve %q: %w", dir, absDirResult.Value.(error)))
 	}
 
 	return loadConfig(core.PathJoin(absDirResult.Value.(string)))
 }
 
-func loadConfig(dir string) (*WorkspaceConfig, coreFailure) {
+func loadConfig(dir string) (*WorkspaceConfig, core.Result) {
 	path := core.PathJoin(dir, ".core", "workspace.yaml")
 
 	if !coreio.Local.IsFile(path) {
@@ -50,33 +50,33 @@ func loadConfig(dir string) (*WorkspaceConfig, coreFailure) {
 		if parent != dir {
 			return loadConfig(parent)
 		}
-		return nil, nil
+		return nil, core.Ok(nil)
 	}
 
 	data, err := coreio.Local.Read(path)
 	if err != nil {
-		return nil, core.Errorf("workspace.LoadConfig: failed to read workspace config: %w", err)
+		return nil, core.Fail(core.Errorf("workspace.LoadConfig: failed to read workspace config: %w", err))
 	}
 
 	cfg := DefaultConfig()
 	if err := yaml.Unmarshal([]byte(data), cfg); err != nil {
-		return nil, core.Errorf("workspace.LoadConfig: failed to parse workspace config: %w", err)
+		return nil, core.Fail(core.Errorf("workspace.LoadConfig: failed to parse workspace config: %w", err))
 	}
 
-	return cfg, nil
+	return cfg, core.Ok(nil)
 }
 
 // FindRoot searches upward for the root directory containing .core/workspace.yaml.
-func FindRoot() (string, coreFailure) {
+func FindRoot() (string, core.Result) {
 	dirResult := core.Getwd()
 	if !dirResult.OK {
-		return "", dirResult.Value.(error)
+		return "", dirResult
 	}
 	dir := dirResult.Value.(string)
 
 	for {
 		if coreio.Local.IsFile(core.PathJoin(dir, ".core", "workspace.yaml")) {
-			return dir, nil
+			return dir, core.Ok(nil)
 		}
 		parent := core.PathDir(dir)
 		if parent == dir {
@@ -85,5 +85,5 @@ func FindRoot() (string, coreFailure) {
 		dir = parent
 	}
 
-	return "", log.E("workspace.FindRoot", "not inside a workspace", nil)
+	return "", core.Fail(log.E("workspace.FindRoot", "not inside a workspace", nil))
 }

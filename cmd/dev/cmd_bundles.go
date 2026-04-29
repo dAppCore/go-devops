@@ -18,7 +18,7 @@ type WorkBundleOptions struct {
 
 // NewWorkBundle creates a bundle for dev work operations.
 // Includes: dev (orchestration) service.
-func NewWorkBundle(opts WorkBundleOptions) (*WorkBundle, coreFailure) {
+func NewWorkBundle(opts WorkBundleOptions) (*WorkBundle, core.Result) {
 	c := core.New()
 
 	svc := &Service{
@@ -37,29 +37,29 @@ func NewWorkBundle(opts WorkBundleOptions) (*WorkBundle, coreFailure) {
 	c.LockEnable()
 	c.LockApply()
 
-	return &WorkBundle{Core: c}, nil
+	return &WorkBundle{Core: c}, core.Ok(nil)
 }
 
 // Start initialises the bundle services.
-func (b *WorkBundle) Start(ctx context.Context) (_ coreFailure) {
-	return resultError(b.Core.ServiceStartup(ctx, nil))
+func (b *WorkBundle) Start(ctx context.Context) (_ core.Result) {
+	return b.Core.ServiceStartup(ctx, nil)
 }
 
 // Stop shuts down the bundle services.
-func (b *WorkBundle) Stop(ctx context.Context) (_ coreFailure) {
-	return resultError(b.Core.ServiceShutdown(ctx))
+func (b *WorkBundle) Stop(ctx context.Context) (_ core.Result) {
+	return b.Core.ServiceShutdown(ctx)
 }
 
 // resultError extracts an error from a failed core.Result, returning nil on success.
-func resultError(r core.Result) (_ coreFailure) {
+func resultError(r core.Result) (_ core.Result) {
 	if !r.OK {
 		if err, ok := r.Value.(error); ok {
-			return err
+			return core.Fail(err)
 		}
 		if r.Value != nil {
-			return core.Errorf("service operation failed: %v", r.Value)
+			return core.Fail(core.Errorf("service operation failed: %v", r.Value))
 		}
-		return core.Errorf("service operation failed")
+		return core.Fail(core.Errorf("service operation failed"))
 	}
-	return nil
+	return core.Ok(nil)
 }

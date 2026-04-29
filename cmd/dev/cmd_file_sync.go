@@ -38,7 +38,7 @@ func AddFileSyncCommand(parent *cli.Command) {
 		Long:  i18n.T("cmd.dev.file_sync.long"),
 		Args:  cli.MinimumNArgs(1),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runFileSync(args[0])
+			return resultToError(runFileSync(args[0]))
 		},
 	}
 
@@ -56,29 +56,29 @@ func AddFileSyncCommand(parent *cli.Command) {
 	parent.AddCommand(syncCmd)
 }
 
-func runFileSync(source string) (_ coreFailure) {
+func runFileSync(source string) (_ core.Result) {
 	ctx := context.Background()
 
 	// Security: Reject path traversal attempts
 	if core.Contains(source, "..") {
-		return log.E("dev.sync", "path traversal not allowed", nil)
+		return core.Fail(log.E("dev.sync", "path traversal not allowed", nil))
 	}
 
 	// Validate source exists
 	sourceInfoResult := core.Stat(source)
 	if !sourceInfoResult.OK {
-		return log.E("dev.sync", i18n.T("cmd.dev.file_sync.error.source_not_found", map[string]any{"Path": source}), sourceInfoResult.Value.(error))
+		return core.Fail(log.E("dev.sync", i18n.T("cmd.dev.file_sync.error.source_not_found", map[string]any{"Path": source}), sourceInfoResult.Value.(error)))
 	}
 	sourceInfo := sourceInfoResult.Value.(core.FsFileInfo)
 
 	// Find target repos
-	targetRepos, err := resolveTargetRepos(fileSyncTo)
-	if err != nil {
-		return err
+	targetRepos, r := resolveTargetRepos(fileSyncTo)
+	if !r.OK {
+		return r
 	}
 
 	if len(targetRepos) == 0 {
-		return cli.Err("%s", i18n.T("cmd.dev.file_sync.error.no_targets"))
+		return core.Fail(cli.Err("%s", i18n.T("cmd.dev.file_sync.error.no_targets")))
 	}
 
 	// Show plan
@@ -94,7 +94,7 @@ func runFileSync(source string) (_ coreFailure) {
 		cli.Blank()
 		if !cli.Confirm(i18n.T("cmd.dev.file_sync.confirm")) {
 			cli.Text(i18n.T("cli.aborted"))
-			return nil
+			return core.Ok(nil)
 		}
 		cli.Blank()
 	}
@@ -111,8 +111,8 @@ func runFileSync(source string) (_ coreFailure) {
 		}
 
 		// Step 1: Pull latest (safe sync)
-		if err := safePull(ctx, repo.Path); err != nil {
-			cli.Print("  %s %s: pull failed: %s\n", errorStyle.Render("x"), repoName, err)
+		if r := safePull(ctx, repo.Path); !r.OK {
+			cli.Print("  %s %s: pull failed: %s\n", errorStyle.Render("x"), repoName, r.Error())
 			failed++
 			continue
 		}
@@ -120,8 +120,8 @@ func runFileSync(source string) (_ coreFailure) {
 		// Step 2: Copy file(s)
 		destPath := core.PathJoin(repo.Path, source)
 		if sourceInfo.IsDir() {
-			if err := copyDir(source, destPath); err != nil {
-				cli.Print("  %s %s: copy failed: %s\n", errorStyle.Render("x"), repoName, err)
+			if r := copyDir(source, destPath); !r.OK {
+				cli.Print("  %s %s: copy failed: %s\n", errorStyle.Render("x"), repoName, r.Error())
 				failed++
 				continue
 			}
@@ -157,16 +157,16 @@ func runFileSync(source string) (_ coreFailure) {
 				commitMsg += "\n\nCo-Authored-By: " + fileSyncCoAuthor
 			}
 
-			if err := gitAddCommit(ctx, repo.Path, source, commitMsg); err != nil {
-				cli.Print("  %s %s: commit failed: %s\n", errorStyle.Render("x"), repoName, err)
+			if r := gitAddCommit(ctx, repo.Path, source, commitMsg); !r.OK {
+				cli.Print("  %s %s: commit failed: %s\n", errorStyle.Render("x"), repoName, r.Error())
 				failed++
 				continue
 			}
 
 			// Step 5: Push if requested
 			if fileSyncPush {
-				if err := safePush(ctx, repo.Path); err != nil {
-					cli.Print("  %s %s: push failed: %s\n", errorStyle.Render("x"), repoName, err)
+				if r := safePush(ctx, repo.Path); !r.OK {
+					cli.Print("  %s %s: push failed: %s\n", errorStyle.Render("x"), repoName, r.Error())
 					failed++
 					continue
 				}
@@ -197,20 +197,20 @@ func runFileSync(source string) (_ coreFailure) {
 	}
 	cli.Blank()
 
-	return nil
+	return core.Ok(nil)
 }
 
 // resolveTargetRepos resolves the --to pattern to actual repos
-func resolveTargetRepos(pattern string) ([]*repos.Repo, coreFailure) {
+func resolveTargetRepos(pattern string) ([]*repos.Repo, core.Result) {
 	// Load registry
 	registryPath, err := repos.FindRegistry(coreio.Local)
 	if err != nil {
-		return nil, log.E("dev.sync", "failed to find registry", err)
+		return nil, core.Fail(log.E("dev.sync", "failed to find registry", err))
 	}
 
 	registry, err := repos.LoadRegistry(coreio.Local, registryPath)
 	if err != nil {
-		return nil, log.E("dev.sync", "failed to load registry", err)
+		return nil, core.Fail(log.E("dev.sync", "failed to load registry", err))
 	}
 
 	// Match pattern against repo names
@@ -225,7 +225,7 @@ func resolveTargetRepos(pattern string) ([]*repos.Repo, coreFailure) {
 		}
 	}
 
-	return matched, nil
+	return matched, core.Ok(nil)
 }
 
 // splitPatterns normalises comma-separated glob patterns.
@@ -279,67 +279,67 @@ func matchGlob(s, pattern string) bool {
 }
 
 // safePull pulls with rebase, handling errors gracefully
-func safePull(ctx context.Context, path string) (_ coreFailure) {
+func safePull(ctx context.Context, path string) (_ core.Result) {
 	// Check if we have upstream
-	_, err := gitCommandQuiet(ctx, path, "rev-parse", "--abbrev-ref", "@{u}")
-	if err != nil {
+	_, r := gitCommandQuiet(ctx, path, "rev-parse", "--abbrev-ref", "@{u}")
+	if !r.OK {
 		// No upstream set, skip pull
-		return nil
+		return core.Ok(nil)
 	}
 
-	return git.Pull(ctx, path)
+	return core.ResultOf(nil, git.Pull(ctx, path))
 }
 
 // safePush pushes with automatic pull-rebase on rejection
-func safePush(ctx context.Context, path string) (_ coreFailure) {
+func safePush(ctx context.Context, path string) (_ core.Result) {
 	err := git.Push(ctx, path)
 	if err == nil {
-		return nil
+		return core.Ok(nil)
 	}
 
 	// If non-fast-forward, try pull and push again
 	if git.IsNonFastForward(err) {
 		if pullErr := git.Pull(ctx, path); pullErr != nil {
-			return pullErr
+			return core.Fail(pullErr)
 		}
-		return git.Push(ctx, path)
+		return core.ResultOf(nil, git.Push(ctx, path))
 	}
 
-	return err
+	return core.Fail(err)
 }
 
 // gitAddCommit stages and commits a file/directory
-func gitAddCommit(ctx context.Context, repoPath, filePath, message string) (_ coreFailure) {
+func gitAddCommit(ctx context.Context, repoPath, filePath, message string) (_ core.Result) {
 	// Stage the file(s)
-	if _, err := gitCommandQuiet(ctx, repoPath, "add", filePath); err != nil {
-		return err
+	if _, r := gitCommandQuiet(ctx, repoPath, "add", filePath); !r.OK {
+		return r
 	}
 
 	// Commit
-	_, err := gitCommandQuiet(ctx, repoPath, "commit", "-m", message)
-	return err
+	_, r := gitCommandQuiet(ctx, repoPath, "commit", "-m", message)
+	return r
 }
 
 // gitCommandQuiet runs a git command without output
-func gitCommandQuiet(ctx context.Context, dir string, args ...string) (string, coreFailure) {
+func gitCommandQuiet(ctx context.Context, dir string, args ...string) (string, core.Result) {
 	cmd := coreexec.Command(ctx, "git", args...).WithDir(dir)
 
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", cli.Err("%s", core.Trim(string(output)))
+	r := cmd.CombinedOutput()
+	if !r.OK {
+		return "", core.Fail(cli.Err("%s", r.Value.(error).Error()))
 	}
-	return string(output), nil
+	return string(r.Value.([]byte)), core.Ok(nil)
 }
 
 // copyDir recursively copies a directory
-func copyDir(src, dst string) (_ coreFailure) {
+func copyDir(src, dst string) (_ core.Result) {
 	entries, err := coreio.Local.List(src)
 	if err != nil {
-		return err
+		return core.Fail(err)
 	}
 
 	if err := coreio.Local.EnsureDir(dst); err != nil {
-		return err
+		return core.Fail(err)
 	}
 
 	for _, entry := range entries {
@@ -347,15 +347,15 @@ func copyDir(src, dst string) (_ coreFailure) {
 		dstPath := core.PathJoin(dst, entry.Name())
 
 		if entry.IsDir() {
-			if err := copyDir(srcPath, dstPath); err != nil {
-				return err
+			if r := copyDir(srcPath, dstPath); !r.OK {
+				return r
 			}
 		} else {
 			if err := coreio.Copy(coreio.Local, srcPath, coreio.Local, dstPath); err != nil {
-				return err
+				return core.Fail(err)
 			}
 		}
 	}
 
-	return nil
+	return core.Ok(nil)
 }

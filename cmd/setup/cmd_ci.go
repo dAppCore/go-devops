@@ -108,7 +108,7 @@ Examples:
 
   # Use in GitHub Actions (pipe to shell)
   eval "$(core setup ci --shell=bash)"`,
-		RunE: runSetupCI,
+		RunE: resultRunE(runSetupCI),
 	}
 
 	ciCmd.Flags().StringVar(&ciShell, "shell", "", "Output format: bash, powershell, yaml (auto-detected if not specified)")
@@ -117,7 +117,7 @@ Examples:
 	setupCmd.AddCommand(ciCmd)
 }
 
-func runSetupCI(cmd *cli.Command, args []string) (_ coreFailure) {
+func runSetupCI(cmd *cli.Command, args []string) (_ core.Result) {
 	cfg := LoadCIConfig()
 
 	// Use flag version or config default
@@ -144,11 +144,11 @@ func runSetupCI(cmd *cli.Command, args []string) (_ coreFailure) {
 	case "yaml", "yml", "gha", "github":
 		return outputGitHubActionsYAML(cfg, version)
 	default:
-		return cli.Err("unsupported shell: %s (use bash, powershell, or yaml)", shell)
+		return core.Fail(cli.Err("unsupported shell: %s (use bash, powershell, or yaml)", shell))
 	}
 }
 
-func outputBashInstall(cfg *CIConfig, version string) (_ coreFailure) {
+func outputBashInstall(cfg *CIConfig, version string) (_ core.Result) {
 	script := core.Sprintf(`#!/bin/bash
 set -e
 
@@ -203,10 +203,10 @@ echo "Installed:"
 		cfg.Formula, cfg.Formula, cfg.Formula, cfg.Formula, cfg.Formula, cfg.Formula, cfg.Formula)
 
 	cli.Print("%s", script)
-	return nil
+	return core.Ok(nil)
 }
 
-func outputPowershellInstall(cfg *CIConfig, version string) (_ coreFailure) {
+func outputPowershellInstall(cfg *CIConfig, version string) (_ core.Result) {
 	script := core.Sprintf(`# PowerShell installation script for %s CLI
 $ErrorActionPreference = "Stop"
 
@@ -259,10 +259,10 @@ Write-Host "Installed:"
 `, cfg.Formula, version, cfg.Repository, cfg.ScoopBucket, cfg.ChocolateyPkg, cfg.Formula)
 
 	cli.Print("%s", script)
-	return nil
+	return core.Ok(nil)
 }
 
-func outputGitHubActionsYAML(cfg *CIConfig, version string) (_ coreFailure) {
+func outputGitHubActionsYAML(cfg *CIConfig, version string) (_ core.Result) {
 	yaml := core.Sprintf(`# GitHub Actions steps to install %s CLI
 # Add these to your workflow file
 
@@ -294,5 +294,5 @@ func outputGitHubActionsYAML(cfg *CIConfig, version string) (_ coreFailure) {
 		cfg.Formula, cfg.Tap, cfg.Tap, cfg.Formula, cfg.Formula)
 
 	cli.Print("%s", yaml)
-	return nil
+	return core.Ok(nil)
 }

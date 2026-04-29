@@ -14,7 +14,7 @@ func ExampleGetBranchProtection() {
 	cleanup := protectionExampleFakeGH("echo '{\"required_pull_request_reviews\":{\"required_approving_review_count\":1}}'")
 	defer cleanup()
 	protection, err := GetBranchProtection("owner/repo", "main")
-	Println(err == nil, protection.RequiredPullRequestReviews.RequiredApprovingReviewCount)
+	Println(err.OK, protection.RequiredPullRequestReviews.RequiredApprovingReviewCount)
 	// Output: true 1
 }
 
@@ -22,7 +22,7 @@ func ExampleSetBranchProtection() {
 	cleanup := protectionExampleFakeGH("exit 0")
 	defer cleanup()
 	err := SetBranchProtection("owner/repo", "main", BranchProtectionConfig{RequiredReviews: 1})
-	Println(err == nil)
+	Println(err.OK)
 	// Output: true
 }
 
@@ -30,6 +30,6 @@ func ExampleSyncBranchProtection() {
 	cleanup := protectionExampleFakeGH("echo '{\"required_pull_request_reviews\":{\"required_approving_review_count\":1}}'")
 	defer cleanup()
 	changes, err := SyncBranchProtection("owner/repo", &GitHubConfig{BranchProtection: []BranchProtectionConfig{{Branch: "main", RequiredReviews: 2}}}, true)
-	Println(err == nil, changes.HasChanges())
+	Println(err.OK, changes.HasChanges())
 	// Output: true true
 }

@@ -10,7 +10,7 @@ import (
 )
 
 // loadRegistryWithConfig loads the registry and applies workspace configuration.
-func loadRegistryWithConfig(registryPath string) (*repos.Registry, string, coreFailure) {
+func loadRegistryWithConfig(registryPath string) (*repos.Registry, string, core.Result) {
 	var reg *repos.Registry
 	var err error
 	var registryDir string
@@ -18,7 +18,7 @@ func loadRegistryWithConfig(registryPath string) (*repos.Registry, string, coreF
 	if registryPath != "" {
 		reg, err = repos.LoadRegistry(io.Local, registryPath)
 		if err != nil {
-			return nil, "", cli.Wrap(err, "failed to load registry")
+			return nil, "", core.Fail(cli.Wrap(err, "failed to load registry"))
 		}
 		cli.Print("%s %s\n\n", dimStyle.Render(i18n.Label("registry")), registryPath)
 		registryDir = core.PathDir(registryPath)
@@ -27,7 +27,7 @@ func loadRegistryWithConfig(registryPath string) (*repos.Registry, string, coreF
 		if err == nil {
 			reg, err = repos.LoadRegistry(io.Local, registryPath)
 			if err != nil {
-				return nil, "", cli.Wrap(err, "failed to load registry")
+				return nil, "", core.Fail(cli.Wrap(err, "failed to load registry"))
 			}
 			cli.Print("%s %s\n\n", dimStyle.Render(i18n.Label("registry")), registryPath)
 			registryDir = core.PathDir(registryPath)
@@ -39,14 +39,14 @@ func loadRegistryWithConfig(registryPath string) (*repos.Registry, string, coreF
 			}
 			reg, err = repos.ScanDirectory(io.Local, cwd)
 			if err != nil {
-				return nil, "", cli.Wrap(err, "failed to scan directory")
+				return nil, "", core.Fail(cli.Wrap(err, "failed to scan directory"))
 			}
 			cli.Print("%s %s\n\n", dimStyle.Render(i18n.T("cmd.dev.scanning_label")), cwd)
 			registryDir = cwd
 		}
 	}
 	// Load workspace config to respect packages_dir (only if config exists)
-	if wsConfig, err := workspace.LoadConfig(registryDir); err == nil && wsConfig != nil {
+	if wsConfig, r := workspace.LoadConfig(registryDir); r.OK && wsConfig != nil {
 		if wsConfig.PackagesDir != "" {
 			pkgDir := wsConfig.PackagesDir
 			// Expand ~
@@ -66,5 +66,5 @@ func loadRegistryWithConfig(registryPath string) (*repos.Registry, string, coreF
 		}
 	}
 
-	return reg, registryDir, nil
+	return reg, registryDir, core.Ok(nil)
 }

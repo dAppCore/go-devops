@@ -56,7 +56,7 @@ func TestGithubLabels_ListLabels_Good(t *core.T) {
 	ghHappy(t)
 	labels, err := ListLabels("owner/repo")
 
-	core.AssertNoError(t, err)
+	core.AssertTrue(t, err.OK)
 	core.AssertEqual(t, "bug", labels[0].Name)
 }
 
@@ -64,7 +64,7 @@ func TestGithubLabels_ListLabels_Bad(t *core.T) {
 	fakeGH(t, "echo label failure >&2\nexit 1")
 	labels, err := ListLabels("owner/repo")
 
-	core.AssertError(t, err)
+	core.AssertFalse(t, err.OK)
 	core.AssertNil(t, labels)
 }
 
@@ -72,7 +72,7 @@ func TestGithubLabels_ListLabels_Ugly(t *core.T) {
 	fakeGH(t, "echo '[]'\nexit 0")
 	labels, err := ListLabels("owner/repo")
 
-	core.AssertNoError(t, err)
+	core.AssertTrue(t, err.OK)
 	core.AssertEmpty(t, labels)
 }
 
@@ -80,15 +80,15 @@ func TestGithubLabels_CreateLabel_Good(t *core.T) {
 	ghHappy(t)
 	err := CreateLabel("owner/repo", LabelConfig{Name: "bug", Color: "ff0000", Description: "Bug"})
 
-	core.AssertNoError(t, err)
-	core.AssertTrue(t, err == nil)
+	core.AssertTrue(t, err.OK)
+	core.AssertTrue(t, err.OK)
 }
 
 func TestGithubLabels_CreateLabel_Bad(t *core.T) {
 	fakeGH(t, "echo create failed\nexit 1")
 	err := CreateLabel("owner/repo", LabelConfig{Name: "bug", Color: "ff0000"})
 
-	core.AssertError(t, err)
+	core.AssertFalse(t, err.OK)
 	core.AssertContains(t, err.Error(), "create failed")
 }
 
@@ -96,23 +96,23 @@ func TestGithubLabels_CreateLabel_Ugly(t *core.T) {
 	ghHappy(t)
 	err := CreateLabel("owner/repo", LabelConfig{Name: "empty-description", Color: "000000"})
 
-	core.AssertNoError(t, err)
-	core.AssertTrue(t, err == nil)
+	core.AssertTrue(t, err.OK)
+	core.AssertTrue(t, err.OK)
 }
 
 func TestGithubLabels_EditLabel_Good(t *core.T) {
 	ghHappy(t)
 	err := EditLabel("owner/repo", LabelConfig{Name: "bug", Color: "ff0000", Description: "Bug"})
 
-	core.AssertNoError(t, err)
-	core.AssertTrue(t, err == nil)
+	core.AssertTrue(t, err.OK)
+	core.AssertTrue(t, err.OK)
 }
 
 func TestGithubLabels_EditLabel_Bad(t *core.T) {
 	fakeGH(t, "echo edit failed\nexit 1")
 	err := EditLabel("owner/repo", LabelConfig{Name: "bug", Color: "ff0000"})
 
-	core.AssertError(t, err)
+	core.AssertFalse(t, err.OK)
 	core.AssertContains(t, err.Error(), "edit failed")
 }
 
@@ -120,8 +120,8 @@ func TestGithubLabels_EditLabel_Ugly(t *core.T) {
 	ghHappy(t)
 	err := EditLabel("owner/repo", LabelConfig{Name: "empty-description", Color: "000000"})
 
-	core.AssertNoError(t, err)
-	core.AssertTrue(t, err == nil)
+	core.AssertTrue(t, err.OK)
+	core.AssertTrue(t, err.OK)
 }
 
 func TestGithubLabels_SyncLabels_Good(t *core.T) {
@@ -129,7 +129,7 @@ func TestGithubLabels_SyncLabels_Good(t *core.T) {
 	cfg := &GitHubConfig{Labels: []LabelConfig{{Name: "bug", Color: "ff0000", Description: "new"}}}
 	changes, err := SyncLabels("owner/repo", cfg, true)
 
-	core.AssertNoError(t, err)
+	core.AssertTrue(t, err.OK)
 	core.AssertEqual(t, ChangeUpdate, changes.Changes[0].Type)
 }
 
@@ -137,7 +137,7 @@ func TestGithubLabels_SyncLabels_Bad(t *core.T) {
 	fakeGH(t, "echo list failed >&2\nexit 1")
 	changes, err := SyncLabels("owner/repo", &GitHubConfig{}, true)
 
-	core.AssertError(t, err)
+	core.AssertFalse(t, err.OK)
 	core.AssertNil(t, changes)
 }
 
@@ -145,6 +145,6 @@ func TestGithubLabels_SyncLabels_Ugly(t *core.T) {
 	ghHappy(t)
 	changes, err := SyncLabels("owner/repo", &GitHubConfig{}, true)
 
-	core.AssertNoError(t, err)
+	core.AssertTrue(t, err.OK)
 	core.AssertFalse(t, changes.HasChanges())
 }

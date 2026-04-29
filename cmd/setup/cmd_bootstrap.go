@@ -19,7 +19,7 @@ import (
 )
 
 // runSetupOrchestrator decides between registry mode and bootstrap mode.
-func runSetupOrchestrator(registryPath, only string, dryRun, all bool, projectName string, runBuild bool) (_ coreFailure) {
+func runSetupOrchestrator(registryPath, only string, dryRun, all bool, projectName string, runBuild bool) (_ core.Result) {
 	ctx := context.Background()
 
 	// Try to find an existing registry
@@ -42,10 +42,10 @@ func runSetupOrchestrator(registryPath, only string, dryRun, all bool, projectNa
 }
 
 // runBootstrap handles the case where no repos.yaml exists.
-func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectName string, runBuild bool) (_ coreFailure) {
+func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectName string, runBuild bool) (_ core.Result) {
 	cwdResult := core.Getwd()
 	if !cwdResult.OK {
-		return log.E("setup.bootstrap", "failed to get working directory", cwdResult.Value.(error))
+		return core.Fail(log.E("setup.bootstrap", "failed to get working directory", cwdResult.Value.(error)))
 	}
 	cwd := cwdResult.Value.(string)
 
@@ -54,9 +54,9 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 	var targetDir string
 
 	// Check if current directory is empty
-	empty, err := isDirEmpty(cwd)
-	if err != nil {
-		return log.E("setup.bootstrap", "failed to check directory", err)
+	empty, r := isDirEmpty(cwd)
+	if !r.OK {
+		return core.Fail(log.E("setup.bootstrap", "failed to check directory", r.Value.(error)))
 	}
 
 	if empty {
@@ -69,9 +69,9 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 
 		if isRepo && isTerminal() && !all {
 			// Offer choice: setup working directory or create package
-			choice, err := promptSetupChoice()
-			if err != nil {
-				return log.E("setup.bootstrap", "failed to get choice", err)
+			choice, r := promptSetupChoice()
+			if !r.OK {
+				return core.Fail(log.E("setup.bootstrap", "failed to get choice", r.Value.(error)))
 			}
 
 			if choice == "setup" {
@@ -86,9 +86,10 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 			if !isTerminal() || all {
 				projectName = defaultOrg
 			} else {
-				projectName, err = promptProjectName(defaultOrg)
-				if err != nil {
-					return log.E("setup.bootstrap", "failed to get project name", err)
+				var promptResult core.Result
+				projectName, promptResult = promptProjectName(defaultOrg)
+				if !promptResult.OK {
+					return core.Fail(log.E("setup.bootstrap", "failed to get project name", promptResult.Value.(error)))
 				}
 			}
 		}
@@ -98,7 +99,7 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 
 		if !dryRun {
 			if err := coreio.Local.EnsureDir(targetDir); err != nil {
-				return log.E("setup.bootstrap", "failed to create directory", err)
+				return core.Fail(log.E("setup.bootstrap", "failed to create directory", err))
 			}
 		}
 	}
@@ -109,8 +110,8 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 		cli.Print("%s %s %s...\n", dimStyle.Render(">>"), i18n.T("common.status.cloning"), devopsRepo)
 
 		if !dryRun {
-			if err := gitClone(ctx, defaultOrg, devopsRepo, devopsPath); err != nil {
-				return log.E("setup.bootstrap", core.Sprintf("failed to clone %s", devopsRepo), err)
+			if r := gitClone(ctx, defaultOrg, devopsRepo, devopsPath); !r.OK {
+				return core.Fail(log.E("setup.bootstrap", core.Sprintf("failed to clone %s", devopsRepo), r.Value.(error)))
 			}
 			cli.Print("%s %s %s\n", successStyle.Render(">>"), devopsRepo, i18n.T("cmd.setup.cloned"))
 		} else {
@@ -125,12 +126,12 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 
 	if dryRun {
 		cli.Print("\n%s %s %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.would_load_registry"), registryPath)
-		return nil
+		return core.Ok(nil)
 	}
 
 	reg, err := repos.LoadRegistry(coreio.Local, registryPath)
 	if err != nil {
-		return log.E("setup.bootstrap", core.Sprintf("failed to load registry from %s", devopsRepo), err)
+		return core.Fail(log.E("setup.bootstrap", core.Sprintf("failed to load registry from %s", devopsRepo), err))
 	}
 
 	// Override base path to target directory
@@ -138,7 +139,7 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 
 	// Check workspace config for default_only if no filter specified
 	if only == "" {
-		if wsConfig, err := workspace.LoadConfig(devopsPath); err == nil && wsConfig != nil && len(wsConfig.DefaultOnly) > 0 {
+		if wsConfig, r := workspace.LoadConfig(devopsPath); r.OK && wsConfig != nil && len(wsConfig.DefaultOnly) > 0 {
 			only = core.Join(",", wsConfig.DefaultOnly...)
 		}
 	}
@@ -154,10 +155,10 @@ func isGitRepoRoot(path string) bool {
 }
 
 // isDirEmpty returns true if the directory is empty or contains only hidden files.
-func isDirEmpty(path string) (bool, coreFailure) {
+func isDirEmpty(path string) (bool, core.Result) {
 	entries, err := coreio.Local.List(path)
 	if err != nil {
-		return false, err
+		return false, core.Fail(err)
 	}
 
 	for _, e := range entries {
@@ -168,9 +169,9 @@ func isDirEmpty(path string) (bool, coreFailure) {
 		}
 		// Any other non-hidden file means directory is not empty
 		if len(name) > 0 && name[0] != '.' {
-			return false, nil
+			return false, core.Ok(nil)
 		}
 	}
 
-	return true, nil
+	return true, core.Ok(nil)
 }

@@ -9,7 +9,7 @@ func ExampleLoadGitHubConfig() {
 	WriteFile(path, []byte("version: 1\nlabels:\n  - name: bug\n    color: ff0000\n"), 0o600)
 
 	cfg, err := LoadGitHubConfig(path)
-	Println(err == nil, cfg.Labels[0].Name)
+	Println(err.OK, cfg.Labels[0].Name)
 	// Output: true bug
 }
 
@@ -21,13 +21,13 @@ func ExampleFindGitHubConfig() {
 	WriteFile(path, []byte("version: 1\n"), 0o600)
 
 	found, err := FindGitHubConfig(dir, "")
-	Println(err == nil, found == path)
+	Println(err.OK, found == path)
 	// Output: true true
 }
 
 func ExampleGitHubConfig_Validate() {
 	cfg := &GitHubConfig{Version: 1, Labels: []LabelConfig{{Name: "bug", Color: "ff0000"}}}
 	err := cfg.Validate()
-	Println(err == nil)
+	Println(err.OK)
 	// Output: true
 }

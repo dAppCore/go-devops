@@ -43,7 +43,7 @@ func addWorkflowListCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.workflow.list.short"),
 		Long:  i18n.T("cmd.dev.workflow.list.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runWorkflowList(workflowRegistryPath)
+			return resultToError(runWorkflowList(workflowRegistryPath))
 		},
 	}
 
@@ -58,7 +58,7 @@ func addWorkflowSyncCommand(parent *cli.Command) {
 		Long:  i18n.T("cmd.dev.workflow.sync.long"),
 		Args:  cli.ExactArgs(1),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runWorkflowSync(workflowRegistryPath, args[0], workflowDryRun)
+			return resultToError(runWorkflowSync(workflowRegistryPath, args[0], workflowDryRun))
 		},
 	}
 
@@ -68,16 +68,16 @@ func addWorkflowSyncCommand(parent *cli.Command) {
 }
 
 // runWorkflowList shows a table of repos vs workflows.
-func runWorkflowList(registryPath string) (_ coreFailure) {
-	reg, registryDir, err := loadRegistryWithConfig(registryPath)
-	if err != nil {
-		return err
+func runWorkflowList(registryPath string) (_ core.Result) {
+	reg, registryDir, r := loadRegistryWithConfig(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	repoList := reg.List()
 	if len(repoList) == 0 {
 		cli.Text(i18n.T("cmd.dev.no_git_repos"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Sort repos by name for consistent output
@@ -103,7 +103,7 @@ func runWorkflowList(registryPath string) (_ coreFailure) {
 
 	if len(workflowNames) == 0 {
 		cli.Text(i18n.T("cmd.dev.workflow.no_workflows"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Check for template workflows in the registry directory
@@ -141,32 +141,32 @@ func runWorkflowList(registryPath string) (_ coreFailure) {
 	cli.Blank()
 	table.Render()
 
-	return nil
+	return core.Ok(nil)
 }
 
 // runWorkflowSync copies a workflow template to all repos.
-func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) (_ coreFailure) {
-	reg, registryDir, err := loadRegistryWithConfig(registryPath)
-	if err != nil {
-		return err
+func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) (_ core.Result) {
+	reg, registryDir, r := loadRegistryWithConfig(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	// Find the template workflow
 	templatePath := findTemplateWorkflow(registryDir, workflowFile)
 	if templatePath == "" {
-		return cli.Err("%s", i18n.T("cmd.dev.workflow.template_not_found", map[string]any{"File": workflowFile}))
+		return core.Fail(cli.Err("%s", i18n.T("cmd.dev.workflow.template_not_found", map[string]any{"File": workflowFile})))
 	}
 
 	// Read template content
-	templateContent, err := io.Local.Read(templatePath)
-	if err != nil {
-		return cli.Wrap(err, i18n.T("cmd.dev.workflow.read_template_error"))
+	templateContent, readErr := io.Local.Read(templatePath)
+	if readErr != nil {
+		return core.Fail(cli.Wrap(readErr, i18n.T("cmd.dev.workflow.read_template_error")))
 	}
 
 	repoList := reg.List()
 	if len(repoList) == 0 {
 		cli.Text(i18n.T("cmd.dev.no_git_repos"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Sort repos by name for consistent output
@@ -191,7 +191,7 @@ func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) (_ c
 		destPath := core.PathJoin(destDir, workflowFile)
 
 		// Check if workflow already exists and is identical
-		if existingContent, err := io.Local.Read(destPath); err == nil {
+		if existingContent, existingErr := io.Local.Read(destPath); existingErr == nil {
 			if existingContent == templateContent {
 				cli.Print("  %s %s %s\n",
 					dimStyle.Render("-"),
@@ -212,21 +212,21 @@ func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) (_ c
 		}
 
 		// Create .github/workflows directory if needed
-		if err := io.Local.EnsureDir(destDir); err != nil {
+		if dirErr := io.Local.EnsureDir(destDir); dirErr != nil {
 			cli.Print("  %s %s %s\n",
 				errorStyle.Render(cli.Glyph(":cross:")),
 				repoNameStyle.Render(repo.Name),
-				err.Error())
+				dirErr.Error())
 			failed++
 			continue
 		}
 
 		// Write workflow file
-		if err := io.Local.Write(destPath, templateContent); err != nil {
+		if writeErr := io.Local.Write(destPath, templateContent); writeErr != nil {
 			cli.Print("  %s %s %s\n",
 				errorStyle.Render(cli.Glyph(":cross:")),
 				repoNameStyle.Render(repo.Name),
-				err.Error())
+				writeErr.Error())
 			failed++
 			continue
 		}
@@ -255,7 +255,7 @@ func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) (_ c
 		}
 	}
 
-	return nil
+	return core.Ok(nil)
 }
 
 // findWorkflows returns a list of workflow file names in a directory.

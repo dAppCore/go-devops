@@ -21,7 +21,7 @@ type GitHubLabel struct {
 }
 
 // ListLabels fetches all labels for a repository.
-func ListLabels(repoFullName string) ([]GitHubLabel, coreFailure) {
+func ListLabels(repoFullName string) ([]GitHubLabel, core.Result) {
 	args := []string{
 		"label", "list",
 		"--repo", repoFullName,
@@ -30,21 +30,21 @@ func ListLabels(repoFullName string) ([]GitHubLabel, coreFailure) {
 	}
 
 	cmd := coreexec.Command(core.Background(), "gh", args...)
-	output, err := cmd.Output()
-	if err != nil {
-		return nil, err
+	output, r := commandCombinedOutput(cmd)
+	if !r.OK {
+		return nil, r
 	}
 
 	var labels []GitHubLabel
 	if r := core.JSONUnmarshal(output, &labels); !r.OK {
-		return nil, r.Value.(error)
+		return nil, r
 	}
 
-	return labels, nil
+	return labels, core.Ok(nil)
 }
 
 // CreateLabel creates a new label in a repository.
-func CreateLabel(repoFullName string, label LabelConfig) (_ coreFailure) {
+func CreateLabel(repoFullName string, label LabelConfig) (_ core.Result) {
 	args := []string{
 		"label", "create",
 		"--repo", repoFullName,
@@ -57,15 +57,15 @@ func CreateLabel(repoFullName string, label LabelConfig) (_ coreFailure) {
 	}
 
 	cmd := coreexec.Command(core.Background(), "gh", args...)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return cli.Err("%s", core.Trim(string(output)))
+	_, r := commandCombinedOutput(cmd)
+	if !r.OK {
+		return r
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 // EditLabel updates an existing label in a repository.
-func EditLabel(repoFullName string, label LabelConfig) (_ coreFailure) {
+func EditLabel(repoFullName string, label LabelConfig) (_ core.Result) {
 	args := []string{
 		"label", "edit",
 		"--repo", repoFullName,
@@ -78,22 +78,22 @@ func EditLabel(repoFullName string, label LabelConfig) (_ coreFailure) {
 	}
 
 	cmd := coreexec.Command(core.Background(), "gh", args...)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return cli.Err("%s", core.Trim(string(output)))
+	_, r := commandCombinedOutput(cmd)
+	if !r.OK {
+		return r
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 // SyncLabels synchronizes labels for a repository.
 // Returns a ChangeSet describing what was changed (or would be changed in dry-run mode).
-func SyncLabels(repoFullName string, config *GitHubConfig, dryRun bool) (*ChangeSet, coreFailure) {
+func SyncLabels(repoFullName string, config *GitHubConfig, dryRun bool) (*ChangeSet, core.Result) {
 	changes := NewChangeSet(repoFullName)
 
 	// Get existing labels
-	existing, err := ListLabels(repoFullName)
-	if err != nil {
-		return nil, cli.Wrap(err, "failed to list labels")
+	existing, r := ListLabels(repoFullName)
+	if !r.OK {
+		return nil, core.Fail(cli.Wrap(r.Value.(error), "failed to list labels"))
 	}
 
 	// Build lookup map
@@ -111,8 +111,8 @@ func SyncLabels(repoFullName string, config *GitHubConfig, dryRun bool) (*Change
 			// Create new label
 			changes.Add(CategoryLabel, ChangeCreate, wantLabel.Name, wantLabel.Description)
 			if !dryRun {
-				if err := CreateLabel(repoFullName, wantLabel); err != nil {
-					return changes, cli.Wrap(err, "failed to create label "+wantLabel.Name)
+				if r := CreateLabel(repoFullName, wantLabel); !r.OK {
+					return changes, core.Fail(cli.Wrap(r.Value.(error), "failed to create label "+wantLabel.Name))
 				}
 			}
 			continue
@@ -134,8 +134,8 @@ func SyncLabels(repoFullName string, config *GitHubConfig, dryRun bool) (*Change
 		if needsUpdate {
 			changes.AddWithDetails(CategoryLabel, ChangeUpdate, wantLabel.Name, "", details)
 			if !dryRun {
-				if err := EditLabel(repoFullName, wantLabel); err != nil {
-					return changes, cli.Wrap(err, "failed to update label "+wantLabel.Name)
+				if r := EditLabel(repoFullName, wantLabel); !r.OK {
+					return changes, core.Fail(cli.Wrap(r.Value.(error), "failed to update label "+wantLabel.Name))
 				}
 			}
 		} else {
@@ -143,5 +143,5 @@ func SyncLabels(repoFullName string, config *GitHubConfig, dryRun bool) (*Change
 		}
 	}
 
-	return changes, nil
+	return changes, core.Ok(nil)
 }

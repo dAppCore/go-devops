@@ -3,6 +3,7 @@ package dev
 import (
 	"slices"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/io"
@@ -28,7 +29,7 @@ func addImpactCommand(parent *cli.Command) {
 		Long:  i18n.T("cmd.dev.impact.long"),
 		Args:  cli.ExactArgs(1),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runImpact(impactRegistryPath, args[0])
+			return resultToError(runImpact(impactRegistryPath, args[0]))
 		},
 	}
 
@@ -37,7 +38,7 @@ func addImpactCommand(parent *cli.Command) {
 	parent.AddCommand(impactCmd)
 }
 
-func runImpact(registryPath string, repoName string) (_ coreFailure) {
+func runImpact(registryPath string, repoName string) (_ core.Result) {
 	// Find or use provided registry
 	var reg *repos.Registry
 	var err error
@@ -45,24 +46,24 @@ func runImpact(registryPath string, repoName string) (_ coreFailure) {
 	if registryPath != "" {
 		reg, err = repos.LoadRegistry(io.Local, registryPath)
 		if err != nil {
-			return cli.Wrap(err, "failed to load registry")
+			return core.Fail(cli.Wrap(err, "failed to load registry"))
 		}
 	} else {
 		registryPath, err = repos.FindRegistry(io.Local)
 		if err == nil {
 			reg, err = repos.LoadRegistry(io.Local, registryPath)
 			if err != nil {
-				return cli.Wrap(err, "failed to load registry")
+				return core.Fail(cli.Wrap(err, "failed to load registry"))
 			}
 		} else {
-			return log.E("dev.impact", i18n.T("cmd.dev.impact.requires_registry"), nil)
+			return core.Fail(log.E("dev.impact", i18n.T("cmd.dev.impact.requires_registry"), nil))
 		}
 	}
 
 	// Check repo exists
 	repo, exists := reg.Get(repoName)
 	if !exists {
-		return log.E("dev.impact", i18n.T("error.repo_not_found", map[string]any{"Name": repoName}), nil)
+		return core.Fail(log.E("dev.impact", i18n.T("error.repo_not_found", map[string]any{"Name": repoName}), nil))
 	}
 
 	// Build reverse dependency graph
@@ -99,7 +100,7 @@ func runImpact(registryPath string, repoName string) (_ coreFailure) {
 
 	if len(allAffected) == 0 {
 		cli.Print("%s %s\n", impactSafeStyle.Render("v"), i18n.T("cmd.dev.impact.no_dependents", map[string]any{"Name": repoName}))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Direct dependents
@@ -146,7 +147,7 @@ func runImpact(registryPath string, repoName string) (_ coreFailure) {
 		}),
 	)
 
-	return nil
+	return core.Ok(nil)
 }
 
 // buildDependentsGraph creates a reverse dependency map

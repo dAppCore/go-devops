@@ -43,8 +43,8 @@ func Ignored() {}
 		t.Fatalf("write demo_test.go: %v", err)
 	}
 
-	if err := runTestGen(); err != nil {
-		t.Fatalf("run test generator: %v", err)
+	if r := runTestGen(); !r.OK {
+		t.Fatalf("run test generator: %v", r.Value)
 	}
 
 	generatedPath := core.PathJoin(tmpDir, "demo", "demo_test.go")
@@ -76,7 +76,7 @@ func Ignored() {}
 func TestGeneratePublicAPITestFile_Good(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	if err := generatePublicAPITestFile(
+	if r := generatePublicAPITestFile(
 		core.PathJoin(tmpDir, "demo"),
 		core.PathJoin(tmpDir, "demo", "demo_test.go"),
 		"demo",
@@ -84,8 +84,8 @@ func TestGeneratePublicAPITestFile_Good(t *testing.T) {
 			{Name: "Example", Kind: "type"},
 			{Name: "Answer", Kind: "const"},
 		},
-	); err != nil {
-		t.Fatalf("generate public API test file: %v", err)
+	); !r.OK {
+		t.Fatalf("generate public API test file: %v", r.Value)
 	}
 
 	content, err := io.Local.Read(core.PathJoin(tmpDir, "demo", "demo_test.go"))
@@ -130,9 +130,9 @@ type Ignored struct{}
 		t.Fatalf("write demo_test.go: %v", err)
 	}
 
-	symbols, err := getExportedSymbols(serviceDir)
-	if err != nil {
-		t.Fatalf("get exported symbols: %v", err)
+	symbols, r := getExportedSymbols(serviceDir)
+	if !r.OK {
+		t.Fatalf("get exported symbols: %v", r.Value)
 	}
 	want := []symbolInfo{
 		{Name: "Answer", Kind: "const"},

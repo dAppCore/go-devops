@@ -48,7 +48,7 @@ func addGitHubCommand(parent *cli.Command) {
 		Short:   i18n.T("cmd.setup.github.short"),
 		Long:    i18n.T("cmd.setup.github.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runGitHubSetup()
+			return resultError(runGitHubSetup())
 		},
 	}
 
@@ -65,43 +65,43 @@ func addGitHubCommand(parent *cli.Command) {
 	parent.AddCommand(ghCmd)
 }
 
-func runGitHubSetup() (_ coreFailure) {
+func runGitHubSetup() (_ core.Result) {
 	// Check gh is available
-	if err := commandResultError(coreexec.Command(core.Background(), "gh", "--version").Run()); err != nil {
-		return log.E("setup.github", i18n.T("error.gh_not_found"), nil)
+	if r := coreexec.Command(core.Background(), "gh", "--version").Run(); !r.OK {
+		return core.Fail(log.E("setup.github", i18n.T("error.gh_not_found"), nil))
 	}
 
 	// Check gh is authenticated
 	if !cli.GhAuthenticated() {
-		return log.E("setup.github", i18n.T("cmd.setup.github.error.not_authenticated"), nil)
+		return core.Fail(log.E("setup.github", i18n.T("cmd.setup.github.error.not_authenticated"), nil))
 	}
 
 	// Find registry
 	registryPath, err := repos.FindRegistry(coreio.Local)
 	if err != nil {
-		return cli.Wrap(err, i18n.T("error.registry_not_found"))
+		return core.Fail(cli.Wrap(err, i18n.T("error.registry_not_found")))
 	}
 
 	reg, err := repos.LoadRegistry(coreio.Local, registryPath)
 	if err != nil {
-		return cli.Wrap(err, "failed to load registry")
+		return core.Fail(cli.Wrap(err, "failed to load registry"))
 	}
 
 	registryDir := core.PathDir(registryPath)
 
 	// Find GitHub config
-	configPath, err := FindGitHubConfig(registryDir, ghConfigPath)
-	if err != nil {
-		return cli.Wrap(err, i18n.T("cmd.setup.github.error.config_not_found"))
+	configPath, r := FindGitHubConfig(registryDir, ghConfigPath)
+	if !r.OK {
+		return core.Fail(cli.Wrap(r.Value.(error), i18n.T("cmd.setup.github.error.config_not_found")))
 	}
 
-	config, err := LoadGitHubConfig(configPath)
-	if err != nil {
-		return cli.Wrap(err, "failed to load GitHub config")
+	config, r := LoadGitHubConfig(configPath)
+	if !r.OK {
+		return core.Fail(cli.Wrap(r.Value.(error), "failed to load GitHub config"))
 	}
 
-	if err := config.Validate(); err != nil {
-		return cli.Wrap(err, "invalid GitHub config")
+	if r := config.Validate(); !r.OK {
+		return core.Fail(cli.Wrap(r.Value.(error), "invalid GitHub config"))
 	}
 
 	// Print header
@@ -117,14 +117,14 @@ func runGitHubSetup() (_ coreFailure) {
 
 	// Reject conflicting flags
 	if ghRepo != "" && ghAll {
-		return log.E("setup.github", i18n.T("cmd.setup.github.error.conflicting_flags"), nil)
+		return core.Fail(log.E("setup.github", i18n.T("cmd.setup.github.error.conflicting_flags"), nil))
 	}
 
 	if ghRepo != "" {
 		// Single repo mode
 		repo, ok := reg.Get(ghRepo)
 		if !ok {
-			return log.E("setup.github", i18n.T("error.repo_not_found", map[string]any{"Name": ghRepo}), nil)
+			return core.Fail(log.E("setup.github", i18n.T("error.repo_not_found", map[string]any{"Name": ghRepo}), nil))
 		}
 		reposToProcess = []*repos.Repo{repo}
 	} else if ghAll {
@@ -134,7 +134,7 @@ func runGitHubSetup() (_ coreFailure) {
 		// No repos specified
 		cli.Print("\n%s\n", i18n.T("cmd.setup.github.no_repos_specified"))
 		cli.Print("  %s\n", i18n.T("cmd.setup.github.usage_hint"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Determine which operations to run
@@ -159,10 +159,10 @@ func runGitHubSetup() (_ coreFailure) {
 
 		// Sync labels
 		if runLabels {
-			labelChanges, err := SyncLabels(repoFullName, config, ghCheck)
-			if err != nil {
+			labelChanges, r := SyncLabels(repoFullName, config, ghCheck)
+			if !r.OK {
 				cli.Print("\033[2K\r")
-				cli.Print("%s %s: %s\n", errorStyle.Render(cli.Glyph(":cross:")), repo.Name, err)
+				cli.Print("%s %s: %s\n", errorStyle.Render(cli.Glyph(":cross:")), repo.Name, r.Error())
 				aggregate.Add(changes) // Preserve partial results
 				continue
 			}
@@ -171,10 +171,10 @@ func runGitHubSetup() (_ coreFailure) {
 
 		// Sync webhooks
 		if runWebhooks {
-			webhookChanges, err := SyncWebhooks(repoFullName, config, ghCheck)
-			if err != nil {
+			webhookChanges, r := SyncWebhooks(repoFullName, config, ghCheck)
+			if !r.OK {
 				cli.Print("\033[2K\r")
-				cli.Print("%s %s: %s\n", errorStyle.Render(cli.Glyph(":cross:")), repo.Name, err)
+				cli.Print("%s %s: %s\n", errorStyle.Render(cli.Glyph(":cross:")), repo.Name, r.Error())
 				aggregate.Add(changes) // Preserve partial results
 				continue
 			}
@@ -183,10 +183,10 @@ func runGitHubSetup() (_ coreFailure) {
 
 		// Sync branch protection
 		if runProtection {
-			protectionChanges, err := SyncBranchProtection(repoFullName, config, ghCheck)
-			if err != nil {
+			protectionChanges, r := SyncBranchProtection(repoFullName, config, ghCheck)
+			if !r.OK {
 				cli.Print("\033[2K\r")
-				cli.Print("%s %s: %s\n", errorStyle.Render(cli.Glyph(":cross:")), repo.Name, err)
+				cli.Print("%s %s: %s\n", errorStyle.Render(cli.Glyph(":cross:")), repo.Name, r.Error())
 				aggregate.Add(changes) // Preserve partial results
 				continue
 			}
@@ -195,10 +195,10 @@ func runGitHubSetup() (_ coreFailure) {
 
 		// Sync security settings
 		if runSecurity {
-			securityChanges, err := SyncSecuritySettings(repoFullName, config, ghCheck)
-			if err != nil {
+			securityChanges, r := SyncSecuritySettings(repoFullName, config, ghCheck)
+			if !r.OK {
 				cli.Print("\033[2K\r")
-				cli.Print("%s %s: %s\n", errorStyle.Render(cli.Glyph(":cross:")), repo.Name, err)
+				cli.Print("%s %s: %s\n", errorStyle.Render(cli.Glyph(":cross:")), repo.Name, r.Error())
 				aggregate.Add(changes) // Preserve partial results
 				continue
 			}
@@ -224,5 +224,5 @@ func runGitHubSetup() (_ coreFailure) {
 		cli.Print("\n%s\n", i18n.T("cmd.setup.github.run_without_check"))
 	}
 
-	return nil
+	return core.Ok(nil)
 }

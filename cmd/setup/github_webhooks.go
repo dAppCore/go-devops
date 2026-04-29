@@ -30,36 +30,39 @@ type GitHubWebhookConfig struct {
 }
 
 // ListWebhooks fetches all webhooks for a repository.
-func ListWebhooks(repoFullName string) ([]GitHubWebhook, coreFailure) {
+func ListWebhooks(repoFullName string) ([]GitHubWebhook, core.Result) {
 	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return nil, log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return nil, core.Fail(log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil))
 	}
 
 	endpoint := core.Sprintf("repos/%s/%s/hooks", parts[0], parts[1])
 	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
+	output, outputResult := commandCombinedOutput(cmd)
+	if !outputResult.OK {
 		stderr := core.Trim(string(output))
-		if core.Contains(stderr, "Must have admin rights") || core.Contains(stderr, "403") {
-			return nil, cli.Err("insufficient permissions to manage webhooks (requires admin)")
+		if stderr == "" {
+			stderr = outputResult.Error()
 		}
-		return nil, cli.Err("%s", stderr)
+		if core.Contains(stderr, "Must have admin rights") || core.Contains(stderr, "403") {
+			return nil, core.Fail(cli.Err("insufficient permissions to manage webhooks (requires admin)"))
+		}
+		return nil, core.Fail(cli.Err("%s", stderr))
 	}
 
 	var hooks []GitHubWebhook
 	if r := core.JSONUnmarshal(output, &hooks); !r.OK {
-		return nil, r.Value.(error)
+		return nil, r
 	}
 
-	return hooks, nil
+	return hooks, core.Ok(nil)
 }
 
 // CreateWebhook creates a new webhook in a repository.
-func CreateWebhook(repoFullName string, name string, config WebhookConfig) (_ coreFailure) {
+func CreateWebhook(repoFullName string, name string, config WebhookConfig) (_ core.Result) {
 	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return core.Fail(log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil))
 	}
 
 	// Build the webhook payload
@@ -85,23 +88,23 @@ func CreateWebhook(repoFullName string, name string, config WebhookConfig) (_ co
 
 	payloadJSON := core.JSONMarshal(payload)
 	if !payloadJSON.OK {
-		return payloadJSON.Value.(error)
+		return payloadJSON
 	}
 
 	endpoint := core.Sprintf("repos/%s/%s/hooks", parts[0], parts[1])
 	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint, "--method", "POST", "--input", "-").WithStdin(core.NewReader(string(payloadJSON.Value.([]byte))))
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return cli.Err("%s", core.Trim(string(output)))
+	_, r := commandCombinedOutput(cmd)
+	if !r.OK {
+		return r
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 // UpdateWebhook updates an existing webhook.
-func UpdateWebhook(repoFullName string, hookID int, config WebhookConfig) (_ coreFailure) {
+func UpdateWebhook(repoFullName string, hookID int, config WebhookConfig) (_ core.Result) {
 	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return core.Fail(log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil))
 	}
 
 	payload := map[string]any{
@@ -125,38 +128,38 @@ func UpdateWebhook(repoFullName string, hookID int, config WebhookConfig) (_ cor
 
 	payloadJSON := core.JSONMarshal(payload)
 	if !payloadJSON.OK {
-		return payloadJSON.Value.(error)
+		return payloadJSON
 	}
 
 	endpoint := core.Sprintf("repos/%s/%s/hooks/%d", parts[0], parts[1], hookID)
 	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint, "--method", "PATCH", "--input", "-").WithStdin(core.NewReader(string(payloadJSON.Value.([]byte))))
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return cli.Err("%s", core.Trim(string(output)))
+	_, r := commandCombinedOutput(cmd)
+	if !r.OK {
+		return r
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 // SyncWebhooks synchronizes webhooks for a repository.
 // Webhooks are matched by URL - if a webhook with the same URL exists, it's updated.
 // Otherwise, a new webhook is created.
-func SyncWebhooks(repoFullName string, config *GitHubConfig, dryRun bool) (*ChangeSet, coreFailure) {
+func SyncWebhooks(repoFullName string, config *GitHubConfig, dryRun bool) (*ChangeSet, core.Result) {
 	changes := NewChangeSet(repoFullName)
 
 	// Skip if no webhooks configured
 	if len(config.Webhooks) == 0 {
-		return changes, nil
+		return changes, core.Ok(nil)
 	}
 
 	// Get existing webhooks
-	existing, err := ListWebhooks(repoFullName)
-	if err != nil {
+	existing, r := ListWebhooks(repoFullName)
+	if !r.OK {
 		// If permission denied, note it but don't fail entirely
-		if core.Contains(err.Error(), "insufficient permissions") {
+		if core.Contains(r.Error(), "insufficient permissions") {
 			changes.Add(CategoryWebhook, ChangeSkip, "all", "insufficient permissions")
-			return changes, nil
+			return changes, core.Ok(nil)
 		}
-		return nil, cli.Wrap(err, "failed to list webhooks")
+		return nil, core.Fail(cli.Wrap(r.Value.(error), "failed to list webhooks"))
 	}
 
 	// Build lookup map by URL
@@ -179,8 +182,8 @@ func SyncWebhooks(repoFullName string, config *GitHubConfig, dryRun bool) (*Chan
 			// Create new webhook
 			changes.Add(CategoryWebhook, ChangeCreate, name, wantHook.URL)
 			if !dryRun {
-				if err := CreateWebhook(repoFullName, name, wantHook); err != nil {
-					return changes, cli.Wrap(err, "failed to create webhook "+name)
+				if r := CreateWebhook(repoFullName, name, wantHook); !r.OK {
+					return changes, core.Fail(cli.Wrap(r.Value.(error), "failed to create webhook "+name))
 				}
 			}
 			continue
@@ -215,8 +218,8 @@ func SyncWebhooks(repoFullName string, config *GitHubConfig, dryRun bool) (*Chan
 		if needsUpdate {
 			changes.AddWithDetails(CategoryWebhook, ChangeUpdate, name, "", details)
 			if !dryRun {
-				if err := UpdateWebhook(repoFullName, existingHook.ID, wantHook); err != nil {
-					return changes, cli.Wrap(err, "failed to update webhook "+name)
+				if r := UpdateWebhook(repoFullName, existingHook.ID, wantHook); !r.OK {
+					return changes, core.Fail(cli.Wrap(r.Value.(error), "failed to update webhook "+name))
 				}
 			}
 		} else {
@@ -224,7 +227,7 @@ func SyncWebhooks(repoFullName string, config *GitHubConfig, dryRun bool) (*Chan
 		}
 	}
 
-	return changes, nil
+	return changes, core.Ok(nil)
 }
 
 // stringSliceEqual compares two string slices for equality (order-independent).

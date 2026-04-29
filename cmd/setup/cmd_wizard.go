@@ -19,25 +19,26 @@ func isTerminal() bool {
 }
 
 // promptSetupChoice asks the user whether to setup the working directory or create a package.
-func promptSetupChoice() (string, coreFailure) {
+func promptSetupChoice() (string, core.Result) {
 	cli.Text(cli.TitleStyle.Render(i18n.T("cmd.setup.wizard.git_repo_title")))
 	cli.Text(i18n.T("cmd.setup.wizard.what_to_do"))
 
 	choice, err := cli.Select("Choose action", []string{"setup", "package"})
 	if err != nil {
-		return "", err
+		return "", core.Fail(err)
 	}
-	return choice, nil
+	return choice, core.Ok(nil)
 }
 
 // promptProjectName asks the user for a project directory name.
-func promptProjectName(defaultName string) (string, coreFailure) {
+func promptProjectName(defaultName string) (string, core.Result) {
 	cli.Text(cli.TitleStyle.Render(i18n.T("cmd.setup.wizard.project_name_title")))
-	return cli.Prompt(i18n.T("cmd.setup.wizard.project_name_desc"), defaultName)
+	value, err := cli.Prompt(i18n.T("cmd.setup.wizard.project_name_desc"), defaultName)
+	return value, core.ResultOf(value, err)
 }
 
 // runPackageWizard presents an interactive multi-select UI for package selection.
-func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string, coreFailure) {
+func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string, core.Result) {
 	allRepos := reg.List()
 	if len(preselectedTypes) > 0 {
 		allRepos = filterReposByTypes(allRepos, preselectedTypes)
@@ -61,7 +62,7 @@ func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string,
 	}
 
 	if len(options) == 0 {
-		return nil, nil
+		return nil, core.Ok(nil)
 	}
 
 	cli.Text(cli.TitleStyle.Render(i18n.T("cmd.setup.wizard.package_selection")))
@@ -69,7 +70,7 @@ func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string,
 
 	selectedLabels, err := cli.MultiSelect(i18n.T("cmd.setup.wizard.select_packages"), options)
 	if err != nil {
-		return nil, err
+		return nil, core.Fail(err)
 	}
 
 	// Extract names from labels
@@ -91,7 +92,7 @@ func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string,
 			selected = append(selected, name)
 		}
 	}
-	return selected, nil
+	return selected, core.Ok(nil)
 }
 
 func filterReposByTypes(repoList []*repos.Repo, allowedTypes []string) []*repos.Repo {
@@ -122,7 +123,7 @@ func filterReposByTypes(repoList []*repos.Repo, allowedTypes []string) []*repos.
 }
 
 // confirmClone asks for confirmation before cloning.
-func confirmClone(count int, target string) (bool, coreFailure) {
+func confirmClone(count int, target string) (bool, core.Result) {
 	confirmed := cli.Confirm(i18n.T("cmd.setup.wizard.confirm_clone", map[string]any{"Count": count, "Target": target}))
-	return confirmed, nil
+	return confirmed, core.Ok(nil)
 }

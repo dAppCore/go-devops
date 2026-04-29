@@ -41,10 +41,10 @@ type SecurityFeature struct {
 }
 
 // GetSecuritySettings fetches current security settings for a repository.
-func GetSecuritySettings(repoFullName string) (*GitHubSecurityStatus, coreFailure) {
+func GetSecuritySettings(repoFullName string) (*GitHubSecurityStatus, core.Result) {
 	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return nil, log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return nil, core.Fail(log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil))
 	}
 
 	status := &GitHubSecurityStatus{}
@@ -52,13 +52,16 @@ func GetSecuritySettings(repoFullName string) (*GitHubSecurityStatus, coreFailur
 	// Check Dependabot alerts (vulnerability alerts)
 	endpoint := core.Sprintf("repos/%s/%s/vulnerability-alerts", parts[0], parts[1])
 	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint, "--method", "GET")
-	alertsOutput, err := cmd.CombinedOutput()
-	if err == nil {
+	alertsOutput, alertsResult := commandCombinedOutput(cmd)
+	if alertsResult.OK {
 		status.DependabotAlerts = true
 	} else {
-		stderr := string(alertsOutput)
+		stderr := core.Trim(string(alertsOutput))
+		if stderr == "" {
+			stderr = alertsResult.Error()
+		}
 		if core.Contains(stderr, "403") {
-			return nil, cli.Err("insufficient permissions to check security settings")
+			return nil, core.Fail(cli.Err("insufficient permissions to check security settings"))
 		}
 		status.DependabotAlerts = false
 	}
@@ -66,14 +69,14 @@ func GetSecuritySettings(repoFullName string) (*GitHubSecurityStatus, coreFailur
 	// Get repo security_and_analysis settings
 	endpoint = core.Sprintf("repos/%s/%s", parts[0], parts[1])
 	cmd = coreexec.Command(core.Background(), "gh", "api", endpoint)
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return nil, cli.Err("%s", core.Trim(string(output)))
+	output, outputResult := commandCombinedOutput(cmd)
+	if !outputResult.OK {
+		return nil, core.Fail(cli.Err("%s", outputResult.Error()))
 	}
 
 	var repo GitHubRepoResponse
 	if r := core.JSONUnmarshal(output, &repo); !r.OK {
-		return nil, r.Value.(error)
+		return nil, r
 	}
 
 	if repo.SecurityAndAnalysis != nil {
@@ -88,62 +91,62 @@ func GetSecuritySettings(repoFullName string) (*GitHubSecurityStatus, coreFailur
 		}
 	}
 
-	return status, nil
+	return status, core.Ok(nil)
 }
 
 // EnableDependabotAlerts enables Dependabot vulnerability alerts.
-func EnableDependabotAlerts(repoFullName string) (_ coreFailure) {
+func EnableDependabotAlerts(repoFullName string) (_ core.Result) {
 	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return core.Fail(log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil))
 	}
 
 	endpoint := core.Sprintf("repos/%s/%s/vulnerability-alerts", parts[0], parts[1])
 	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint, "--method", "PUT")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return cli.Err("%s", core.Trim(string(output)))
+	_, r := commandCombinedOutput(cmd)
+	if !r.OK {
+		return r
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 // EnableDependabotSecurityUpdates enables automated Dependabot security updates.
-func EnableDependabotSecurityUpdates(repoFullName string) (_ coreFailure) {
+func EnableDependabotSecurityUpdates(repoFullName string) (_ core.Result) {
 	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return core.Fail(log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil))
 	}
 
 	endpoint := core.Sprintf("repos/%s/%s/automated-security-fixes", parts[0], parts[1])
 	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint, "--method", "PUT")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return cli.Err("%s", core.Trim(string(output)))
+	_, r := commandCombinedOutput(cmd)
+	if !r.OK {
+		return r
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 // DisableDependabotSecurityUpdates disables automated Dependabot security updates.
-func DisableDependabotSecurityUpdates(repoFullName string) (_ coreFailure) {
+func DisableDependabotSecurityUpdates(repoFullName string) (_ core.Result) {
 	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return core.Fail(log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil))
 	}
 
 	endpoint := core.Sprintf("repos/%s/%s/automated-security-fixes", parts[0], parts[1])
 	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint, "--method", "DELETE")
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return cli.Err("%s", core.Trim(string(output)))
+	_, r := commandCombinedOutput(cmd)
+	if !r.OK {
+		return r
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 // UpdateSecurityAndAnalysis updates security_and_analysis settings.
-func UpdateSecurityAndAnalysis(repoFullName string, secretScanning, pushProtection bool) (_ coreFailure) {
+func UpdateSecurityAndAnalysis(repoFullName string, secretScanning, pushProtection bool) (_ core.Result) {
 	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return core.Fail(log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil))
 	}
 
 	// Build the payload
@@ -160,22 +163,25 @@ func UpdateSecurityAndAnalysis(repoFullName string, secretScanning, pushProtecti
 
 	payloadJSON := core.JSONMarshal(payload)
 	if !payloadJSON.OK {
-		return payloadJSON.Value.(error)
+		return payloadJSON
 	}
 
 	endpoint := core.Sprintf("repos/%s/%s", parts[0], parts[1])
 	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint, "--method", "PATCH", "--input", "-")
 	cmd = cmd.WithStdin(core.NewReader(string(payloadJSON.Value.([]byte))))
-	output, err := cmd.CombinedOutput()
-	if err != nil {
+	output, r := commandCombinedOutput(cmd)
+	if !r.OK {
 		errStr := core.Trim(string(output))
+		if errStr == "" {
+			errStr = r.Error()
+		}
 		// Some repos (private without GHAS) don't support these features
 		if core.Contains(errStr, "secret scanning") || core.Contains(errStr, "not available") {
-			return nil // Silently skip unsupported features
+			return core.Ok(nil) // Silently skip unsupported features
 		}
-		return cli.Err("%s", errStr)
+		return core.Fail(cli.Err("%s", errStr))
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 func boolToStatus(b bool) string {
@@ -186,18 +192,18 @@ func boolToStatus(b bool) string {
 }
 
 // SyncSecuritySettings synchronizes security settings for a repository.
-func SyncSecuritySettings(repoFullName string, config *GitHubConfig, dryRun bool) (*ChangeSet, coreFailure) {
+func SyncSecuritySettings(repoFullName string, config *GitHubConfig, dryRun bool) (*ChangeSet, core.Result) {
 	changes := NewChangeSet(repoFullName)
 
 	// Get current settings
-	existing, err := GetSecuritySettings(repoFullName)
-	if err != nil {
+	existing, r := GetSecuritySettings(repoFullName)
+	if !r.OK {
 		// If permission denied, note it but don't fail
-		if core.Contains(err.Error(), "insufficient permissions") {
+		if core.Contains(r.Error(), "insufficient permissions") {
 			changes.Add(CategorySecurity, ChangeSkip, "all", "insufficient permissions")
-			return changes, nil
+			return changes, core.Ok(nil)
 		}
-		return nil, cli.Wrap(err, "failed to get security settings")
+		return nil, core.Fail(cli.Wrap(r.Value.(error), "failed to get security settings"))
 	}
 
 	wantConfig := config.Security
@@ -206,8 +212,8 @@ func SyncSecuritySettings(repoFullName string, config *GitHubConfig, dryRun bool
 	if wantConfig.DependabotAlerts && !existing.DependabotAlerts {
 		changes.Add(CategorySecurity, ChangeCreate, "dependabot_alerts", "enable")
 		if !dryRun {
-			if err := EnableDependabotAlerts(repoFullName); err != nil {
-				return changes, cli.Wrap(err, "failed to enable dependabot alerts")
+			if r := EnableDependabotAlerts(repoFullName); !r.OK {
+				return changes, core.Fail(cli.Wrap(r.Value.(error), "failed to enable dependabot alerts"))
 			}
 		}
 	} else if !wantConfig.DependabotAlerts && existing.DependabotAlerts {
@@ -220,16 +226,16 @@ func SyncSecuritySettings(repoFullName string, config *GitHubConfig, dryRun bool
 	if wantConfig.DependabotSecurityUpdates && !existing.DependabotSecurityUpdates {
 		changes.Add(CategorySecurity, ChangeCreate, "dependabot_security_updates", "enable")
 		if !dryRun {
-			if err := EnableDependabotSecurityUpdates(repoFullName); err != nil {
+			if r := EnableDependabotSecurityUpdates(repoFullName); !r.OK {
 				// This might fail if alerts aren't enabled first
-				return changes, cli.Wrap(err, "failed to enable dependabot security updates")
+				return changes, core.Fail(cli.Wrap(r.Value.(error), "failed to enable dependabot security updates"))
 			}
 		}
 	} else if !wantConfig.DependabotSecurityUpdates && existing.DependabotSecurityUpdates {
 		changes.Add(CategorySecurity, ChangeDelete, "dependabot_security_updates", "disable")
 		if !dryRun {
-			if err := DisableDependabotSecurityUpdates(repoFullName); err != nil {
-				return changes, cli.Wrap(err, "failed to disable dependabot security updates")
+			if r := DisableDependabotSecurityUpdates(repoFullName); !r.OK {
+				return changes, core.Fail(cli.Wrap(r.Value.(error), "failed to disable dependabot security updates"))
 			}
 		}
 	} else {
@@ -262,13 +268,13 @@ func SyncSecuritySettings(repoFullName string, config *GitHubConfig, dryRun bool
 
 	// Apply security_and_analysis changes
 	if needsSecurityUpdate && !dryRun {
-		if err := UpdateSecurityAndAnalysis(repoFullName, wantConfig.SecretScanning, wantConfig.SecretScanningPushProtection); err != nil {
+		if r := UpdateSecurityAndAnalysis(repoFullName, wantConfig.SecretScanning, wantConfig.SecretScanningPushProtection); !r.OK {
 			// Don't fail on unsupported features
-			if !core.Contains(err.Error(), "not available") {
-				return changes, cli.Wrap(err, "failed to update security settings")
+			if !core.Contains(r.Error(), "not available") {
+				return changes, core.Fail(cli.Wrap(r.Value.(error), "failed to update security settings"))
 			}
 		}
 	}
 
-	return changes, nil
+	return changes, core.Ok(nil)
 }

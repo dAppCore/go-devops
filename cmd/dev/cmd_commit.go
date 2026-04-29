@@ -23,7 +23,7 @@ func AddCommitCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.commit.short"),
 		Long:  i18n.T("cmd.dev.commit.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runCommit(commitRegistryPath, commitAll)
+			return resultToError(runCommit(commitRegistryPath, commitAll))
 		},
 	}
 
@@ -33,7 +33,7 @@ func AddCommitCommand(parent *cli.Command) {
 	parent.AddCommand(commitCmd)
 }
 
-func runCommit(registryPath string, all bool) (_ coreFailure) {
+func runCommit(registryPath string, all bool) (_ core.Result) {
 	ctx := context.Background()
 	cwd := "."
 	if cwdResult := core.Getwd(); cwdResult.OK {
@@ -46,9 +46,9 @@ func runCommit(registryPath string, all bool) (_ coreFailure) {
 	}
 
 	// Multi-repo mode: find or use provided registry
-	reg, regDir, err := loadRegistryWithConfig(registryPath)
-	if err != nil {
-		return err
+	reg, regDir, r := loadRegistryWithConfig(registryPath)
+	if !r.OK {
+		return r
 	}
 	registryPath = regDir // Use resolved registry directory for relative paths
 
@@ -65,7 +65,7 @@ func runCommit(registryPath string, all bool) (_ coreFailure) {
 
 	if len(paths) == 0 {
 		cli.Text(i18n.T("cmd.dev.no_git_repos"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Get status for all repos
@@ -84,7 +84,7 @@ func runCommit(registryPath string, all bool) (_ coreFailure) {
 
 	if len(dirtyRepos) == 0 {
 		cli.Text(i18n.T("cmd.dev.no_changes"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Show dirty repos
@@ -108,7 +108,7 @@ func runCommit(registryPath string, all bool) (_ coreFailure) {
 		cli.Blank()
 		if !cli.Confirm(i18n.T("cmd.dev.confirm_claude_commit")) {
 			cli.Text(i18n.T("cli.aborted"))
-			return nil
+			return core.Ok(nil)
 		}
 	}
 
@@ -119,8 +119,8 @@ func runCommit(registryPath string, all bool) (_ coreFailure) {
 	for _, s := range dirtyRepos {
 		cli.Print("%s %s\n", dimStyle.Render(i18n.T("cmd.dev.committing")), s.Name)
 
-		if err := doCommit(ctx, s.Path, false); err != nil {
-			cli.Print("  %s %s\n", errorStyle.Render("x"), err)
+		if r := doCommit(ctx, s.Path, false); !r.OK {
+			cli.Print("  %s %s\n", errorStyle.Render("x"), r.Error())
 			failed++
 		} else {
 			cli.Print("  %s %s\n", successStyle.Render("v"), i18n.T("cmd.dev.committed"))
@@ -136,7 +136,7 @@ func runCommit(registryPath string, all bool) (_ coreFailure) {
 	}
 	cli.Blank()
 
-	return nil
+	return core.Ok(nil)
 }
 
 // isGitRepo checks if a directory is a git repository.
@@ -147,7 +147,7 @@ func isGitRepo(path string) bool {
 }
 
 // runCommitSingleRepo handles commit for a single repo (current directory).
-func runCommitSingleRepo(ctx context.Context, repoPath string, all bool) (_ coreFailure) {
+func runCommitSingleRepo(ctx context.Context, repoPath string, all bool) (_ core.Result) {
 	repoName := core.PathBase(repoPath)
 
 	// Get status
@@ -158,15 +158,15 @@ func runCommitSingleRepo(ctx context.Context, repoPath string, all bool) (_ core
 
 	if len(statuses) == 0 || statuses[0].Error != nil {
 		if len(statuses) > 0 && statuses[0].Error != nil {
-			return statuses[0].Error
+			return core.Fail(statuses[0].Error)
 		}
-		return cli.Err("failed to get repo status")
+		return core.Fail(cli.Err("failed to get repo status"))
 	}
 
 	s := statuses[0]
 	if !s.IsDirty() {
 		cli.Text(i18n.T("cmd.dev.no_changes"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Show status
@@ -187,17 +187,17 @@ func runCommitSingleRepo(ctx context.Context, repoPath string, all bool) (_ core
 		cli.Blank()
 		if !cli.Confirm(i18n.T("cmd.dev.confirm_claude_commit")) {
 			cli.Text(i18n.T("cli.aborted"))
-			return nil
+			return core.Ok(nil)
 		}
 	}
 
 	cli.Blank()
 
 	// Commit
-	if err := doCommit(ctx, repoPath, false); err != nil {
-		cli.Print("  %s %s\n", errorStyle.Render("x"), err)
-		return err
+	if r := doCommit(ctx, repoPath, false); !r.OK {
+		cli.Print("  %s %s\n", errorStyle.Render("x"), r.Error())
+		return r
 	}
 	cli.Print("  %s %s\n", successStyle.Render("v"), i18n.T("cmd.dev.committed"))
-	return nil
+	return core.Ok(nil)
 }
