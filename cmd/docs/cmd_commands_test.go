@@ -5,7 +5,7 @@ import (
 	"dappco.re/go/cli/pkg/cli"
 )
 
-func TestAX7_AddDocsCommands_Good(t *T) {
+func TestCmdCommands_AddDocsCommands_Good(t *T) {
 	root := &cli.Command{Use: "root"}
 	AddDocsCommands(root)
 	commands := root.Commands()
@@ -14,7 +14,7 @@ func TestAX7_AddDocsCommands_Good(t *T) {
 	AssertEqual(t, "docs", commands[0].Use)
 }
 
-func TestAX7_AddDocsCommands_Bad(t *T) {
+func TestCmdCommands_AddDocsCommands_Bad(t *T) {
 	var root *cli.Command
 	AssertPanics(t, func() {
 		AddDocsCommands(root)
@@ -22,7 +22,7 @@ func TestAX7_AddDocsCommands_Bad(t *T) {
 	AssertNil(t, root)
 }
 
-func TestAX7_AddDocsCommands_Ugly(t *T) {
+func TestCmdCommands_AddDocsCommands_Ugly(t *T) {
 	root := &cli.Command{Use: "root"}
 	root.AddCommand(&cli.Command{Use: "existing"})
 	AddDocsCommands(root)

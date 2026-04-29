@@ -18,13 +18,12 @@
 package setup
 
 import (
-	"os/exec"
-	"path/filepath"
-
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	coreio "dappco.re/go/io"
 	log "dappco.re/go/log"
+	coreexec "dappco.re/go/process/exec"
 	"dappco.re/go/scm/repos"
 )
 
@@ -66,9 +65,9 @@ func addGitHubCommand(parent *cli.Command) {
 	parent.AddCommand(ghCmd)
 }
 
-func runGitHubSetup() error {
+func runGitHubSetup() (_ coreFailure) {
 	// Check gh is available
-	if _, err := exec.LookPath("gh"); err != nil {
+	if err := commandResultError(coreexec.Command(core.Background(), "gh", "--version").Run()); err != nil {
 		return log.E("setup.github", i18n.T("error.gh_not_found"), nil)
 	}
 
@@ -88,7 +87,7 @@ func runGitHubSetup() error {
 		return cli.Wrap(err, "failed to load registry")
 	}
 
-	registryDir := filepath.Dir(registryPath)
+	registryDir := core.PathDir(registryPath)
 
 	// Find GitHub config
 	configPath, err := FindGitHubConfig(registryDir, ghConfigPath)

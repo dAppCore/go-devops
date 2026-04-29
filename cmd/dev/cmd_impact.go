@@ -37,7 +37,7 @@ func addImpactCommand(parent *cli.Command) {
 	parent.AddCommand(impactCmd)
 }
 
-func runImpact(registryPath string, repoName string) error {
+func runImpact(registryPath string, repoName string) (_ coreFailure) {
 	// Find or use provided registry
 	var reg *repos.Registry
 	var err error

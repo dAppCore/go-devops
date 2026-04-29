@@ -7,17 +7,14 @@
 package setup
 
 import (
-	"fmt"
 	"net/url"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	coreio "dappco.re/go/io"
 	log "dappco.re/go/log"
+	coreexec "dappco.re/go/process/exec"
 )
 
 var repoDryRun bool
@@ -30,12 +27,12 @@ func addRepoCommand(parent *cli.Command) {
 		Long:  i18n.T("cmd.setup.repo.long"),
 		Args:  cli.ExactArgs(0),
 		RunE: func(cmd *cli.Command, args []string) error {
-			cwd, err := os.Getwd()
-			if err != nil {
-				return log.E("setup.repo", "failed to get working directory", err)
+			cwdResult := core.Getwd()
+			if !cwdResult.OK {
+				return log.E("setup.repo", "failed to get working directory", cwdResult.Value.(error))
 			}
 
-			return runRepoSetup(cwd, repoDryRun)
+			return runRepoSetup(cwdResult.Value.(string), repoDryRun)
 		},
 	}
 
@@ -45,15 +42,15 @@ func addRepoCommand(parent *cli.Command) {
 }
 
 // runRepoSetup sets up the current repository with .core/ configuration.
-func runRepoSetup(repoPath string, dryRun bool) error {
-	fmt.Printf("%s %s: %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.repo.setting_up"), repoPath)
+func runRepoSetup(repoPath string, dryRun bool) (_ coreFailure) {
+	cli.Print("%s %s: %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.repo.setting_up"), repoPath)
 
 	// Detect project type
 	projectType := detectProjectType(repoPath)
-	fmt.Printf("%s %s: %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.repo.detected_type"), projectType)
+	cli.Print("%s %s: %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.repo.detected_type"), projectType)
 
 	// Create .core directory
-	coreDir := filepath.Join(repoPath, ".core")
+	coreDir := core.PathJoin(repoPath, ".core")
 	if !dryRun {
 		if err := coreio.Local.EnsureDir(coreDir); err != nil {
 			return log.E("setup.repo", "failed to create .core directory", err)
@@ -61,7 +58,7 @@ func runRepoSetup(repoPath string, dryRun bool) error {
 	}
 
 	// Generate configs based on project type
-	name := filepath.Base(repoPath)
+	name := core.PathBase(repoPath)
 	configs := map[string]string{
 		"build.yaml":   generateBuildConfig(repoPath, projectType),
 		"release.yaml": generateReleaseConfig(name, projectType),
@@ -69,23 +66,23 @@ func runRepoSetup(repoPath string, dryRun bool) error {
 	}
 
 	if dryRun {
-		fmt.Printf("\n%s %s:\n", dimStyle.Render(">>"), i18n.T("cmd.setup.repo.would_create"))
+		cli.Print("\n%s %s:\n", dimStyle.Render(">>"), i18n.T("cmd.setup.repo.would_create"))
 		for filename, content := range configs {
-			fmt.Printf("\n  %s:\n", filepath.Join(coreDir, filename))
+			cli.Print("\n  %s:\n", core.PathJoin(coreDir, filename))
 			// Indent content for display
-			for _, line := range strings.Split(content, "\n") {
-				fmt.Printf("    %s\n", line)
+			for _, line := range core.Split(content, "\n") {
+				cli.Print("    %s\n", line)
 			}
 		}
 		return nil
 	}
 
 	for filename, content := range configs {
-		configPath := filepath.Join(coreDir, filename)
+		configPath := core.PathJoin(coreDir, filename)
 		if err := coreio.Local.Write(configPath, content); err != nil {
-			return log.E("setup.repo", fmt.Sprintf("failed to write %s", filename), err)
+			return log.E("setup.repo", core.Sprintf("failed to write %s", filename), err)
 		}
-		fmt.Printf("%s %s %s\n", successStyle.Render(">>"), i18n.T("cmd.setup.repo.created"), configPath)
+		cli.Print("%s %s %s\n", successStyle.Render(">>"), i18n.T("cmd.setup.repo.created"), configPath)
 	}
 
 	return nil
@@ -94,16 +91,16 @@ func runRepoSetup(repoPath string, dryRun bool) error {
 // detectProjectType identifies the project type from files present.
 func detectProjectType(path string) string {
 	// Check in priority order
-	if coreio.Local.IsFile(filepath.Join(path, "wails.json")) {
+	if coreio.Local.IsFile(core.PathJoin(path, "wails.json")) {
 		return "wails"
 	}
-	if coreio.Local.IsFile(filepath.Join(path, "go.mod")) {
+	if coreio.Local.IsFile(core.PathJoin(path, "go.mod")) {
 		return "go"
 	}
-	if coreio.Local.IsFile(filepath.Join(path, "package.json")) {
+	if coreio.Local.IsFile(core.PathJoin(path, "package.json")) {
 		return "node"
 	}
-	if coreio.Local.IsFile(filepath.Join(path, "composer.json")) {
+	if coreio.Local.IsFile(core.PathJoin(path, "composer.json")) {
 		return "php"
 	}
 	return "unknown"
@@ -111,11 +108,11 @@ func detectProjectType(path string) string {
 
 // generateBuildConfig creates a build.yaml configuration based on project type.
 func generateBuildConfig(path, projectType string) string {
-	name := filepath.Base(path)
+	name := core.PathBase(path)
 
 	switch projectType {
 	case "go", "wails":
-		return fmt.Sprintf(`version: 1
+		return core.Sprintf(`version: 1
 project:
   name: %s
   description: Go application
@@ -142,7 +139,7 @@ targets:
 `, name, name, name)
 
 	case "php":
-		return fmt.Sprintf(`version: 1
+		return core.Sprintf(`version: 1
 project:
   name: %s
   description: PHP application
@@ -153,7 +150,7 @@ build:
 `, name, name)
 
 	case "node":
-		return fmt.Sprintf(`version: 1
+		return core.Sprintf(`version: 1
 project:
   name: %s
   description: Node.js application
@@ -164,7 +161,7 @@ build:
 `, name)
 
 	default:
-		return fmt.Sprintf(`version: 1
+		return core.Sprintf(`version: 1
 project:
   name: %s
   description: Application
@@ -180,7 +177,7 @@ func generateReleaseConfig(name, projectType string) string {
 		repo = "owner/" + name
 	}
 
-	base := fmt.Sprintf(`version: 1
+	base := core.Sprintf(`version: 1
 project:
   name: %s
   repository: %s
@@ -289,13 +286,13 @@ commands:
 
 // detectGitHubRepo tries to extract owner/repo from git remote.
 func detectGitHubRepo() string {
-	cmd := exec.Command("git", "remote", "get-url", "origin")
+	cmd := coreexec.Command(core.Background(), "git", "remote", "get-url", "origin")
 	output, err := cmd.Output()
 	if err != nil {
 		return ""
 	}
 
-	return parseGitHubRepoURL(strings.TrimSpace(string(output)))
+	return parseGitHubRepoURL(core.Trim(string(output)))
 }
 
 // parseGitHubRepoURL extracts owner/repo from a GitHub remote URL.
@@ -306,33 +303,33 @@ func detectGitHubRepo() string {
 // - https://github.com/owner/repo.git
 // - git://github.com/owner/repo.git
 func parseGitHubRepoURL(remote string) string {
-	remote = strings.TrimSpace(remote)
+	remote = core.Trim(remote)
 	if remote == "" {
 		return ""
 	}
 
 	// Handle SSH-style scp syntax first.
-	if strings.HasPrefix(remote, "git@github.com:") {
-		repo := strings.TrimPrefix(remote, "git@github.com:")
-		return strings.TrimSuffix(repo, ".git")
+	if core.HasPrefix(remote, "git@github.com:") {
+		repo := core.TrimPrefix(remote, "git@github.com:")
+		return core.TrimSuffix(repo, ".git")
 	}
 
 	if parsed, err := url.Parse(remote); err == nil && parsed.Host != "" {
-		host := strings.TrimPrefix(parsed.Hostname(), "www.")
+		host := core.TrimPrefix(parsed.Hostname(), "www.")
 		if host == "github.com" {
-			repo := strings.TrimPrefix(parsed.Path, "/")
-			repo = strings.TrimSuffix(repo, ".git")
-			repo = strings.TrimSuffix(repo, "/")
+			repo := core.TrimPrefix(parsed.Path, "/")
+			repo = core.TrimSuffix(repo, ".git")
+			repo = core.TrimSuffix(repo, "/")
 			return repo
 		}
 	}
 
-	if strings.Contains(remote, "github.com/") {
-		parts := strings.SplitN(remote, "github.com/", 2)
+	if core.Contains(remote, "github.com/") {
+		parts := core.SplitN(remote, "github.com/", 2)
 		if len(parts) == 2 {
-			repo := strings.TrimPrefix(parts[1], "/")
-			repo = strings.TrimSuffix(repo, ".git")
-			return strings.TrimSuffix(repo, "/")
+			repo := core.TrimPrefix(parts[1], "/")
+			repo = core.TrimSuffix(repo, ".git")
+			return core.TrimSuffix(repo, "/")
 		}
 	}
 

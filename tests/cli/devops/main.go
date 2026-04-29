@@ -5,11 +5,7 @@
 package main
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
-
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	deploycmd "dappco.re/go/devops/cmd/deploy"
 	devcmd "dappco.re/go/devops/cmd/dev"
@@ -28,11 +24,11 @@ func main() {
 	gitcmd.AddGitCommands(root)
 	setupcmd.AddSetupCommands(root)
 	root.AddCommand(playbookSmokeCommand())
-	root.SetArgs(os.Args[1:])
+	root.SetArgs(core.Args()[1:])
 
 	if err := root.Execute(); err != nil {
-		fmt.Fprintln(os.Stderr, err)
-		os.Exit(1)
+		core.Print(core.Stderr(), "%v", err)
+		core.Exit(1)
 	}
 }
 
@@ -45,45 +41,48 @@ func playbookSmokeCommand() *cli.Command {
 	}
 }
 
-func runPlaybookSmoke(cmd *cli.Command, args []string) error {
+func runPlaybookSmoke(cmd *cli.Command, args []string) (_ coreFailure) {
 	dir := "playbooks"
 	if len(args) > 0 {
 		dir = args[0]
 	}
 
 	count := 0
-	err := filepath.WalkDir(dir, func(path string, entry os.DirEntry, err error) error {
+	err := core.PathWalkDir(dir, func(path string, entry core.FsDirEntry, err error) error {
 		if err != nil {
-			return fmt.Errorf("%s: %w", path, err)
+			return core.Errorf("%s: %w", path, err)
 		}
 		if entry.IsDir() || !isYAML(path) {
 			return nil
 		}
 
-		raw, err := os.ReadFile(path)
-		if err != nil {
-			return fmt.Errorf("%s: %w", path, err)
+		rawResult := core.ReadFile(path)
+		if !rawResult.OK {
+			return core.Errorf("%s: %w", path, rawResult.Value.(error))
 		}
+		raw := rawResult.Value.([]byte)
 
 		var document any
 		if err := yaml.Unmarshal(raw, &document); err != nil {
-			return fmt.Errorf("%s: %w", path, err)
+			return core.Errorf("%s: %w", path, err)
 		}
 		count++
 		return nil
 	})
 	if err != nil {
-		return fmt.Errorf("walk %s: %w", dir, err)
+		return core.Errorf("walk %s: %w", dir, err)
 	}
 	if count == 0 {
-		return fmt.Errorf("no playbook YAML files found in %s", dir)
+		return core.Errorf("no playbook YAML files found in %s", dir)
 	}
 
-	fmt.Fprintf(cmd.OutOrStdout(), "playbook smoke passed: %d YAML files decoded\n", count)
+	if result := core.WriteString(cmd.OutOrStdout(), core.Sprintf("playbook smoke passed: %d YAML files decoded\n", count)); !result.OK {
+		return result.Value.(error)
+	}
 	return nil
 }
 
 func isYAML(path string) bool {
-	ext := strings.ToLower(filepath.Ext(path))
+	ext := core.Lower(core.PathExt(path))
 	return ext == ".yaml" || ext == ".yml"
 }

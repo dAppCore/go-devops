@@ -2,9 +2,9 @@ package dev
 
 import (
 	"slices"
-	"strings"
 	"time"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 
@@ -62,7 +62,7 @@ func addIssuesCommand(parent *cli.Command) {
 	parent.AddCommand(issuesCmd)
 }
 
-func runIssues(registryPath string, limit int, assignee string) error {
+func runIssues(registryPath string, limit int, assignee string) (_ coreFailure) {
 	client, err := forgeAPIClient()
 	if err != nil {
 		return err
@@ -120,7 +120,7 @@ func runIssues(registryPath string, limit int, assignee string) error {
 	return nil
 }
 
-func fetchIssues(client *gitea.Client, owner, apiRepo, displayName string, limit int, assignee string) ([]ForgeIssue, error) {
+func fetchIssues(client *gitea.Client, owner, apiRepo, displayName string, limit int, assignee string) ([]ForgeIssue, coreFailure) {
 	opts := gitea.ListIssueOption{
 		ListOptions: gitea.ListOptions{Page: 1, PageSize: limit},
 		State:       gitea.StateOpen,
@@ -133,7 +133,7 @@ func fetchIssues(client *gitea.Client, owner, apiRepo, displayName string, limit
 	issues, _, err := client.ListRepoIssues(owner, apiRepo, opts)
 	if err != nil {
 		errMsg := err.Error()
-		if strings.Contains(errMsg, "404") || strings.Contains(errMsg, "Not Found") {
+		if core.Contains(errMsg, "404") || core.Contains(errMsg, "Not Found") {
 			return nil, nil
 		}
 		return nil, err
@@ -173,7 +173,7 @@ func printIssue(issue ForgeIssue) {
 
 	// Add labels if any
 	if len(issue.Labels) > 0 {
-		line += " " + issueLabelStyle.Render("["+strings.Join(issue.Labels, ", ")+"]")
+		line += " " + issueLabelStyle.Render("["+core.Join(", ", issue.Labels...)+"]")
 	}
 
 	// Add assignee if any
@@ -182,7 +182,7 @@ func printIssue(issue ForgeIssue) {
 		for _, a := range issue.Assignees {
 			tagged = append(tagged, "@"+a)
 		}
-		line += " " + issueAssigneeStyle.Render(strings.Join(tagged, ", "))
+		line += " " + issueAssigneeStyle.Render(core.Join(", ", tagged...))
 	}
 
 	// Add age

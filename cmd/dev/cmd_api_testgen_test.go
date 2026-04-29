@@ -1,9 +1,8 @@
 package dev
 
 import (
-	"path/filepath"
+	core "dappco.re/go"
 	"slices"
-	"strings"
 	"testing"
 
 	"dappco.re/go/io"
@@ -13,11 +12,11 @@ func TestRunTestGen_Good(t *testing.T) {
 	tmpDir := t.TempDir()
 	t.Setenv("CORE_WORKING_DIRECTORY", tmpDir)
 
-	serviceDir := filepath.Join(tmpDir, "pkg", "demo")
+	serviceDir := core.PathJoin(tmpDir, "pkg", "demo")
 	if err := io.Local.EnsureDir(serviceDir); err != nil {
 		t.Fatalf("create service dir: %v", err)
 	}
-	if err := io.Local.Write(filepath.Join(serviceDir, "demo.go"), `package demo
+	if err := io.Local.Write(core.PathJoin(serviceDir, "demo.go"), `package demo
 
 type Example struct{}
 
@@ -29,7 +28,7 @@ func Run() {}
 `); err != nil {
 		t.Fatalf("write demo.go: %v", err)
 	}
-	if err := io.Local.Write(filepath.Join(serviceDir, "extra.go"), `package demo
+	if err := io.Local.Write(core.PathJoin(serviceDir, "extra.go"), `package demo
 
 type Another struct{}
 
@@ -37,7 +36,7 @@ func Extra() {}
 `); err != nil {
 		t.Fatalf("write extra.go: %v", err)
 	}
-	if err := io.Local.Write(filepath.Join(serviceDir, "demo_test.go"), `package demo
+	if err := io.Local.Write(core.PathJoin(serviceDir, "demo_test.go"), `package demo
 
 func Ignored() {}
 `); err != nil {
@@ -48,7 +47,7 @@ func Ignored() {}
 		t.Fatalf("run test generator: %v", err)
 	}
 
-	generatedPath := filepath.Join(tmpDir, "demo", "demo_test.go")
+	generatedPath := core.PathJoin(tmpDir, "demo", "demo_test.go")
 	content, err := io.Local.Read(generatedPath)
 	if err != nil {
 		t.Fatalf("read generated file: %v", err)
@@ -65,11 +64,11 @@ func Ignored() {}
 		`var _ = impl.Run`,
 		`var _ = impl.Extra`,
 	} {
-		if !strings.Contains(content, want) {
+		if !core.Contains(content, want) {
 			t.Fatalf("generated content missing %q", want)
 		}
 	}
-	if strings.Contains(content, `Ignored`) {
+	if core.Contains(content, `Ignored`) {
 		t.Fatal("generated content includes ignored symbol")
 	}
 }
@@ -78,8 +77,8 @@ func TestGeneratePublicAPITestFile_Good(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	if err := generatePublicAPITestFile(
-		filepath.Join(tmpDir, "demo"),
-		filepath.Join(tmpDir, "demo", "demo_test.go"),
+		core.PathJoin(tmpDir, "demo"),
+		core.PathJoin(tmpDir, "demo", "demo_test.go"),
 		"demo",
 		[]symbolInfo{
 			{Name: "Example", Kind: "type"},
@@ -89,26 +88,26 @@ func TestGeneratePublicAPITestFile_Good(t *testing.T) {
 		t.Fatalf("generate public API test file: %v", err)
 	}
 
-	content, err := io.Local.Read(filepath.Join(tmpDir, "demo", "demo_test.go"))
+	content, err := io.Local.Read(core.PathJoin(tmpDir, "demo", "demo_test.go"))
 	if err != nil {
 		t.Fatalf("read generated public API test file: %v", err)
 	}
 
 	for _, want := range []string{`type _ = impl.Example`, `const _ = impl.Answer`} {
-		if !strings.Contains(content, want) {
+		if !core.Contains(content, want) {
 			t.Fatalf("generated content missing %q", want)
 		}
 	}
 }
 
-func TestGetExportedSymbols_MultiFile_Good(t *testing.T) {
+func TestGetExportedSymbolsMultiFile(t *testing.T) {
 	tmpDir := t.TempDir()
 
-	serviceDir := filepath.Join(tmpDir, "demo")
+	serviceDir := core.PathJoin(tmpDir, "demo")
 	if err := io.Local.EnsureDir(serviceDir); err != nil {
 		t.Fatalf("create service dir: %v", err)
 	}
-	if err := io.Local.Write(filepath.Join(serviceDir, "demo.go"), `package demo
+	if err := io.Local.Write(core.PathJoin(serviceDir, "demo.go"), `package demo
 
 type Example struct{}
 
@@ -116,7 +115,7 @@ const Answer = 42
 `); err != nil {
 		t.Fatalf("write demo.go: %v", err)
 	}
-	if err := io.Local.Write(filepath.Join(serviceDir, "extra.go"), `package demo
+	if err := io.Local.Write(core.PathJoin(serviceDir, "extra.go"), `package demo
 
 var Value = Example{}
 
@@ -124,7 +123,7 @@ func Run() {}
 `); err != nil {
 		t.Fatalf("write extra.go: %v", err)
 	}
-	if err := io.Local.Write(filepath.Join(serviceDir, "demo_test.go"), `package demo
+	if err := io.Local.Write(core.PathJoin(serviceDir, "demo_test.go"), `package demo
 
 type Ignored struct{}
 `); err != nil {

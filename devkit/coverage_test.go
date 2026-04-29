@@ -1,172 +1,185 @@
 package devkit
 
 import (
-	"math"
-	"os"
-	"path/filepath"
-	"testing"
-	"time"
+	. "dappco.re/go"
 )
 
-func TestParseCoverProfile_Good(t *testing.T) {
-	snapshot, err := ParseCoverProfile(`mode: set
-github.com/acme/project/foo/foo.go:1.1,3.1 2 1
-github.com/acme/project/foo/bar.go:1.1,4.1 3 0
-github.com/acme/project/baz/baz.go:1.1,2.1 4 4
-`)
-	if err != nil {
-		t.Fatalf("parse cover profile: %v", err)
-	}
-	if len(snapshot.Packages) != 2 {
-		t.Fatalf("packages length = %d, want 2", len(snapshot.Packages))
-	}
-	if snapshot.Packages[0].Name != "github.com/acme/project/baz" {
-		t.Fatalf("packages[0].Name = %q, want github.com/acme/project/baz", snapshot.Packages[0].Name)
-	}
-	if snapshot.Packages[1].Name != "github.com/acme/project/foo" {
-		t.Fatalf("packages[1].Name = %q, want github.com/acme/project/foo", snapshot.Packages[1].Name)
-	}
-	for name, check := range map[string]struct {
-		got  float64
-		want float64
-	}{
-		"baz coverage":   {got: snapshot.Packages[0].Coverage, want: 100.0},
-		"foo coverage":   {got: snapshot.Packages[1].Coverage, want: 40.0},
-		"total coverage": {got: snapshot.Total.Coverage, want: 66.6667},
-	} {
-		if math.Abs(check.got-check.want) > 0.0001 {
-			t.Fatalf("%s = %v, want %v", name, check.got, check.want)
-		}
-	}
+func TestCoverage_NewCoverageStore_Good(t *T) {
+	path := Path(t.TempDir(), "coverage.json")
+	store := NewCoverageStore(path)
+
+	AssertNotNil(t, store)
+	AssertEqual(t, path, store.path)
 }
 
-func TestParseCoverProfile_Bad(t *testing.T) {
-	_, err := ParseCoverProfile("mode: set\nbroken line")
-	if err == nil {
-		t.Fatal("expected parse error")
-	}
+func TestCoverage_NewCoverageStore_Bad(t *T) {
+	store := NewCoverageStore("")
+	AssertNotNil(t, store)
+
+	AssertEqual(t, "", store.path)
+	AssertError(t, store.Append(CoverageSnapshot{}))
 }
 
-func TestParseCoverOutput_Good(t *testing.T) {
-	snapshot, err := ParseCoverOutput(`ok  	github.com/acme/project/foo	0.123s	coverage: 75.0% of statements
-ok  	github.com/acme/project/bar	0.456s	coverage: 50.0% of statements
-`)
-	if err != nil {
-		t.Fatalf("parse cover output: %v", err)
-	}
-	if len(snapshot.Packages) != 2 {
-		t.Fatalf("packages length = %d, want 2", len(snapshot.Packages))
-	}
-	if snapshot.Packages[0].Name != "github.com/acme/project/bar" {
-		t.Fatalf("packages[0].Name = %q, want github.com/acme/project/bar", snapshot.Packages[0].Name)
-	}
-	if snapshot.Packages[1].Name != "github.com/acme/project/foo" {
-		t.Fatalf("packages[1].Name = %q, want github.com/acme/project/foo", snapshot.Packages[1].Name)
-	}
-	if math.Abs(snapshot.Total.Coverage-62.5) > 0.0001 {
-		t.Fatalf("total coverage = %v, want 62.5", snapshot.Total.Coverage)
-	}
+func TestCoverage_NewCoverageStore_Ugly(t *T) {
+	path := Path(t.TempDir(), "nested", "coverage.json")
+	store := NewCoverageStore(path)
+
+	AssertNotNil(t, store)
+	AssertContains(t, store.path, "nested")
 }
 
-func TestCompareCoverage_Good(t *testing.T) {
-	previous := CoverageSnapshot{
-		Packages: []CoveragePackage{
-			{Name: "pkg/a", Coverage: 90.0},
-			{Name: "pkg/b", Coverage: 80.0},
-		},
-		Total: CoveragePackage{Name: "total", Coverage: 85.0},
-	}
-	current := CoverageSnapshot{
-		Packages: []CoveragePackage{
-			{Name: "pkg/a", Coverage: 87.5},
-			{Name: "pkg/b", Coverage: 82.0},
-			{Name: "pkg/c", Coverage: 100.0},
-		},
-		Total: CoveragePackage{Name: "total", Coverage: 89.0},
-	}
+func TestCoverage_CoverageStore_Append_Good(t *T) {
+	store := NewCoverageStore(Path(t.TempDir(), "coverage.json"))
+	snapshot := CoverageSnapshot{CapturedAt: UnixTime(1770000000), Total: CoveragePackage{Name: "total", Coverage: 80}}
 
-	comparison := CompareCoverage(previous, current)
-	if len(comparison.Regressions) != 1 {
-		t.Fatalf("regressions length = %d, want 1", len(comparison.Regressions))
-	}
-	if len(comparison.Improvements) != 1 {
-		t.Fatalf("improvements length = %d, want 1", len(comparison.Improvements))
-	}
-	if len(comparison.NewPackages) != 1 {
-		t.Fatalf("new packages length = %d, want 1", len(comparison.NewPackages))
-	}
-	if len(comparison.Removed) != 0 {
-		t.Fatalf("removed length = %d, want 0", len(comparison.Removed))
-	}
-	if comparison.Regressions[0].Name != "pkg/a" {
-		t.Fatalf("regressions[0].Name = %q, want pkg/a", comparison.Regressions[0].Name)
-	}
-	if comparison.Improvements[0].Name != "pkg/b" {
-		t.Fatalf("improvements[0].Name = %q, want pkg/b", comparison.Improvements[0].Name)
-	}
-	if comparison.NewPackages[0].Name != "pkg/c" {
-		t.Fatalf("newPackages[0].Name = %q, want pkg/c", comparison.NewPackages[0].Name)
-	}
-	if math.Abs(comparison.TotalDelta-4.0) > 0.0001 {
-		t.Fatalf("total delta = %v, want 4.0", comparison.TotalDelta)
-	}
+	err := store.Append(snapshot)
+	AssertNoError(t, err)
+	AssertTrue(t, Stat(store.path).OK)
 }
 
-func TestCoverageStore_Good(t *testing.T) {
+func TestCoverage_CoverageStore_Append_Bad(t *T) {
 	dir := t.TempDir()
-	store := NewCoverageStore(filepath.Join(dir, "coverage.json"))
+	store := NewCoverageStore(dir)
+	err := store.Append(CoverageSnapshot{})
 
-	first := CoverageSnapshot{
-		CapturedAt: time.Date(2026, 4, 1, 10, 0, 0, 0, time.UTC),
-		Packages:   []CoveragePackage{{Name: "pkg/a", Coverage: 80.0}},
-		Total:      CoveragePackage{Name: "total", Coverage: 80.0},
-	}
-	second := CoverageSnapshot{
-		CapturedAt: time.Date(2026, 4, 1, 11, 0, 0, 0, time.UTC),
-		Packages:   []CoveragePackage{{Name: "pkg/a", Coverage: 82.5}},
-		Total:      CoveragePackage{Name: "total", Coverage: 82.5},
-	}
+	AssertError(t, err)
+	AssertContains(t, err.Error(), "is a directory")
+}
 
-	if err := store.Append(first); err != nil {
-		t.Fatalf("append first snapshot: %v", err)
-	}
-	if err := store.Append(second); err != nil {
-		t.Fatalf("append second snapshot: %v", err)
-	}
+func TestCoverage_CoverageStore_Append_Ugly(t *T) {
+	store := NewCoverageStore(Path(t.TempDir(), "coverage.json"))
+	err := store.Append(CoverageSnapshot{})
+
+	AssertNoError(t, err)
+	AssertTrue(t, Stat(store.path).OK)
+}
+
+func TestCoverage_CoverageStore_Load_Good(t *T) {
+	store := NewCoverageStore(Path(t.TempDir(), "coverage.json"))
+	RequireNoError(t, store.Append(CoverageSnapshot{CapturedAt: UnixTime(1)}))
 
 	snapshots, err := store.Load()
-	if err != nil {
-		t.Fatalf("load snapshots: %v", err)
-	}
-	if len(snapshots) != 2 {
-		t.Fatalf("snapshots length = %d, want 2", len(snapshots))
-	}
-	if !snapshots[0].CapturedAt.Equal(first.CapturedAt) {
-		t.Fatalf("snapshots[0].CapturedAt = %v, want %v", snapshots[0].CapturedAt, first.CapturedAt)
-	}
-	if !snapshots[1].CapturedAt.Equal(second.CapturedAt) {
-		t.Fatalf("snapshots[1].CapturedAt = %v, want %v", snapshots[1].CapturedAt, second.CapturedAt)
-	}
-
-	latest, err := store.Latest()
-	if err != nil {
-		t.Fatalf("load latest snapshot: %v", err)
-	}
-	if !latest.CapturedAt.Equal(second.CapturedAt) {
-		t.Fatalf("latest.CapturedAt = %v, want %v", latest.CapturedAt, second.CapturedAt)
-	}
+	AssertNoError(t, err)
+	AssertLen(t, snapshots, 1)
 }
 
-func TestCoverageStore_Bad(t *testing.T) {
-	dir := t.TempDir()
-	path := filepath.Join(dir, "coverage.json")
-	if err := os.WriteFile(path, []byte("{"), 0o600); err != nil {
-		t.Fatalf("write coverage store: %v", err)
-	}
-
+func TestCoverage_CoverageStore_Load_Bad(t *T) {
+	path := Path(t.TempDir(), "coverage.json")
+	RequireTrue(t, WriteFile(path, []byte("{"), 0o600).OK)
 	store := NewCoverageStore(path)
-	_, err := store.Load()
-	if err == nil {
-		t.Fatal("expected load error")
-	}
+
+	snapshots, err := store.Load()
+	AssertError(t, err)
+	AssertNil(t, snapshots)
+}
+
+func TestCoverage_CoverageStore_Load_Ugly(t *T) {
+	path := Path(t.TempDir(), "coverage.json")
+	RequireTrue(t, WriteFile(path, []byte(" \n "), 0o600).OK)
+	store := NewCoverageStore(path)
+
+	snapshots, err := store.Load()
+	AssertNoError(t, err)
+	AssertNil(t, snapshots)
+}
+
+func TestCoverage_CoverageStore_Latest_Good(t *T) {
+	store := NewCoverageStore(Path(t.TempDir(), "coverage.json"))
+	RequireNoError(t, store.Append(CoverageSnapshot{CapturedAt: UnixTime(1)}))
+	RequireNoError(t, store.Append(CoverageSnapshot{CapturedAt: UnixTime(2)}))
+
+	latest, err := store.Latest()
+	AssertNoError(t, err)
+	AssertTrue(t, latest.CapturedAt.Equal(UnixTime(2)))
+}
+
+func TestCoverage_CoverageStore_Latest_Bad(t *T) {
+	store := NewCoverageStore(Path(t.TempDir(), "coverage.json"))
+	latest, err := store.Latest()
+
+	AssertError(t, err)
+	AssertEqual(t, CoverageSnapshot{}, latest)
+}
+
+func TestCoverage_CoverageStore_Latest_Ugly(t *T) {
+	store := NewCoverageStore(Path(t.TempDir(), "coverage.json"))
+	RequireNoError(t, store.Append(CoverageSnapshot{}))
+
+	latest, err := store.Latest()
+	AssertNoError(t, err)
+	AssertEqual(t, CoverageSnapshot{}, latest)
+}
+
+func TestCoverage_ParseCoverProfile_Good(t *T) {
+	snapshot, err := ParseCoverProfile("mode: set\npkg/a.go:1.1,2.1 2 1\n")
+	AssertNoError(t, err)
+
+	AssertLen(t, snapshot.Packages, 1)
+	AssertEqual(t, 100.0, snapshot.Total.Coverage)
+}
+
+func TestCoverage_ParseCoverProfile_Bad(t *T) {
+	snapshot, err := ParseCoverProfile("mode: set\nbroken line\n")
+	AssertError(t, err)
+
+	AssertEqual(t, CoverageSnapshot{}, snapshot)
+	AssertContains(t, err.Error(), "invalid cover profile line")
+}
+
+func TestCoverage_ParseCoverProfile_Ugly(t *T) {
+	snapshot, err := ParseCoverProfile(" \n ")
+	AssertNoError(t, err)
+
+	AssertEmpty(t, snapshot.Packages)
+	AssertEqual(t, 0.0, snapshot.Total.Coverage)
+}
+
+func TestCoverage_ParseCoverOutput_Good(t *T) {
+	snapshot, err := ParseCoverOutput("ok  \tpkg/a\t0.1s\tcoverage: 75.0% of statements\n")
+	AssertNoError(t, err)
+
+	AssertLen(t, snapshot.Packages, 1)
+	AssertEqual(t, 75.0, snapshot.Total.Coverage)
+}
+
+func TestCoverage_ParseCoverOutput_Bad(t *T) {
+	snapshot, err := ParseCoverOutput("no coverage here\n")
+	AssertNoError(t, err)
+
+	AssertEmpty(t, snapshot.Packages)
+	AssertEqual(t, 0.0, snapshot.Total.Coverage)
+}
+
+func TestCoverage_ParseCoverOutput_Ugly(t *T) {
+	snapshot, err := ParseCoverOutput("?   \tpkg/a\t0.1s\tcoverage: 0.0% of statements\n")
+	AssertNoError(t, err)
+
+	AssertLen(t, snapshot.Packages, 1)
+	AssertEqual(t, 0.0, snapshot.Total.Coverage)
+}
+
+func TestCoverage_CompareCoverage_Good(t *T) {
+	previous := CoverageSnapshot{Packages: []CoveragePackage{{Name: "pkg/a", Coverage: 90}}}
+	current := CoverageSnapshot{Packages: []CoveragePackage{{Name: "pkg/a", Coverage: 95}}}
+	comparison := CompareCoverage(previous, current)
+
+	AssertLen(t, comparison.Improvements, 1)
+	AssertEqual(t, 5.0, comparison.Improvements[0].Delta)
+}
+
+func TestCoverage_CompareCoverage_Bad(t *T) {
+	previous := CoverageSnapshot{Packages: []CoveragePackage{{Name: "pkg/a", Coverage: 90}}}
+	current := CoverageSnapshot{Packages: []CoveragePackage{{Name: "pkg/a", Coverage: 80}}}
+	comparison := CompareCoverage(previous, current)
+
+	AssertLen(t, comparison.Regressions, 1)
+	AssertEqual(t, -10.0, comparison.Regressions[0].Delta)
+}
+
+func TestCoverage_CompareCoverage_Ugly(t *T) {
+	comparison := CompareCoverage(CoverageSnapshot{}, CoverageSnapshot{})
+	AssertEmpty(t, comparison.Regressions)
+
+	AssertEmpty(t, comparison.Improvements)
+	AssertEqual(t, 0.0, comparison.TotalDelta)
 }

@@ -9,13 +9,10 @@
 package setup
 
 import (
-	"encoding/json"
-	"fmt"
-	"os/exec"
-	"strings"
-
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	log "dappco.re/go/log"
+	coreexec "dappco.re/go/process/exec"
 )
 
 // GitHubSecurityStatus represents the security settings status of a repository.
@@ -44,44 +41,39 @@ type SecurityFeature struct {
 }
 
 // GetSecuritySettings fetches current security settings for a repository.
-func GetSecuritySettings(repoFullName string) (*GitHubSecurityStatus, error) {
-	parts := strings.Split(repoFullName, "/")
+func GetSecuritySettings(repoFullName string) (*GitHubSecurityStatus, coreFailure) {
+	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return nil, log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return nil, log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
 	status := &GitHubSecurityStatus{}
 
 	// Check Dependabot alerts (vulnerability alerts)
-	endpoint := fmt.Sprintf("repos/%s/%s/vulnerability-alerts", parts[0], parts[1])
-	cmd := exec.Command("gh", "api", endpoint, "--method", "GET")
-	_, err := cmd.Output()
+	endpoint := core.Sprintf("repos/%s/%s/vulnerability-alerts", parts[0], parts[1])
+	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint, "--method", "GET")
+	alertsOutput, err := cmd.CombinedOutput()
 	if err == nil {
 		status.DependabotAlerts = true
-	} else if exitErr, ok := err.(*exec.ExitError); ok {
-		stderr := string(exitErr.Stderr)
-		// 404 means alerts are disabled, 204 means enabled
-		if strings.Contains(stderr, "403") {
+	} else {
+		stderr := string(alertsOutput)
+		if core.Contains(stderr, "403") {
 			return nil, cli.Err("insufficient permissions to check security settings")
 		}
-		// Other errors (like 404) mean alerts are disabled
 		status.DependabotAlerts = false
 	}
 
 	// Get repo security_and_analysis settings
-	endpoint = fmt.Sprintf("repos/%s/%s", parts[0], parts[1])
-	cmd = exec.Command("gh", "api", endpoint)
-	output, err := cmd.Output()
+	endpoint = core.Sprintf("repos/%s/%s", parts[0], parts[1])
+	cmd = coreexec.Command(core.Background(), "gh", "api", endpoint)
+	output, err := cmd.CombinedOutput()
 	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return nil, cli.Err("%s", strings.TrimSpace(string(exitErr.Stderr)))
-		}
-		return nil, err
+		return nil, cli.Err("%s", core.Trim(string(output)))
 	}
 
 	var repo GitHubRepoResponse
-	if err := json.Unmarshal(output, &repo); err != nil {
-		return nil, err
+	if r := core.JSONUnmarshal(output, &repo); !r.OK {
+		return nil, r.Value.(error)
 	}
 
 	if repo.SecurityAndAnalysis != nil {
@@ -100,58 +92,58 @@ func GetSecuritySettings(repoFullName string) (*GitHubSecurityStatus, error) {
 }
 
 // EnableDependabotAlerts enables Dependabot vulnerability alerts.
-func EnableDependabotAlerts(repoFullName string) error {
-	parts := strings.Split(repoFullName, "/")
+func EnableDependabotAlerts(repoFullName string) (_ coreFailure) {
+	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
-	endpoint := fmt.Sprintf("repos/%s/%s/vulnerability-alerts", parts[0], parts[1])
-	cmd := exec.Command("gh", "api", endpoint, "--method", "PUT")
+	endpoint := core.Sprintf("repos/%s/%s/vulnerability-alerts", parts[0], parts[1])
+	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint, "--method", "PUT")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return cli.Err("%s", strings.TrimSpace(string(output)))
+		return cli.Err("%s", core.Trim(string(output)))
 	}
 	return nil
 }
 
 // EnableDependabotSecurityUpdates enables automated Dependabot security updates.
-func EnableDependabotSecurityUpdates(repoFullName string) error {
-	parts := strings.Split(repoFullName, "/")
+func EnableDependabotSecurityUpdates(repoFullName string) (_ coreFailure) {
+	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
-	endpoint := fmt.Sprintf("repos/%s/%s/automated-security-fixes", parts[0], parts[1])
-	cmd := exec.Command("gh", "api", endpoint, "--method", "PUT")
+	endpoint := core.Sprintf("repos/%s/%s/automated-security-fixes", parts[0], parts[1])
+	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint, "--method", "PUT")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return cli.Err("%s", strings.TrimSpace(string(output)))
+		return cli.Err("%s", core.Trim(string(output)))
 	}
 	return nil
 }
 
 // DisableDependabotSecurityUpdates disables automated Dependabot security updates.
-func DisableDependabotSecurityUpdates(repoFullName string) error {
-	parts := strings.Split(repoFullName, "/")
+func DisableDependabotSecurityUpdates(repoFullName string) (_ coreFailure) {
+	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
-	endpoint := fmt.Sprintf("repos/%s/%s/automated-security-fixes", parts[0], parts[1])
-	cmd := exec.Command("gh", "api", endpoint, "--method", "DELETE")
+	endpoint := core.Sprintf("repos/%s/%s/automated-security-fixes", parts[0], parts[1])
+	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint, "--method", "DELETE")
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return cli.Err("%s", strings.TrimSpace(string(output)))
+		return cli.Err("%s", core.Trim(string(output)))
 	}
 	return nil
 }
 
 // UpdateSecurityAndAnalysis updates security_and_analysis settings.
-func UpdateSecurityAndAnalysis(repoFullName string, secretScanning, pushProtection bool) error {
-	parts := strings.Split(repoFullName, "/")
+func UpdateSecurityAndAnalysis(repoFullName string, secretScanning, pushProtection bool) (_ coreFailure) {
+	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil)
 	}
 
 	// Build the payload
@@ -166,19 +158,19 @@ func UpdateSecurityAndAnalysis(repoFullName string, secretScanning, pushProtecti
 		},
 	}
 
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return err
+	payloadJSON := core.JSONMarshal(payload)
+	if !payloadJSON.OK {
+		return payloadJSON.Value.(error)
 	}
 
-	endpoint := fmt.Sprintf("repos/%s/%s", parts[0], parts[1])
-	cmd := exec.Command("gh", "api", endpoint, "--method", "PATCH", "--input", "-")
-	cmd.Stdin = strings.NewReader(string(payloadJSON))
+	endpoint := core.Sprintf("repos/%s/%s", parts[0], parts[1])
+	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint, "--method", "PATCH", "--input", "-")
+	cmd = cmd.WithStdin(core.NewReader(string(payloadJSON.Value.([]byte))))
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		errStr := strings.TrimSpace(string(output))
+		errStr := core.Trim(string(output))
 		// Some repos (private without GHAS) don't support these features
-		if strings.Contains(errStr, "secret scanning") || strings.Contains(errStr, "not available") {
+		if core.Contains(errStr, "secret scanning") || core.Contains(errStr, "not available") {
 			return nil // Silently skip unsupported features
 		}
 		return cli.Err("%s", errStr)
@@ -194,14 +186,14 @@ func boolToStatus(b bool) string {
 }
 
 // SyncSecuritySettings synchronizes security settings for a repository.
-func SyncSecuritySettings(repoFullName string, config *GitHubConfig, dryRun bool) (*ChangeSet, error) {
+func SyncSecuritySettings(repoFullName string, config *GitHubConfig, dryRun bool) (*ChangeSet, coreFailure) {
 	changes := NewChangeSet(repoFullName)
 
 	// Get current settings
 	existing, err := GetSecuritySettings(repoFullName)
 	if err != nil {
 		// If permission denied, note it but don't fail
-		if strings.Contains(err.Error(), "insufficient permissions") {
+		if core.Contains(err.Error(), "insufficient permissions") {
 			changes.Add(CategorySecurity, ChangeSkip, "all", "insufficient permissions")
 			return changes, nil
 		}
@@ -272,7 +264,7 @@ func SyncSecuritySettings(repoFullName string, config *GitHubConfig, dryRun bool
 	if needsSecurityUpdate && !dryRun {
 		if err := UpdateSecurityAndAnalysis(repoFullName, wantConfig.SecretScanning, wantConfig.SecretScanningPushProtection); err != nil {
 			// Don't fail on unsupported features
-			if !strings.Contains(err.Error(), "not available") {
+			if !core.Contains(err.Error(), "not available") {
 				return changes, cli.Wrap(err, "failed to update security settings")
 			}
 		}

@@ -2,10 +2,9 @@ package coolify
 
 import (
 	"context"
-	"encoding/json"
-	"os"
 	"sync"
 
+	core "dappco.re/go"
 	log "dappco.re/go/log"
 
 	"dappco.re/go/devops/deploy/python"
@@ -35,15 +34,15 @@ var initEmbeddedPython = python.Init
 // DefaultConfig returns default configuration from environment.
 func DefaultConfig() Config {
 	return Config{
-		BaseURL:   os.Getenv("COOLIFY_URL"),
-		APIToken:  os.Getenv("COOLIFY_TOKEN"),
+		BaseURL:   core.Getenv("COOLIFY_URL"),
+		APIToken:  core.Getenv("COOLIFY_TOKEN"),
 		Timeout:   30,
 		VerifySSL: true,
 	}
 }
 
 // NewClient creates a new Coolify client.
-func NewClient(cfg Config) (*Client, error) {
+func NewClient(cfg Config) (*Client, coreFailure) {
 	if cfg.BaseURL == "" {
 		return nil, log.E("coolify", "COOLIFY_URL not set", nil)
 	}
@@ -65,7 +64,7 @@ func NewClient(cfg Config) (*Client, error) {
 }
 
 // Call invokes a Coolify API operation by operationId.
-func (c *Client) Call(ctx context.Context, operationID string, params map[string]any) (map[string]any, error) {
+func (c *Client) Call(ctx context.Context, operationID string, params map[string]any) (map[string]any, coreFailure) {
 	if c == nil {
 		return nil, log.E("coolify", "client is nil", nil)
 	}
@@ -92,20 +91,20 @@ func (c *Client) Call(ctx context.Context, operationID string, params map[string
 
 	// Parse JSON result
 	var result map[string]any
-	if err := json.Unmarshal([]byte(output), &result); err != nil {
+	if r := core.JSONUnmarshal([]byte(output), &result); !r.OK {
 		// Try parsing as array
 		var arrResult []any
-		if err2 := json.Unmarshal([]byte(output), &arrResult); err2 == nil {
+		if arr := core.JSONUnmarshal([]byte(output), &arrResult); arr.OK {
 			return map[string]any{"result": arrResult}, nil
 		}
-		return nil, log.E("coolify", "failed to parse response (output: "+output+")", err)
+		return nil, log.E("coolify", "failed to parse response (output: "+output+")", r.Value.(error))
 	}
 
 	return result, nil
 }
 
 // ListServers returns all servers.
-func (c *Client) ListServers(ctx context.Context) ([]map[string]any, error) {
+func (c *Client) ListServers(ctx context.Context) ([]map[string]any, coreFailure) {
 	result, err := c.Call(ctx, "list-servers", nil)
 	if err != nil {
 		return nil, err
@@ -114,17 +113,17 @@ func (c *Client) ListServers(ctx context.Context) ([]map[string]any, error) {
 }
 
 // GetServer returns a server by UUID.
-func (c *Client) GetServer(ctx context.Context, uuid string) (map[string]any, error) {
+func (c *Client) GetServer(ctx context.Context, uuid string) (map[string]any, coreFailure) {
 	return c.Call(ctx, "get-server-by-uuid", map[string]any{"uuid": uuid})
 }
 
 // ValidateServer validates a server by UUID.
-func (c *Client) ValidateServer(ctx context.Context, uuid string) (map[string]any, error) {
+func (c *Client) ValidateServer(ctx context.Context, uuid string) (map[string]any, coreFailure) {
 	return c.Call(ctx, "validate-server-by-uuid", map[string]any{"uuid": uuid})
 }
 
 // ListProjects returns all projects.
-func (c *Client) ListProjects(ctx context.Context) ([]map[string]any, error) {
+func (c *Client) ListProjects(ctx context.Context) ([]map[string]any, coreFailure) {
 	result, err := c.Call(ctx, "list-projects", nil)
 	if err != nil {
 		return nil, err
@@ -133,12 +132,12 @@ func (c *Client) ListProjects(ctx context.Context) ([]map[string]any, error) {
 }
 
 // GetProject returns a project by UUID.
-func (c *Client) GetProject(ctx context.Context, uuid string) (map[string]any, error) {
+func (c *Client) GetProject(ctx context.Context, uuid string) (map[string]any, coreFailure) {
 	return c.Call(ctx, "get-project-by-uuid", map[string]any{"uuid": uuid})
 }
 
 // CreateProject creates a new project.
-func (c *Client) CreateProject(ctx context.Context, name, description string) (map[string]any, error) {
+func (c *Client) CreateProject(ctx context.Context, name, description string) (map[string]any, coreFailure) {
 	return c.Call(ctx, "create-project", map[string]any{
 		"name":        name,
 		"description": description,
@@ -146,7 +145,7 @@ func (c *Client) CreateProject(ctx context.Context, name, description string) (m
 }
 
 // ListApplications returns all applications.
-func (c *Client) ListApplications(ctx context.Context) ([]map[string]any, error) {
+func (c *Client) ListApplications(ctx context.Context) ([]map[string]any, coreFailure) {
 	result, err := c.Call(ctx, "list-applications", nil)
 	if err != nil {
 		return nil, err
@@ -155,17 +154,17 @@ func (c *Client) ListApplications(ctx context.Context) ([]map[string]any, error)
 }
 
 // GetApplication returns an application by UUID.
-func (c *Client) GetApplication(ctx context.Context, uuid string) (map[string]any, error) {
+func (c *Client) GetApplication(ctx context.Context, uuid string) (map[string]any, coreFailure) {
 	return c.Call(ctx, "get-application-by-uuid", map[string]any{"uuid": uuid})
 }
 
 // DeployApplication triggers deployment of an application.
-func (c *Client) DeployApplication(ctx context.Context, uuid string) (map[string]any, error) {
+func (c *Client) DeployApplication(ctx context.Context, uuid string) (map[string]any, coreFailure) {
 	return c.Call(ctx, "deploy-by-tag-or-uuid", map[string]any{"uuid": uuid})
 }
 
 // ListDatabases returns all databases.
-func (c *Client) ListDatabases(ctx context.Context) ([]map[string]any, error) {
+func (c *Client) ListDatabases(ctx context.Context) ([]map[string]any, coreFailure) {
 	result, err := c.Call(ctx, "list-databases", nil)
 	if err != nil {
 		return nil, err
@@ -174,12 +173,12 @@ func (c *Client) ListDatabases(ctx context.Context) ([]map[string]any, error) {
 }
 
 // GetDatabase returns a database by UUID.
-func (c *Client) GetDatabase(ctx context.Context, uuid string) (map[string]any, error) {
+func (c *Client) GetDatabase(ctx context.Context, uuid string) (map[string]any, coreFailure) {
 	return c.Call(ctx, "get-database-by-uuid", map[string]any{"uuid": uuid})
 }
 
 // ListServices returns all services.
-func (c *Client) ListServices(ctx context.Context) ([]map[string]any, error) {
+func (c *Client) ListServices(ctx context.Context) ([]map[string]any, coreFailure) {
 	result, err := c.Call(ctx, "list-services", nil)
 	if err != nil {
 		return nil, err
@@ -188,12 +187,12 @@ func (c *Client) ListServices(ctx context.Context) ([]map[string]any, error) {
 }
 
 // GetService returns a service by UUID.
-func (c *Client) GetService(ctx context.Context, uuid string) (map[string]any, error) {
+func (c *Client) GetService(ctx context.Context, uuid string) (map[string]any, coreFailure) {
 	return c.Call(ctx, "get-service-by-uuid", map[string]any{"uuid": uuid})
 }
 
 // ListEnvironments returns environments for a project.
-func (c *Client) ListEnvironments(ctx context.Context, projectUUID string) ([]map[string]any, error) {
+func (c *Client) ListEnvironments(ctx context.Context, projectUUID string) ([]map[string]any, coreFailure) {
 	result, err := c.Call(ctx, "get-environments", map[string]any{"project_uuid": projectUUID})
 	if err != nil {
 		return nil, err
@@ -202,12 +201,12 @@ func (c *Client) ListEnvironments(ctx context.Context, projectUUID string) ([]ma
 }
 
 // GetTeam returns the current team.
-func (c *Client) GetTeam(ctx context.Context) (map[string]any, error) {
+func (c *Client) GetTeam(ctx context.Context) (map[string]any, coreFailure) {
 	return c.Call(ctx, "get-current-team", nil)
 }
 
 // GetTeamMembers returns members of the current team.
-func (c *Client) GetTeamMembers(ctx context.Context) ([]map[string]any, error) {
+func (c *Client) GetTeamMembers(ctx context.Context) ([]map[string]any, coreFailure) {
 	result, err := c.Call(ctx, "get-current-team-members", nil)
 	if err != nil {
 		return nil, err
@@ -216,7 +215,7 @@ func (c *Client) GetTeamMembers(ctx context.Context) ([]map[string]any, error) {
 }
 
 // extractArray extracts an array from result["result"] or returns empty.
-func extractArray(result map[string]any) ([]map[string]any, error) {
+func extractArray(result map[string]any) ([]map[string]any, coreFailure) {
 	if arr, ok := result["result"].([]any); ok {
 		items := make([]map[string]any, 0, len(arr))
 		for _, item := range arr {

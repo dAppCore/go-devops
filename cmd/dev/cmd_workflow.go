@@ -3,10 +3,9 @@ package dev
 import (
 	"cmp"
 	"maps"
-	"path/filepath"
 	"slices"
-	"strings"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/io"
@@ -69,7 +68,7 @@ func addWorkflowSyncCommand(parent *cli.Command) {
 }
 
 // runWorkflowList shows a table of repos vs workflows.
-func runWorkflowList(registryPath string) error {
+func runWorkflowList(registryPath string) (_ coreFailure) {
 	reg, registryDir, err := loadRegistryWithConfig(registryPath)
 	if err != nil {
 		return err
@@ -108,10 +107,10 @@ func runWorkflowList(registryPath string) error {
 	}
 
 	// Check for template workflows in the registry directory
-	templateWorkflows := findWorkflows(filepath.Join(registryDir, ".github", "workflow-templates"))
+	templateWorkflows := findWorkflows(core.PathJoin(registryDir, ".github", "workflow-templates"))
 	if len(templateWorkflows) == 0 {
 		// Also check .github/workflows in the devops repo itself
-		templateWorkflows = findWorkflows(filepath.Join(registryDir, ".github", "workflows"))
+		templateWorkflows = findWorkflows(core.PathJoin(registryDir, ".github", "workflows"))
 	}
 	templateSet := make(map[string]bool)
 	for _, wf := range templateWorkflows {
@@ -119,7 +118,7 @@ func runWorkflowList(registryPath string) error {
 	}
 	templateNames := slices.Sorted(maps.Keys(templateSet))
 	if len(templateNames) > 0 {
-		cli.Print("%s %s\n\n", i18n.T("cmd.dev.workflow.templates"), strings.Join(templateNames, ", "))
+		cli.Print("%s %s\n\n", i18n.T("cmd.dev.workflow.templates"), core.Join(", ", templateNames...))
 	}
 
 	// Build table
@@ -146,7 +145,7 @@ func runWorkflowList(registryPath string) error {
 }
 
 // runWorkflowSync copies a workflow template to all repos.
-func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) error {
+func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) (_ coreFailure) {
 	reg, registryDir, err := loadRegistryWithConfig(registryPath)
 	if err != nil {
 		return err
@@ -188,8 +187,8 @@ func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) erro
 			continue
 		}
 
-		destDir := filepath.Join(repo.Path, ".github", "workflows")
-		destPath := filepath.Join(destDir, workflowFile)
+		destDir := core.PathJoin(repo.Path, ".github", "workflows")
+		destPath := core.PathJoin(destDir, workflowFile)
 
 		// Check if workflow already exists and is identical
 		if existingContent, err := io.Local.Read(destPath); err == nil {
@@ -261,9 +260,9 @@ func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) erro
 
 // findWorkflows returns a list of workflow file names in a directory.
 func findWorkflows(dir string) []string {
-	workflowsDir := filepath.Join(dir, ".github", "workflows")
+	workflowsDir := core.PathJoin(dir, ".github", "workflows")
 	// If dir already ends with workflows path, use it directly
-	if strings.HasSuffix(dir, "workflows") || strings.HasSuffix(dir, "workflow-templates") {
+	if core.HasSuffix(dir, "workflows") || core.HasSuffix(dir, "workflow-templates") {
 		workflowsDir = dir
 	}
 
@@ -278,7 +277,7 @@ func findWorkflows(dir string) []string {
 			continue
 		}
 		name := entry.Name()
-		if strings.HasSuffix(name, ".yml") || strings.HasSuffix(name, ".yaml") {
+		if core.HasSuffix(name, ".yml") || core.HasSuffix(name, ".yaml") {
 			workflows = append(workflows, name)
 		}
 	}
@@ -289,15 +288,15 @@ func findWorkflows(dir string) []string {
 // findTemplateWorkflow finds a workflow template file in common locations.
 func findTemplateWorkflow(registryDir, workflowFile string) string {
 	// Ensure .yml extension
-	if !strings.HasSuffix(workflowFile, ".yml") && !strings.HasSuffix(workflowFile, ".yaml") {
+	if !core.HasSuffix(workflowFile, ".yml") && !core.HasSuffix(workflowFile, ".yaml") {
 		workflowFile = workflowFile + ".yml"
 	}
 
 	// Check common template locations
 	candidates := []string{
-		filepath.Join(registryDir, ".github", "workflow-templates", workflowFile),
-		filepath.Join(registryDir, ".github", "workflows", workflowFile),
-		filepath.Join(registryDir, "workflow-templates", workflowFile),
+		core.PathJoin(registryDir, ".github", "workflow-templates", workflowFile),
+		core.PathJoin(registryDir, ".github", "workflows", workflowFile),
+		core.PathJoin(registryDir, "workflow-templates", workflowFile),
 	}
 
 	for _, candidate := range candidates {

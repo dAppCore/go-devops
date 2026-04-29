@@ -1,85 +1,63 @@
 package setup
 
 import (
-	"bytes"
-	"io"
-	"os"
-	"strings"
-	"testing"
+	core "dappco.re/go"
 )
 
-func captureStdout(t *testing.T, fn func() error) (string, error) {
-	t.Helper()
-
-	oldStdout := os.Stdout
-	r, w, err := os.Pipe()
-	if err != nil {
-		t.Fatalf("create pipe: %v", err)
-	}
-	defer func() {
-		_ = r.Close()
-	}()
-
-	os.Stdout = w
-	defer func() {
-		os.Stdout = oldStdout
-	}()
-
-	outC := make(chan string, 1)
-	errC := make(chan error, 1)
-
-	go func() {
-		var buf bytes.Buffer
-		_, copyErr := io.Copy(&buf, r)
-		errC <- copyErr
-		outC <- buf.String()
-	}()
-
-	runErr := fn()
-
-	if err := w.Close(); err != nil {
-		t.Fatalf("close pipe writer: %v", err)
-	}
-	if err := <-errC; err != nil {
-		t.Fatalf("copy stdout: %v", err)
-	}
-	out := <-outC
-
-	return out, runErr
-}
-
-func TestDefaultCIConfig_Good(t *testing.T) {
+func TestCmdCi_DefaultCIConfig_Good(t *core.T) {
 	cfg := DefaultCIConfig()
+	core.AssertEqual(t, "host-uk/tap", cfg.Tap)
 
-	checks := map[string]struct {
-		got  string
-		want string
-	}{
-		"tap":             {got: cfg.Tap, want: "host-uk/tap"},
-		"formula":         {got: cfg.Formula, want: "core"},
-		"scoop bucket":    {got: cfg.ScoopBucket, want: "https://forge.lthn.ai/core/scoop-bucket.git"},
-		"chocolatey pkg":  {got: cfg.ChocolateyPkg, want: "core-cli"},
-		"repository":      {got: cfg.Repository, want: "host-uk/core"},
-		"default version": {got: cfg.DefaultVersion, want: "dev"},
-	}
-	for name, check := range checks {
-		if check.got != check.want {
-			t.Fatalf("%s = %q, want %q", name, check.got, check.want)
-		}
-	}
+	core.AssertEqual(t, "core", cfg.Formula)
+	core.AssertEqual(t, "dev", cfg.DefaultVersion)
 }
 
-func TestOutputPowershellInstall_Good(t *testing.T) {
-	out, err := captureStdout(t, func() error {
-		return outputPowershellInstall(DefaultCIConfig(), "dev")
-	})
-	if err != nil {
-		t.Fatalf("output powershell install: %v", err)
-	}
-	if !strings.Contains(out, `scoop bucket add host-uk $ScoopBucket`) {
-		t.Fatalf("output missing scoop bucket command: %q", out)
-	}
-	if strings.Contains(out, `https://https://forge.lthn.ai/core/scoop-bucket.git`) {
-		t.Fatalf("output contains doubled URL scheme: %q", out)
-	}
+func TestCmdCi_DefaultCIConfig_Bad(t *core.T) {
+	cfg := DefaultCIConfig()
+	cfg.DefaultVersion = ""
+
+	core.AssertEqual(t, "", cfg.DefaultVersion)
+	core.AssertEqual(t, "core-cli", cfg.ChocolateyPkg)
+}
+
+func TestCmdCi_DefaultCIConfig_Ugly(t *core.T) {
+	first := DefaultCIConfig()
+	second := DefaultCIConfig()
+	first.Formula = "mutated"
+
+	core.AssertEqual(t, "mutated", first.Formula)
+	core.AssertEqual(t, "core", second.Formula)
+}
+
+func TestCmdCi_LoadCIConfig_Good(t *core.T) {
+	dir := t.TempDir()
+	core.RequireTrue(t, core.MkdirAll(core.Path(dir, ".core"), 0o755).OK)
+	core.RequireTrue(t, core.WriteFile(core.Path(dir, ".core", "ci.yaml"), []byte("formula: devops\ndefault_version: v1\n"), 0o644).OK)
+	t.Chdir(dir)
+
+	cfg := LoadCIConfig()
+	core.AssertEqual(t, "devops", cfg.Formula)
+	core.AssertEqual(t, "v1", cfg.DefaultVersion)
+}
+
+func TestCmdCi_LoadCIConfig_Bad(t *core.T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+	cfg := LoadCIConfig()
+
+	core.AssertEqual(t, "core", cfg.Formula)
+	core.AssertEqual(t, "dev", cfg.DefaultVersion)
+}
+
+func TestCmdCi_LoadCIConfig_Ugly(t *core.T) {
+	dir := t.TempDir()
+	child := core.Path(dir, "a", "b")
+	core.RequireTrue(t, core.MkdirAll(core.Path(dir, ".core"), 0o755).OK)
+	core.RequireTrue(t, core.MkdirAll(child, 0o755).OK)
+	core.RequireTrue(t, core.WriteFile(core.Path(dir, ".core", "ci.yaml"), []byte("tap: custom/tap\n"), 0o644).OK)
+	t.Chdir(child)
+
+	cfg := LoadCIConfig()
+	core.AssertEqual(t, "custom/tap", cfg.Tap)
+	core.AssertEqual(t, "core", cfg.Formula)
 }

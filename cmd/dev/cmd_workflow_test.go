@@ -1,8 +1,8 @@
 package dev
 
 import (
+	core "dappco.re/go"
 	"maps"
-	"path/filepath"
 	"slices"
 	"testing"
 
@@ -12,20 +12,20 @@ import (
 func TestFindWorkflows_Good(t *testing.T) {
 	// Create a temp directory with workflow files
 	tmpDir := t.TempDir()
-	workflowsDir := filepath.Join(tmpDir, ".github", "workflows")
+	workflowsDir := core.PathJoin(tmpDir, ".github", "workflows")
 	if err := io.Local.EnsureDir(workflowsDir); err != nil {
 		t.Fatalf("create workflows dir: %v", err)
 	}
 
 	// Create some workflow files
 	for _, name := range []string{"qa.yml", "tests.yml", "codeql.yaml"} {
-		if err := io.Local.Write(filepath.Join(workflowsDir, name), "name: Test"); err != nil {
+		if err := io.Local.Write(core.PathJoin(workflowsDir, name), "name: Test"); err != nil {
 			t.Fatalf("write workflow %s: %v", name, err)
 		}
 	}
 
 	// Create a non-workflow file (should be ignored)
-	if err := io.Local.Write(filepath.Join(workflowsDir, "readme.md"), "# Workflows"); err != nil {
+	if err := io.Local.Write(core.PathJoin(workflowsDir, "readme.md"), "# Workflows"); err != nil {
 		t.Fatalf("write readme: %v", err)
 	}
 
@@ -47,7 +47,7 @@ func TestFindWorkflows_Good(t *testing.T) {
 	}
 }
 
-func TestFindWorkflows_NoWorkflowsDir_Bad(t *testing.T) {
+func TestFindWorkflowsNoWorkflowsDir(t *testing.T) {
 	tmpDir := t.TempDir()
 	workflows := findWorkflows(tmpDir)
 
@@ -58,13 +58,13 @@ func TestFindWorkflows_NoWorkflowsDir_Bad(t *testing.T) {
 
 func TestFindTemplateWorkflow_Good(t *testing.T) {
 	tmpDir := t.TempDir()
-	templatesDir := filepath.Join(tmpDir, ".github", "workflow-templates")
+	templatesDir := core.PathJoin(tmpDir, ".github", "workflow-templates")
 	if err := io.Local.EnsureDir(templatesDir); err != nil {
 		t.Fatalf("create templates dir: %v", err)
 	}
 
 	templateContent := "name: QA\non: [push]"
-	if err := io.Local.Write(filepath.Join(templatesDir, "qa.yml"), templateContent); err != nil {
+	if err := io.Local.Write(core.PathJoin(templatesDir, "qa.yml"), templateContent); err != nil {
 		t.Fatalf("write template workflow: %v", err)
 	}
 
@@ -81,15 +81,15 @@ func TestFindTemplateWorkflow_Good(t *testing.T) {
 	}
 }
 
-func TestFindTemplateWorkflow_FallbackToWorkflows_Good(t *testing.T) {
+func TestFindTemplateWorkflowFallbackToWorkflows(t *testing.T) {
 	tmpDir := t.TempDir()
-	workflowsDir := filepath.Join(tmpDir, ".github", "workflows")
+	workflowsDir := core.PathJoin(tmpDir, ".github", "workflows")
 	if err := io.Local.EnsureDir(workflowsDir); err != nil {
 		t.Fatalf("create workflows dir: %v", err)
 	}
 
 	templateContent := "name: Tests\non: [push]"
-	if err := io.Local.Write(filepath.Join(workflowsDir, "tests.yml"), templateContent); err != nil {
+	if err := io.Local.Write(core.PathJoin(workflowsDir, "tests.yml"), templateContent); err != nil {
 		t.Fatalf("write workflow: %v", err)
 	}
 
@@ -99,7 +99,7 @@ func TestFindTemplateWorkflow_FallbackToWorkflows_Good(t *testing.T) {
 	}
 }
 
-func TestFindTemplateWorkflow_NotFound_Bad(t *testing.T) {
+func TestFindTemplateWorkflowNotFound(t *testing.T) {
 	tmpDir := t.TempDir()
 
 	result := findTemplateWorkflow(tmpDir, "nonexistent.yml")

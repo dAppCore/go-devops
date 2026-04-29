@@ -1,9 +1,10 @@
 package dev
 
 import (
-	"testing"
-
+	core "dappco.re/go"
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/scm/repos"
+	"testing"
 )
 
 func TestFilterTargetRepos_Good(t *testing.T) {
@@ -47,4 +48,30 @@ func TestFilterTargetRepos_Good(t *testing.T) {
 			t.Fatalf("matched length = %d, want 3", len(matched))
 		}
 	})
+}
+
+func TestCmdApply_AddApplyCommand_Good(t *core.T) {
+	root := &cli.Command{Use: "root"}
+	AddApplyCommand(root)
+	cmd := testCommand(root, "apply")
+
+	core.AssertNotNil(t, cmd)
+	core.AssertNotNil(t, cmd.Flag("command"))
+}
+
+func TestCmdApply_AddApplyCommand_Bad(t *core.T) {
+	var root *cli.Command
+	core.AssertPanics(t, func() {
+		AddApplyCommand(root)
+	})
+	core.AssertNil(t, root)
+}
+
+func TestCmdApply_AddApplyCommand_Ugly(t *core.T) {
+	root := &cli.Command{Use: "root"}
+	AddApplyCommand(root)
+	AddApplyCommand(root)
+
+	core.AssertLen(t, root.Commands(), 2)
+	core.AssertNotNil(t, testCommand(root, "apply"))
 }

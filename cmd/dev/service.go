@@ -2,11 +2,10 @@ package dev
 
 import (
 	"context"
-	"os"
-	"os/exec"
 
-	"dappco.re/go"
+	core "dappco.re/go"
 	"dappco.re/go/agent/pkg/lib"
+	coreexec "dappco.re/go/process/exec"
 )
 
 // ServiceOptions for configuring the dev service.
@@ -24,7 +23,7 @@ func (s *Service) handleAction(_ *core.Core, _ core.Message) core.Result {
 }
 
 // doCommit shells out to claude for AI-assisted commit.
-func doCommit(ctx context.Context, repoPath string, allowEdit bool) error {
+func doCommit(ctx context.Context, repoPath string, allowEdit bool) (_ coreFailure) {
 	prompt := ""
 	if r := lib.Prompt("commit"); r.OK {
 		value, ok := r.Value.(string)
@@ -39,11 +38,11 @@ func doCommit(ctx context.Context, repoPath string, allowEdit bool) error {
 		tools = "Bash,Read,Write,Edit,Glob,Grep"
 	}
 
-	cmd := exec.CommandContext(ctx, "claude", "-p", prompt, "--allowedTools", tools)
-	cmd.Dir = repoPath
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
+	cmd := coreexec.Command(ctx, "claude", "-p", prompt, "--allowedTools", tools).
+		WithDir(repoPath).
+		WithStdout(core.Stdout()).
+		WithStderr(core.Stderr()).
+		WithStdin(core.Stdin())
 
-	return cmd.Run()
+	return resultError(cmd.Run())
 }

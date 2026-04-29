@@ -2,9 +2,9 @@ package dev
 
 import (
 	"slices"
-	"strings"
 	"time"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 
@@ -59,7 +59,7 @@ func addReviewsCommand(parent *cli.Command) {
 	parent.AddCommand(reviewsCmd)
 }
 
-func runReviews(registryPath string, author string, showAll bool) error {
+func runReviews(registryPath string, author string, showAll bool) (_ coreFailure) {
 	client, err := forgeAPIClient()
 	if err != nil {
 		return err
@@ -158,14 +158,14 @@ func runReviews(registryPath string, author string, showAll bool) error {
 	return nil
 }
 
-func fetchPRs(client *gitea.Client, owner, apiRepo, displayName string, author string) ([]ForgePR, error) {
+func fetchPRs(client *gitea.Client, owner, apiRepo, displayName string, author string) ([]ForgePR, coreFailure) {
 	prs, _, err := client.ListRepoPullRequests(owner, apiRepo, gitea.ListPullRequestsOptions{
 		ListOptions: gitea.ListOptions{Page: 1, PageSize: 50},
 		State:       gitea.StateOpen,
 	})
 	if err != nil {
 		errMsg := err.Error()
-		if strings.Contains(errMsg, "404") || strings.Contains(errMsg, "Not Found") {
+		if core.Contains(errMsg, "404") || core.Contains(errMsg, "Not Found") {
 			return nil, nil
 		}
 		return nil, err

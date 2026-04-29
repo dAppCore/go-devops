@@ -1,12 +1,11 @@
 package dev
 
 import (
-	"path/filepath"
-	"strings"
 	"time"
 
 	"code.gitea.io/sdk/gitea"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 )
@@ -60,7 +59,7 @@ func addCICommand(parent *cli.Command) {
 	parent.AddCommand(ciCmd)
 }
 
-func runCI(registryPath string, branch string, failedOnly bool) error {
+func runCI(registryPath string, branch string, failedOnly bool) (_ coreFailure) {
 	client, err := forgeAPIClient()
 	if err != nil {
 		return err
@@ -84,7 +83,7 @@ func runCI(registryPath string, branch string, failedOnly bool) error {
 		owner, apiRepo := forgeRepoIdentity(repo.Path, reg.Org, repo.Name)
 		runs, err := fetchWorkflowRuns(client, owner, apiRepo, repo.Name, branch)
 		if err != nil {
-			if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "no workflows") {
+			if core.Contains(err.Error(), "404") || core.Contains(err.Error(), "no workflows") {
 				noCI = append(noCI, repo.Name)
 			} else {
 				fetchErrors = append(fetchErrors, cli.Wrap(err, repo.Name))
@@ -166,7 +165,7 @@ func runCI(registryPath string, branch string, failedOnly bool) error {
 	return nil
 }
 
-func fetchWorkflowRuns(client *gitea.Client, owner, apiRepo, displayName string, branch string) ([]WorkflowRun, error) {
+func fetchWorkflowRuns(client *gitea.Client, owner, apiRepo, displayName string, branch string) ([]WorkflowRun, coreFailure) {
 	// Try ListRepoActionRuns first (Gitea 1.25+ / modern Forgejo)
 	resp, _, err := client.ListRepoActionRuns(owner, apiRepo, gitea.ListRepoActionRunsOptions{
 		ListOptions: gitea.ListOptions{Page: 1, PageSize: 5},
@@ -178,7 +177,7 @@ func fetchWorkflowRuns(client *gitea.Client, owner, apiRepo, displayName string,
 			name := r.DisplayTitle
 			if r.Path != "" {
 				// Use workflow filename as name: ".forgejo/workflows/ci.yml" → "ci"
-				name = strings.TrimSuffix(filepath.Base(r.Path), filepath.Ext(r.Path))
+				name = core.TrimSuffix(core.PathBase(r.Path), core.PathExt(r.Path))
 			}
 			updated := r.CompletedAt
 			if updated.IsZero() {

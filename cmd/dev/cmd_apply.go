@@ -9,15 +9,14 @@ package dev
 
 import (
 	"context"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"sort"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/io"
-	core "dappco.re/go/log"
+	log "dappco.re/go/log"
+	coreexec "dappco.re/go/process/exec"
 	"dappco.re/go/scm/git"
 	"dappco.re/go/scm/repos"
 )
@@ -61,18 +60,18 @@ func AddApplyCommand(parent *cli.Command) {
 	parent.AddCommand(applyCmd)
 }
 
-func runApply() error {
+func runApply() (_ coreFailure) {
 	ctx := context.Background()
 
 	// Validate inputs
 	if applyCommand == "" && applyScript == "" {
-		return core.E("dev.apply", i18n.T("cmd.dev.apply.error.no_command"), nil)
+		return log.E("dev.apply", i18n.T("cmd.dev.apply.error.no_command"), nil)
 	}
 	if applyCommand != "" && applyScript != "" {
-		return core.E("dev.apply", i18n.T("cmd.dev.apply.error.both_command_script"), nil)
+		return log.E("dev.apply", i18n.T("cmd.dev.apply.error.both_command_script"), nil)
 	}
 	if applyCommit && applyMessage == "" {
-		return core.E("dev.apply", i18n.T("cmd.dev.apply.error.commit_needs_message"), nil)
+		return log.E("dev.apply", i18n.T("cmd.dev.apply.error.commit_needs_message"), nil)
 	}
 
 	// Validate script exists
@@ -89,7 +88,7 @@ func runApply() error {
 	}
 
 	if len(targetRepos) == 0 {
-		return core.E("dev.apply", i18n.T("cmd.dev.apply.error.no_repos"), nil)
+		return log.E("dev.apply", i18n.T("cmd.dev.apply.error.no_repos"), nil)
 	}
 
 	// Show plan
@@ -119,7 +118,7 @@ func runApply() error {
 	var succeeded, skipped, failed int
 
 	for _, repo := range targetRepos {
-		repoName := filepath.Base(repo.Path)
+		repoName := core.PathBase(repo.Path)
 
 		if applyDryRun {
 			cli.Print("  %s %s\n", dimStyle.Render("[dry-run]"), repoName)
@@ -223,16 +222,16 @@ func runApply() error {
 }
 
 // getApplyTargetRepos gets repos to apply command to
-func getApplyTargetRepos() ([]*repos.Repo, error) {
+func getApplyTargetRepos() ([]*repos.Repo, coreFailure) {
 	// Load registry
 	registryPath, err := repos.FindRegistry(io.Local)
 	if err != nil {
-		return nil, core.E("dev.apply", "failed to find registry", err)
+		return nil, log.E("dev.apply", "failed to find registry", err)
 	}
 
 	registry, err := repos.LoadRegistry(io.Local, registryPath)
 	if err != nil {
-		return nil, core.E("dev.apply", "failed to load registry", err)
+		return nil, log.E("dev.apply", "failed to load registry", err)
 	}
 
 	return filterTargetRepos(registry, applyRepos), nil
@@ -271,44 +270,41 @@ func filterTargetRepos(registry *repos.Registry, selection string) []*repos.Repo
 }
 
 // runCommandInRepo runs a shell command in a repo directory
-func runCommandInRepo(ctx context.Context, repoPath, command string) error {
+func runCommandInRepo(ctx context.Context, repoPath, command string) (_ coreFailure) {
 	// Use shell to execute command
-	var cmd *exec.Cmd
+	var cmd *coreexec.Cmd
 	if isWindows() {
-		cmd = exec.CommandContext(ctx, "cmd", "/C", command)
+		cmd = coreexec.Command(ctx, "cmd", "/C", command)
 	} else {
-		cmd = exec.CommandContext(ctx, "sh", "-c", command)
+		cmd = coreexec.Command(ctx, "sh", "-c", command)
 	}
-	cmd.Dir = repoPath
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd = cmd.WithDir(repoPath).WithStdout(core.Stdout()).WithStderr(core.Stderr())
 
-	return cmd.Run()
+	return resultError(cmd.Run())
 }
 
 // runScriptInRepo runs a script in a repo directory
-func runScriptInRepo(ctx context.Context, repoPath, scriptPath string) error {
+func runScriptInRepo(ctx context.Context, repoPath, scriptPath string) (_ coreFailure) {
 	// Get absolute path to script
-	absScript, err := filepath.Abs(scriptPath)
-	if err != nil {
-		return err
+	absResult := core.PathAbs(scriptPath)
+	if !absResult.OK {
+		return absResult.Value.(error)
 	}
+	absScript := absResult.Value.(string)
 
-	var cmd *exec.Cmd
+	var cmd *coreexec.Cmd
 	if isWindows() {
-		cmd = exec.CommandContext(ctx, "cmd", "/C", absScript)
+		cmd = coreexec.Command(ctx, "cmd", "/C", absScript)
 	} else {
 		// Execute script directly to honor shebang
-		cmd = exec.CommandContext(ctx, absScript)
+		cmd = coreexec.Command(ctx, absScript)
 	}
-	cmd.Dir = repoPath
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd = cmd.WithDir(repoPath).WithStdout(core.Stdout()).WithStderr(core.Stderr())
 
-	return cmd.Run()
+	return resultError(cmd.Run())
 }
 
 // isWindows returns true if running on Windows
 func isWindows() bool {
-	return os.PathSeparator == '\\'
+	return core.PathSeparator == '\\'
 }

@@ -1,8 +1,6 @@
 package docs
 
 import (
-	"strings"
-
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 )
@@ -21,7 +19,7 @@ func init() {
 	docsListCmd.Flags().StringVar(&docsListRegistryPath, "registry", "", i18n.T("common.flag.registry"))
 }
 
-func runDocsList(registryPath string) error {
+func runDocsList(registryPath string) (_ coreFailure) {
 	reg, _, err := loadRegistry(registryPath)
 	if err != nil {
 		return err
@@ -34,7 +32,7 @@ func runDocsList(registryPath string) error {
 		headerStyle.Render(i18n.T("cmd.docs.list.header.changelog")),
 		headerStyle.Render(i18n.T("cmd.docs.list.header.docs")),
 	)
-	cli.Text(strings.Repeat("─", 70))
+	cli.Text("──────────────────────────────────────────────────────────────────────")
 
 	var withDocs, withoutDocs int
 	for _, repo := range reg.List() {

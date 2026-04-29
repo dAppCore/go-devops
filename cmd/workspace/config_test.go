@@ -1,50 +1,92 @@
 package workspace
 
 import (
-	"os"
-	"path/filepath"
-	"testing"
+	. "dappco.re/go"
 )
 
-func TestLoadConfig_RelativeDirFindsParentConfig_Good(t *testing.T) {
-	root := t.TempDir()
-	if err := os.MkdirAll(filepath.Join(root, ".core"), 0o755); err != nil {
-		t.Fatalf("create .core dir: %v", err)
-	}
-	if err := os.MkdirAll(filepath.Join(root, "packages", "app"), 0o755); err != nil {
-		t.Fatalf("create app dir: %v", err)
-	}
-	if err := os.WriteFile(filepath.Join(root, ".core", "workspace.yaml"), []byte(`version: 1
-active: app
-packages_dir: ./packages
-`), 0o600); err != nil {
-		t.Fatalf("write workspace config: %v", err)
-	}
+func TestConfig_DefaultConfig_Good(t *T) {
+	cfg := DefaultConfig()
 
-	originalWD, err := os.Getwd()
-	if err != nil {
-		t.Fatalf("get working directory: %v", err)
-	}
-	t.Cleanup(func() {
-		if err := os.Chdir(originalWD); err != nil {
-			t.Fatalf("restore working directory: %v", err)
-		}
-	})
-	if err := os.Chdir(filepath.Join(root, "packages", "app")); err != nil {
-		t.Fatalf("change working directory: %v", err)
-	}
+	AssertEqual(t, 1, cfg.Version)
+	AssertEqual(t, "./packages", cfg.PackagesDir)
+}
 
-	cfg, err := LoadConfig(".")
-	if err != nil {
-		t.Fatalf("load config: %v", err)
-	}
-	if cfg == nil {
-		t.Fatal("expected config")
-	}
-	if cfg.Active != "app" {
-		t.Fatalf("active = %q, want app", cfg.Active)
-	}
-	if cfg.PackagesDir != "./packages" {
-		t.Fatalf("packages dir = %q, want ./packages", cfg.PackagesDir)
-	}
+func TestConfig_DefaultConfig_Bad(t *T) {
+	cfg := DefaultConfig()
+
+	AssertEqual(t, "", cfg.Active)
+	AssertEmpty(t, cfg.DefaultOnly)
+}
+
+func TestConfig_DefaultConfig_Ugly(t *T) {
+	first := DefaultConfig()
+	second := DefaultConfig()
+	first.PackagesDir = "changed"
+
+	AssertEqual(t, "./packages", second.PackagesDir)
+	AssertNotEqual(t, first.PackagesDir, second.PackagesDir)
+}
+
+func TestConfig_LoadConfig_Good(t *T) {
+	dir := t.TempDir()
+	RequireTrue(t, MkdirAll(Path(dir, ".core"), 0o755).OK)
+	RequireTrue(t, WriteFile(Path(dir, ".core", "workspace.yaml"), []byte("version: 1\nactive: devops\npackages_dir: repos\n"), 0o644).OK)
+
+	cfg, err := LoadConfig(dir)
+	AssertNoError(t, err)
+	AssertEqual(t, "devops", cfg.Active)
+	AssertEqual(t, "repos", cfg.PackagesDir)
+}
+
+func TestConfig_LoadConfig_Bad(t *T) {
+	cfg, err := LoadConfig(t.TempDir())
+	AssertNoError(t, err)
+
+	AssertNil(t, cfg)
+	AssertNoError(t, err)
+}
+
+func TestConfig_LoadConfig_Ugly(t *T) {
+	dir := t.TempDir()
+	child := Path(dir, "a", "b")
+	RequireTrue(t, MkdirAll(Path(dir, ".core"), 0o755).OK)
+	RequireTrue(t, MkdirAll(child, 0o755).OK)
+	RequireTrue(t, WriteFile(Path(dir, ".core", "workspace.yaml"), []byte("version: 1\npackages_dir: nested\n"), 0o644).OK)
+
+	cfg, err := LoadConfig(child)
+	AssertNoError(t, err)
+	AssertEqual(t, "nested", cfg.PackagesDir)
+}
+
+func TestConfig_FindRoot_Good(t *T) {
+	dir := t.TempDir()
+	RequireTrue(t, MkdirAll(Path(dir, ".core"), 0o755).OK)
+	RequireTrue(t, WriteFile(Path(dir, ".core", "workspace.yaml"), []byte("version: 1\n"), 0o644).OK)
+	t.Chdir(dir)
+
+	root, err := FindRoot()
+	AssertNoError(t, err)
+	AssertEqual(t, dir, root)
+}
+
+func TestConfig_FindRoot_Bad(t *T) {
+	dir := t.TempDir()
+	t.Chdir(dir)
+
+	root, err := FindRoot()
+	AssertError(t, err)
+	AssertEqual(t, "", root)
+}
+
+func TestConfig_FindRoot_Ugly(t *T) {
+	dir := t.TempDir()
+	child := Path(dir, "nested", "deep")
+	RequireTrue(t, MkdirAll(Path(dir, ".core"), 0o755).OK)
+	RequireTrue(t, MkdirAll(child, 0o755).OK)
+	RequireTrue(t, WriteFile(Path(dir, ".core", "workspace.yaml"), []byte("version: 1\n"), 0o644).OK)
+	t.Chdir(child)
+
+	root, err := FindRoot()
+	AssertNoError(t, err)
+	AssertEqual(t, dir, root)
 }

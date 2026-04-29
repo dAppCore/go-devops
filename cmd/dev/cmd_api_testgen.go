@@ -1,10 +1,9 @@
 package dev
 
 import (
-	"bytes"
-	"path/filepath"
 	"text/template"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	coreio "dappco.re/go/io"
@@ -27,7 +26,7 @@ func addTestGenCommand(parent *cli.Command) {
 	parent.AddCommand(testGenCmd)
 }
 
-func runTestGen() error {
+func runTestGen() (_ coreFailure) {
 	pkgDir := "pkg"
 	internalDirs, err := coreio.Local.List(pkgDir)
 	if err != nil {
@@ -40,9 +39,9 @@ func runTestGen() error {
 		}
 
 		serviceName := dir.Name()
-		internalDir := filepath.Join(pkgDir, serviceName)
+		internalDir := core.PathJoin(pkgDir, serviceName)
 		publicDir := serviceName
-		publicTestFile := filepath.Join(publicDir, serviceName+"_test.go")
+		publicTestFile := core.PathJoin(publicDir, serviceName+"_test.go")
 
 		if !coreio.Local.Exists(internalDir) {
 			continue
@@ -85,7 +84,7 @@ var _ = impl.{{.Name}}
 {{end}}
 `
 
-func generatePublicAPITestFile(dir, path, serviceName string, symbols []symbolInfo) error {
+func generatePublicAPITestFile(dir, path, serviceName string, symbols []symbolInfo) (_ coreFailure) {
 	if err := coreio.Local.EnsureDir(dir); err != nil {
 		return err
 	}
@@ -103,8 +102,8 @@ func generatePublicAPITestFile(dir, path, serviceName string, symbols []symbolIn
 		Symbols:     symbols,
 	}
 
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
+	buf := core.NewBuffer()
+	if err := tmpl.Execute(buf, data); err != nil {
 		return err
 	}
 

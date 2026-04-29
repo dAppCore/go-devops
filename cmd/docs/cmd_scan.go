@@ -1,11 +1,7 @@
 package docs
 
 import (
-	"io/fs"
-	"os"
-	"path/filepath"
-	"strings"
-
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/devops/cmd/workspace"
 	"dappco.re/go/i18n"
@@ -25,7 +21,7 @@ type RepoDocInfo struct {
 	KBFiles   []string // All files in KB/ directory (recursive)
 }
 
-func loadRegistry(registryPath string) (*repos.Registry, string, error) {
+func loadRegistry(registryPath string) (*repos.Registry, string, coreFailure) {
 	var reg *repos.Registry
 	var err error
 	var registryDir string
@@ -35,7 +31,7 @@ func loadRegistry(registryPath string) (*repos.Registry, string, error) {
 		if err != nil {
 			return nil, "", cli.Wrap(err, i18n.T("i18n.fail.load", "registry"))
 		}
-		registryDir = filepath.Dir(registryPath)
+		registryDir = core.PathDir(registryPath)
 	} else {
 		registryPath, err = repos.FindRegistry(io.Local)
 		if err == nil {
@@ -43,9 +39,12 @@ func loadRegistry(registryPath string) (*repos.Registry, string, error) {
 			if err != nil {
 				return nil, "", cli.Wrap(err, i18n.T("i18n.fail.load", "registry"))
 			}
-			registryDir = filepath.Dir(registryPath)
+			registryDir = core.PathDir(registryPath)
 		} else {
-			cwd, _ := os.Getwd()
+			cwd := "."
+			if cwdResult := core.Getwd(); cwdResult.OK {
+				cwd = cwdResult.Value.(string)
+			}
 			reg, err = repos.ScanDirectory(io.Local, cwd)
 			if err != nil {
 				return nil, "", cli.Wrap(err, i18n.T("i18n.fail.scan", "directory"))
@@ -66,13 +65,14 @@ func loadRegistry(registryPath string) (*repos.Registry, string, error) {
 		pkgDir := wsConfig.PackagesDir
 
 		// Expand ~
-		if strings.HasPrefix(pkgDir, "~/") {
-			home, _ := os.UserHomeDir()
-			pkgDir = filepath.Join(home, pkgDir[2:])
+		if core.HasPrefix(pkgDir, "~/") {
+			if homeResult := core.UserHomeDir(); homeResult.OK {
+				pkgDir = core.PathJoin(homeResult.Value.(string), pkgDir[2:])
+			}
 		}
 
-		if !filepath.IsAbs(pkgDir) {
-			pkgDir = filepath.Join(registryDir, pkgDir)
+		if !core.PathIsAbs(pkgDir) {
+			pkgDir = core.PathJoin(registryDir, pkgDir)
 		}
 		basePath = pkgDir
 
@@ -80,7 +80,7 @@ func loadRegistry(registryPath string) (*repos.Registry, string, error) {
 		// This ensures consistency when packages_dir overrides the default
 		reg.BasePath = basePath
 		for _, repo := range reg.Repos {
-			repo.Path = filepath.Join(basePath, repo.Name)
+			repo.Path = core.PathJoin(basePath, repo.Name)
 		}
 	}
 
@@ -94,48 +94,48 @@ func scanRepoDocs(repo *repos.Repo) RepoDocInfo {
 	}
 
 	// Check for README.md
-	readme := filepath.Join(repo.Path, "README.md")
+	readme := core.PathJoin(repo.Path, "README.md")
 	if io.Local.IsFile(readme) {
 		info.Readme = readme
 		info.HasDocs = true
 	}
 
 	// Check for CLAUDE.md
-	claudeMd := filepath.Join(repo.Path, "CLAUDE.md")
+	claudeMd := core.PathJoin(repo.Path, "CLAUDE.md")
 	if io.Local.IsFile(claudeMd) {
 		info.ClaudeMd = claudeMd
 		info.HasDocs = true
 	}
 
 	// Check for CHANGELOG.md
-	changelog := filepath.Join(repo.Path, "CHANGELOG.md")
+	changelog := core.PathJoin(repo.Path, "CHANGELOG.md")
 	if io.Local.IsFile(changelog) {
 		info.Changelog = changelog
 		info.HasDocs = true
 	}
 
 	// Recursively scan docs/ directory for .md files
-	docsDir := filepath.Join(repo.Path, "docs")
+	docsDir := core.PathJoin(repo.Path, "docs")
 	// Check if directory exists by listing it
 	if _, err := io.Local.List(docsDir); err == nil {
-		if err := filepath.WalkDir(docsDir, func(path string, d fs.DirEntry, err error) error {
+		if err := core.PathWalkDir(docsDir, func(path string, d core.FsDirEntry, err error) error {
 			if err != nil {
 				return nil
 			}
 			// Skip plans/ directory
 			if d.IsDir() && d.Name() == "plans" {
-				return filepath.SkipDir
+				return core.PathSkipDir
 			}
 			// Skip non-markdown files
-			if d.IsDir() || !strings.HasSuffix(d.Name(), ".md") {
+			if d.IsDir() || !core.HasSuffix(d.Name(), ".md") {
 				return nil
 			}
 			// Get relative path from docs/
-			relPath, err := filepath.Rel(docsDir, path)
-			if err != nil {
-				return err
+			relResult := core.PathRel(docsDir, path)
+			if !relResult.OK {
+				return relResult.Value.(error)
 			}
-			info.DocsFiles = append(info.DocsFiles, relPath)
+			info.DocsFiles = append(info.DocsFiles, relResult.Value.(string))
 			info.HasDocs = true
 			return nil
 		}); err != nil {
@@ -144,20 +144,20 @@ func scanRepoDocs(repo *repos.Repo) RepoDocInfo {
 	}
 
 	// Recursively scan KB/ directory for .md files
-	kbDir := filepath.Join(repo.Path, "KB")
+	kbDir := core.PathJoin(repo.Path, "KB")
 	if _, err := io.Local.List(kbDir); err == nil {
-		if err := filepath.WalkDir(kbDir, func(path string, d fs.DirEntry, err error) error {
+		if err := core.PathWalkDir(kbDir, func(path string, d core.FsDirEntry, err error) error {
 			if err != nil {
 				return nil
 			}
-			if d.IsDir() || !strings.HasSuffix(d.Name(), ".md") {
+			if d.IsDir() || !core.HasSuffix(d.Name(), ".md") {
 				return nil
 			}
-			relPath, err := filepath.Rel(kbDir, path)
-			if err != nil {
-				return err
+			relResult := core.PathRel(kbDir, path)
+			if !relResult.OK {
+				return relResult.Value.(error)
 			}
-			info.KBFiles = append(info.KBFiles, relPath)
+			info.KBFiles = append(info.KBFiles, relResult.Value.(string))
 			info.HasDocs = true
 			return nil
 		}); err != nil {

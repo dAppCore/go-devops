@@ -2,9 +2,8 @@ package dev
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/scm/git"
@@ -33,9 +32,12 @@ func AddPushCommand(parent *cli.Command) {
 	parent.AddCommand(pushCmd)
 }
 
-func runPush(registryPath string, force bool) error {
+func runPush(registryPath string, force bool) (_ coreFailure) {
 	ctx := context.Background()
-	cwd, _ := os.Getwd()
+	cwd := "."
+	if cwdResult := core.Getwd(); cwdResult.OK {
+		cwd = cwdResult.Value.(string)
+	}
 
 	// Check if current directory is a git repo (single-repo mode)
 	if registryPath == "" && isGitRepo(cwd) {
@@ -168,8 +170,8 @@ func runPush(registryPath string, force bool) error {
 }
 
 // runPushSingleRepo handles push for a single repo (current directory).
-func runPushSingleRepo(ctx context.Context, repoPath string, force bool) error {
-	repoName := filepath.Base(repoPath)
+func runPushSingleRepo(ctx context.Context, repoPath string, force bool) (_ coreFailure) {
+	repoName := core.PathBase(repoPath)
 
 	// Get status
 	statuses := git.Status(ctx, git.StatusOptions{

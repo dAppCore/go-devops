@@ -1,11 +1,7 @@
 package docs
 
 import (
-	"bytes"
-	"fmt"
-	"path/filepath"
-	"strings"
-
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/io"
@@ -41,8 +37,8 @@ func packageOutputName(repoName string) string {
 		return "go"
 	}
 	// core-admin -> admin, core-api -> api, etc.
-	if strings.HasPrefix(repoName, "core-") {
-		return strings.TrimPrefix(repoName, "core-")
+	if core.HasPrefix(repoName, "core-") {
+		return core.TrimPrefix(repoName, "core-")
 	}
 	return repoName
 }
@@ -60,7 +56,7 @@ func shouldSyncRepo(repoName string) bool {
 	return true
 }
 
-func runDocsSync(registryPath string, outputDir string, dryRun bool, target string) error {
+func runDocsSync(registryPath string, outputDir string, dryRun bool, target string) (_ coreFailure) {
 	reg, basePath, err := loadRegistry(registryPath)
 	if err != nil {
 		return err
@@ -76,10 +72,10 @@ func runDocsSync(registryPath string, outputDir string, dryRun bool, target stri
 	}
 }
 
-func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) error {
+func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) (_ coreFailure) {
 	// Default output to core-php/docs/packages relative to registry
 	if outputDir == "" {
-		outputDir = filepath.Join(basePath, "core-php", "docs", "packages")
+		outputDir = core.PathJoin(basePath, "core-php", "docs", "packages")
 	}
 
 	// Scan all repos for docs
@@ -137,7 +133,7 @@ func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun b
 	var synced int
 	for _, info := range docsInfo {
 		outName := packageOutputName(info.Name)
-		repoOutDir := filepath.Join(outputDir, outName)
+		repoOutDir := core.PathJoin(outputDir, outName)
 
 		// Clear existing directory (recursively)
 		if err := resetOutputDir(repoOutDir); err != nil {
@@ -146,12 +142,12 @@ func runPHPSync(reg *repos.Registry, basePath string, outputDir string, dryRun b
 		}
 
 		// Copy all docs files
-		docsDir := filepath.Join(info.Path, "docs")
+		docsDir := core.PathJoin(info.Path, "docs")
 		for _, f := range info.DocsFiles {
-			src := filepath.Join(docsDir, f)
-			dst := filepath.Join(repoOutDir, f)
+			src := core.PathJoin(docsDir, f)
+			dst := core.PathJoin(repoOutDir, f)
 			// Ensure parent dir
-			if err := io.Local.EnsureDir(filepath.Dir(dst)); err != nil {
+			if err := io.Local.EnsureDir(core.PathDir(dst)); err != nil {
 				cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), f, err)
 				continue
 			}
@@ -178,41 +174,52 @@ func zensicalOutputName(repoName string) (string, string) {
 	if repoName == "core" {
 		return "cli", ""
 	}
-	if strings.HasPrefix(repoName, "go-") {
+	if core.HasPrefix(repoName, "go-") {
 		return "go", repoName
 	}
-	if strings.HasPrefix(repoName, "core-") {
-		return "php", strings.TrimPrefix(repoName, "core-")
+	if core.HasPrefix(repoName, "core-") {
+		return "php", core.TrimPrefix(repoName, "core-")
 	}
 	return "go", repoName
 }
 
 // injectFrontMatter prepends Hugo front matter to markdown content if missing.
 func injectFrontMatter(content []byte, title string, weight int) []byte {
-	if bytes.HasPrefix(bytes.TrimSpace(content), []byte("---")) {
+	if core.HasPrefix(core.Trim(string(content)), "---") {
 		return content
 	}
-	fm := fmt.Sprintf("---\ntitle: %q\nweight: %d\n---\n\n", title, weight)
+	fm := core.Sprintf("---\ntitle: %q\nweight: %d\n---\n\n", title, weight)
 	return append([]byte(fm), content...)
 }
 
 // titleFromFilename derives a human-readable title from a filename.
 func titleFromFilename(filename string) string {
-	name := strings.TrimSuffix(filepath.Base(filename), ".md")
-	name = strings.ReplaceAll(name, "-", " ")
-	name = strings.ReplaceAll(name, "_", " ")
-	words := strings.Fields(name)
+	name := core.TrimSuffix(core.PathBase(filename), ".md")
+	name = core.Replace(name, "-", " ")
+	name = core.Replace(name, "_", " ")
+	words := splitFields(name)
 	for i, w := range words {
 		if len(w) > 0 {
-			words[i] = strings.ToUpper(w[:1]) + w[1:]
+			words[i] = core.Upper(w[:1]) + w[1:]
 		}
 	}
-	return strings.Join(words, " ")
+	return core.Join(" ", words...)
+}
+
+func splitFields(s string) []string {
+	var fields []string
+	for _, candidate := range core.Split(s, " ") {
+		candidate = core.Trim(candidate)
+		if candidate != "" {
+			fields = append(fields, candidate)
+		}
+	}
+	return fields
 }
 
 // copyWithFrontMatter copies a markdown file, injecting front matter if missing.
-func copyWithFrontMatter(src, dst string, weight int) error {
-	if err := io.Local.EnsureDir(filepath.Dir(dst)); err != nil {
+func copyWithFrontMatter(src, dst string, weight int) (_ coreFailure) {
+	if err := io.Local.EnsureDir(core.PathDir(dst)); err != nil {
 		return err
 	}
 	content, err := io.Local.Read(src)
@@ -224,9 +231,9 @@ func copyWithFrontMatter(src, dst string, weight int) error {
 	return io.Local.Write(dst, string(result))
 }
 
-func runZensicalSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) error {
+func runZensicalSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) (_ coreFailure) {
 	if outputDir == "" {
-		outputDir = filepath.Join(basePath, "docs-site", "docs")
+		outputDir = core.PathJoin(basePath, "docs-site", "docs")
 	}
 
 	var docsInfo []RepoDocInfo
@@ -277,9 +284,9 @@ repoLoop:
 	for _, info := range docsInfo {
 		section, folder := zensicalOutputName(info.Name)
 
-		destDir := filepath.Join(outputDir, section)
+		destDir := core.PathJoin(outputDir, section)
 		if folder != "" {
-			destDir = filepath.Join(destDir, folder)
+			destDir = core.PathJoin(destDir, folder)
 		}
 
 		if err := resetOutputDir(destDir); err != nil {
@@ -288,10 +295,10 @@ repoLoop:
 		}
 
 		weight := 10
-		docsDir := filepath.Join(info.Path, "docs")
+		docsDir := core.PathJoin(info.Path, "docs")
 		for _, f := range info.DocsFiles {
-			src := filepath.Join(docsDir, f)
-			dst := filepath.Join(destDir, f)
+			src := core.PathJoin(docsDir, f)
+			dst := core.PathJoin(destDir, f)
 			if err := copyWithFrontMatter(src, dst, weight); err != nil {
 				cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), f, err)
 				continue
@@ -306,17 +313,17 @@ repoLoop:
 		}
 
 		if len(info.KBFiles) > 0 {
-			suffix := strings.TrimPrefix(info.Name, "go-")
-			kbDestDir := filepath.Join(outputDir, "kb", suffix)
+			suffix := core.TrimPrefix(info.Name, "go-")
+			kbDestDir := core.PathJoin(outputDir, "kb", suffix)
 			if err := resetOutputDir(kbDestDir); err != nil {
 				cli.Print("  %s KB: %s\n", errorStyle.Render("✗"), err)
 				continue repoLoop
 			}
-			kbDir := filepath.Join(info.Path, "KB")
+			kbDir := core.PathJoin(info.Path, "KB")
 			kbWeight := 10
 			for _, f := range info.KBFiles {
-				src := filepath.Join(kbDir, f)
-				dst := filepath.Join(kbDestDir, f)
+				src := core.PathJoin(kbDir, f)
+				dst := core.PathJoin(kbDestDir, f)
 				if err := copyWithFrontMatter(src, dst, kbWeight); err != nil {
 					cli.Print("  %s KB/%s: %s\n", errorStyle.Render("✗"), f, err)
 					continue
@@ -334,13 +341,13 @@ repoLoop:
 }
 
 // copyZensicalReadme copies a repository README to index.md in the target directory.
-func copyZensicalReadme(src, destDir string) error {
-	dst := filepath.Join(destDir, "index.md")
+func copyZensicalReadme(src, destDir string) (_ coreFailure) {
+	dst := core.PathJoin(destDir, "index.md")
 	return copyWithFrontMatter(src, dst, 1)
 }
 
 // resetOutputDir clears and recreates a target directory before copying files into it.
-func resetOutputDir(dir string) error {
+func resetOutputDir(dir string) (_ coreFailure) {
 	if err := io.Local.DeleteAll(dir); err != nil {
 		return err
 	}
@@ -352,15 +359,15 @@ func goHelpOutputName(repoName string) string {
 	if repoName == "core" {
 		return "go"
 	}
-	if strings.HasPrefix(repoName, "core-") {
-		return strings.TrimPrefix(repoName, "core-")
+	if core.HasPrefix(repoName, "core-") {
+		return core.TrimPrefix(repoName, "core-")
 	}
 	return repoName
 }
 
-func runGoHelpSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) error {
+func runGoHelpSync(reg *repos.Registry, basePath string, outputDir string, dryRun bool) (_ coreFailure) {
 	if outputDir == "" {
-		outputDir = filepath.Join(basePath, "docs", "content")
+		outputDir = core.PathJoin(basePath, "docs", "content")
 	}
 
 	var docsInfo []RepoDocInfo
@@ -406,7 +413,7 @@ func runGoHelpSync(reg *repos.Registry, basePath string, outputDir string, dryRu
 	var synced int
 	for _, info := range docsInfo {
 		outName := goHelpOutputName(info.Name)
-		repoOutDir := filepath.Join(outputDir, outName)
+		repoOutDir := core.PathJoin(outputDir, outName)
 
 		// Clear existing directory
 		if err := resetOutputDir(repoOutDir); err != nil {
@@ -415,11 +422,11 @@ func runGoHelpSync(reg *repos.Registry, basePath string, outputDir string, dryRu
 		}
 
 		// Plain copy of docs files (no frontmatter injection)
-		docsDir := filepath.Join(info.Path, "docs")
+		docsDir := core.PathJoin(info.Path, "docs")
 		for _, f := range info.DocsFiles {
-			src := filepath.Join(docsDir, f)
-			dst := filepath.Join(repoOutDir, f)
-			if err := io.Local.EnsureDir(filepath.Dir(dst)); err != nil {
+			src := core.PathJoin(docsDir, f)
+			dst := core.PathJoin(repoOutDir, f)
+			if err := io.Local.EnsureDir(core.PathDir(dst)); err != nil {
 				cli.Print("  %s %s: %s\n", errorStyle.Render("✗"), f, err)
 				continue
 			}

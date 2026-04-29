@@ -1,15 +1,13 @@
 package dev
 
 import (
-	"bytes"
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"path/filepath"
 	"sort"
-	"strings"
 	"text/template"
 
+	core "dappco.re/go"
 	"dappco.re/go/i18n"
 	coreio "dappco.re/go/io"
 
@@ -42,7 +40,7 @@ type symbolInfo struct {
 	Kind string // "var", "func", "type", "const"
 }
 
-func runSync() error {
+func runSync() (_ coreFailure) {
 	pkgDir := "pkg"
 	internalDirs, err := coreio.Local.List(pkgDir)
 	if err != nil {
@@ -55,9 +53,9 @@ func runSync() error {
 		}
 
 		serviceName := dir.Name()
-		internalDir := filepath.Join(pkgDir, serviceName)
+		internalDir := core.PathJoin(pkgDir, serviceName)
 		publicDir := serviceName
-		publicFile := filepath.Join(publicDir, serviceName+".go")
+		publicFile := core.PathJoin(publicDir, serviceName+".go")
 
 		if !coreio.Local.Exists(internalDir) {
 			continue
@@ -76,7 +74,7 @@ func runSync() error {
 	return nil
 }
 
-func getExportedSymbols(path string) ([]symbolInfo, error) {
+func getExportedSymbols(path string) ([]symbolInfo, coreFailure) {
 	files, err := listGoFiles(path)
 	if err != nil {
 		return nil, err
@@ -137,7 +135,7 @@ func getExportedSymbols(path string) ([]symbolInfo, error) {
 	return symbols, nil
 }
 
-func listGoFiles(path string) ([]string, error) {
+func listGoFiles(path string) ([]string, coreFailure) {
 	entries, err := coreio.Local.List(path)
 	if err == nil {
 		files := make([]string, 0, len(entries))
@@ -147,11 +145,11 @@ func listGoFiles(path string) ([]string, error) {
 			}
 
 			name := entry.Name()
-			if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
+			if !core.HasSuffix(name, ".go") || core.HasSuffix(name, "_test.go") {
 				continue
 			}
 
-			files = append(files, filepath.Join(path, name))
+			files = append(files, core.PathJoin(path, name))
 		}
 		sort.Strings(files)
 		return files, nil
@@ -196,7 +194,7 @@ var {{.Name}} = impl.{{.Name}}
 type {{.InterfaceName}} = core.{{.InterfaceName}}
 `
 
-func generatePublicAPIFile(dir, path, serviceName string, symbols []symbolInfo) error {
+func generatePublicAPIFile(dir, path, serviceName string, symbols []symbolInfo) (_ coreFailure) {
 	if err := coreio.Local.EnsureDir(dir); err != nil {
 		return err
 	}
@@ -219,8 +217,8 @@ func generatePublicAPIFile(dir, path, serviceName string, symbols []symbolInfo) 
 		InterfaceName: interfaceName,
 	}
 
-	var buf bytes.Buffer
-	if err := tmpl.Execute(&buf, data); err != nil {
+	buf := core.NewBuffer()
+	if err := tmpl.Execute(buf, data); err != nil {
 		return err
 	}
 

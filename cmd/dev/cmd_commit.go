@@ -2,9 +2,8 @@ package dev
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	coreio "dappco.re/go/io"
@@ -34,9 +33,12 @@ func AddCommitCommand(parent *cli.Command) {
 	parent.AddCommand(commitCmd)
 }
 
-func runCommit(registryPath string, all bool) error {
+func runCommit(registryPath string, all bool) (_ coreFailure) {
 	ctx := context.Background()
-	cwd, _ := os.Getwd()
+	cwd := "."
+	if cwdResult := core.Getwd(); cwdResult.OK {
+		cwd = cwdResult.Value.(string)
+	}
 
 	// Check if current directory is a git repo (single-repo mode)
 	if registryPath == "" && isGitRepo(cwd) {
@@ -145,8 +147,8 @@ func isGitRepo(path string) bool {
 }
 
 // runCommitSingleRepo handles commit for a single repo (current directory).
-func runCommitSingleRepo(ctx context.Context, repoPath string, all bool) error {
-	repoName := filepath.Base(repoPath)
+func runCommitSingleRepo(ctx context.Context, repoPath string, all bool) (_ coreFailure) {
+	repoName := core.PathBase(repoPath)
 
 	// Get status
 	statuses := git.Status(ctx, git.StatusOptions{

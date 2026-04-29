@@ -2,10 +2,8 @@ package deploy
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"os"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/devops/deploy/coolify"
 	"dappco.re/go/i18n"
@@ -74,8 +72,8 @@ var callCmd = &cli.Command{
 
 func init() {
 	// Global flags
-	Cmd.PersistentFlags().StringVar(&coolifyURL, "url", os.Getenv("COOLIFY_URL"), "Coolify API URL")
-	Cmd.PersistentFlags().StringVar(&coolifyToken, "token", os.Getenv("COOLIFY_TOKEN"), "Coolify API token")
+	Cmd.PersistentFlags().StringVar(&coolifyURL, "url", core.Getenv("COOLIFY_URL"), "Coolify API URL")
+	Cmd.PersistentFlags().StringVar(&coolifyToken, "token", core.Getenv("COOLIFY_TOKEN"), "Coolify API token")
 	Cmd.PersistentFlags().BoolVar(&outputJSON, "json", false, "Output as JSON")
 
 	// Add subcommands
@@ -88,7 +86,7 @@ func init() {
 	Cmd.AddCommand(callCmd)
 }
 
-func getClient() (*coolify.Client, error) {
+func getClient() (*coolify.Client, coreFailure) {
 	cfg := coolify.Config{
 		BaseURL:   coolifyURL,
 		APIToken:  coolifyToken,
@@ -97,20 +95,25 @@ func getClient() (*coolify.Client, error) {
 	}
 
 	if cfg.BaseURL == "" {
-		cfg.BaseURL = os.Getenv("COOLIFY_URL")
+		cfg.BaseURL = core.Getenv("COOLIFY_URL")
 	}
 	if cfg.APIToken == "" {
-		cfg.APIToken = os.Getenv("COOLIFY_TOKEN")
+		cfg.APIToken = core.Getenv("COOLIFY_TOKEN")
 	}
 
 	return coolify.NewClient(cfg)
 }
 
-func outputResult(data any) error {
+func outputResult(data any) (_ coreFailure) {
 	if outputJSON {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		return enc.Encode(data)
+		r := core.JSONMarshalIndent(data, "", "  ")
+		if !r.OK {
+			return r.Value.(error)
+		}
+		if write := core.WriteString(core.Stdout(), string(r.Value.([]byte))+"\n"); !write.OK {
+			return write.Value.(error)
+		}
+		return nil
 	}
 
 	// Pretty print based on type
@@ -122,7 +125,7 @@ func outputResult(data any) error {
 	case map[string]any:
 		printItem(v)
 	default:
-		fmt.Printf("%v\n", data)
+		cli.Print("%v\n", data)
 	}
 	return nil
 }
@@ -130,28 +133,28 @@ func outputResult(data any) error {
 func printItem(item map[string]any) {
 	// Common fields to display
 	if uuid, ok := item["uuid"].(string); ok {
-		fmt.Printf("%s  ", cli.DimStyle.Render(uuid[:8]))
+		cli.Print("%s  ", cli.DimStyle.Render(uuid[:8]))
 	}
 	if name, ok := item["name"].(string); ok {
-		fmt.Printf("%s", cli.TitleStyle.Render(name))
+		cli.Print("%s", cli.TitleStyle.Render(name))
 	}
 	if desc, ok := item["description"].(string); ok && desc != "" {
-		fmt.Printf("  %s", cli.DimStyle.Render(desc))
+		cli.Print("  %s", cli.DimStyle.Render(desc))
 	}
 	if status, ok := item["status"].(string); ok {
 		switch status {
 		case "running":
-			fmt.Printf("  %s", cli.SuccessStyle.Render("●"))
+			cli.Print("  %s", cli.SuccessStyle.Render("●"))
 		case "stopped":
-			fmt.Printf("  %s", cli.ErrorStyle.Render("○"))
+			cli.Print("  %s", cli.ErrorStyle.Render("○"))
 		default:
-			fmt.Printf("  %s", cli.DimStyle.Render(status))
+			cli.Print("  %s", cli.DimStyle.Render(status))
 		}
 	}
-	fmt.Println()
+	core.Println()
 }
 
-func runListServers(cmd *cli.Command, args []string) error {
+func runListServers(cmd *cli.Command, args []string) (_ coreFailure) {
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -163,14 +166,14 @@ func runListServers(cmd *cli.Command, args []string) error {
 	}
 
 	if len(servers) == 0 {
-		fmt.Println("No servers found")
+		core.Println("No servers found")
 		return nil
 	}
 
 	return outputResult(servers)
 }
 
-func runListProjects(cmd *cli.Command, args []string) error {
+func runListProjects(cmd *cli.Command, args []string) (_ coreFailure) {
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -182,14 +185,14 @@ func runListProjects(cmd *cli.Command, args []string) error {
 	}
 
 	if len(projects) == 0 {
-		fmt.Println("No projects found")
+		core.Println("No projects found")
 		return nil
 	}
 
 	return outputResult(projects)
 }
 
-func runListApps(cmd *cli.Command, args []string) error {
+func runListApps(cmd *cli.Command, args []string) (_ coreFailure) {
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -201,14 +204,14 @@ func runListApps(cmd *cli.Command, args []string) error {
 	}
 
 	if len(apps) == 0 {
-		fmt.Println("No applications found")
+		core.Println("No applications found")
 		return nil
 	}
 
 	return outputResult(apps)
 }
 
-func runListDatabases(cmd *cli.Command, args []string) error {
+func runListDatabases(cmd *cli.Command, args []string) (_ coreFailure) {
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -220,14 +223,14 @@ func runListDatabases(cmd *cli.Command, args []string) error {
 	}
 
 	if len(dbs) == 0 {
-		fmt.Println("No databases found")
+		core.Println("No databases found")
 		return nil
 	}
 
 	return outputResult(dbs)
 }
 
-func runListServices(cmd *cli.Command, args []string) error {
+func runListServices(cmd *cli.Command, args []string) (_ coreFailure) {
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -239,14 +242,14 @@ func runListServices(cmd *cli.Command, args []string) error {
 	}
 
 	if len(services) == 0 {
-		fmt.Println("No services found")
+		core.Println("No services found")
 		return nil
 	}
 
 	return outputResult(services)
 }
 
-func runTeam(cmd *cli.Command, args []string) error {
+func runTeam(cmd *cli.Command, args []string) (_ coreFailure) {
 	client, err := getClient()
 	if err != nil {
 		return err
@@ -260,7 +263,7 @@ func runTeam(cmd *cli.Command, args []string) error {
 	return outputResult(team)
 }
 
-func runCall(cmd *cli.Command, args []string) error {
+func runCall(cmd *cli.Command, args []string) (_ coreFailure) {
 	client, err := getClient()
 	if err != nil {
 		return cli.WrapVerb(err, "initialize", "client")
@@ -269,8 +272,8 @@ func runCall(cmd *cli.Command, args []string) error {
 	operation := args[0]
 	var params map[string]any
 	if len(args) > 1 {
-		if err := json.Unmarshal([]byte(args[1]), &params); err != nil {
-			return log.E("deploy", "invalid JSON params", err)
+		if r := core.JSONUnmarshal([]byte(args[1]), &params); !r.OK {
+			return log.E("deploy", "invalid JSON params", r.Value.(error))
 		}
 	}
 

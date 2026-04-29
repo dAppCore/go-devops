@@ -1,10 +1,10 @@
 package dev
 
 import (
+	core "dappco.re/go"
+	"dappco.re/go/cli/pkg/cli"
 	"slices"
 	"testing"
-
-	"dappco.re/go/cli/pkg/cli"
 )
 
 func TestAddFileSyncCommand_Good(t *testing.T) {
@@ -72,4 +72,30 @@ func TestMatchGlob_Good(t *testing.T) {
 			t.Fatalf("matchGlob(%q, %q) = true, want false", tc.name, tc.pattern)
 		}
 	}
+}
+
+func TestCmdFileSync_AddFileSyncCommand_Good(t *core.T) {
+	root := &cli.Command{Use: "root"}
+	AddFileSyncCommand(root)
+	cmd := testCommand(root, "sync")
+
+	core.AssertNotNil(t, cmd)
+	core.AssertNotNil(t, cmd.Flag("to"))
+}
+
+func TestCmdFileSync_AddFileSyncCommand_Bad(t *core.T) {
+	var root *cli.Command
+	core.AssertPanics(t, func() {
+		AddFileSyncCommand(root)
+	})
+	core.AssertNil(t, root)
+}
+
+func TestCmdFileSync_AddFileSyncCommand_Ugly(t *core.T) {
+	root := &cli.Command{Use: "root"}
+	AddFileSyncCommand(root)
+	AddFileSyncCommand(root)
+
+	core.AssertLen(t, root.Commands(), 2)
+	core.AssertNotNil(t, testCommand(root, "sync"))
 }

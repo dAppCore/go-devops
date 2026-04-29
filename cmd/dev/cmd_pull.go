@@ -2,10 +2,10 @@ package dev
 
 import (
 	"context"
-	"os/exec"
 
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
+	coreexec "dappco.re/go/process/exec"
 	"dappco.re/go/scm/git"
 )
 
@@ -32,7 +32,7 @@ func AddPullCommand(parent *cli.Command) {
 	parent.AddCommand(pullCmd)
 }
 
-func runPull(registryPath string, all bool) error {
+func runPull(registryPath string, all bool) (_ coreFailure) {
 	ctx := context.Background()
 
 	// Find or use provided registry
@@ -119,9 +119,8 @@ func runPull(registryPath string, all bool) error {
 	return nil
 }
 
-func gitPull(ctx context.Context, path string) error {
-	cmd := exec.CommandContext(ctx, "git", "pull", "--ff-only")
-	cmd.Dir = path
+func gitPull(ctx context.Context, path string) (_ coreFailure) {
+	cmd := coreexec.Command(ctx, "git", "pull", "--ff-only").WithDir(path)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
 		return cli.Err("%s", string(output))

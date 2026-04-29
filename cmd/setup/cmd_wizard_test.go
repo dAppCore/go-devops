@@ -27,7 +27,7 @@ func TestFilterReposByTypes_Good(t *testing.T) {
 	}
 }
 
-func TestFilterReposByTypes_EmptyFilter_Good(t *testing.T) {
+func TestFilterReposByTypesEmptyFilter(t *testing.T) {
 	reposList := []*repos.Repo{
 		{Name: "foundation-a", Type: "foundation"},
 		{Name: "module-a", Type: "module"},

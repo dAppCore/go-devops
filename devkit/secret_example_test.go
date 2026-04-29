@@ -1,0 +1,12 @@
+package devkit
+
+import . "dappco.re/go"
+
+func ExampleScanDir() {
+	dir := MustCast[string](MkdirTemp("", "secret-scan-*"))
+	defer RemoveAll(dir)
+	WriteFile(PathJoin(dir, "config.env"), []byte("API_KEY=abcdefghijk\n"), 0o600)
+	findings, err := ScanDir(dir)
+	Println(err == nil, findings[0].Rule)
+	// Output: true generic-secret-assignment
+}

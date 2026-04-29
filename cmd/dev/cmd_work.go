@@ -4,8 +4,8 @@ import (
 	"cmp"
 	"context"
 	"slices"
-	"strings"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/scm/git"
@@ -36,7 +36,7 @@ func AddWorkCommand(parent *cli.Command) {
 	parent.AddCommand(workCmd)
 }
 
-func runWork(registryPath string, statusOnly, autoCommit bool) error {
+func runWork(registryPath string, statusOnly, autoCommit bool) (_ coreFailure) {
 	ctx := context.Background()
 
 	// Build worker bundle with required services
@@ -237,7 +237,7 @@ func printStatusTable(statuses []git.RepoStatus) {
 	)
 
 	// Print separator
-	cli.Text(strings.Repeat("-", nameWidth+2+10+11+8+7))
+	cli.Text(repeatStatusSeparator(nameWidth + 2 + 10 + 11 + 8 + 7))
 
 	// Print rows
 	for _, s := range statuses {
@@ -289,4 +289,12 @@ func printStatusTable(statuses []git.RepoStatus) {
 			aheadStr,
 		)
 	}
+}
+
+func repeatStatusSeparator(width int) string {
+	parts := make([]string, width)
+	for i := range parts {
+		parts[i] = "-"
+	}
+	return core.Join("", parts...)
 }

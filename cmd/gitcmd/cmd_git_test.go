@@ -5,7 +5,7 @@ import (
 	"dappco.re/go/cli/pkg/cli"
 )
 
-func TestAX7_AddGitCommands_Good(t *T) {
+func TestCmdGit_AddGitCommands_Good(t *T) {
 	root := &cli.Command{Use: "root"}
 	AddGitCommands(root)
 	gitCmd := root.Commands()[0]
@@ -14,7 +14,7 @@ func TestAX7_AddGitCommands_Good(t *T) {
 	AssertGreaterOrEqual(t, len(gitCmd.Commands()), 7)
 }
 
-func TestAX7_AddGitCommands_Bad(t *T) {
+func TestCmdGit_AddGitCommands_Bad(t *T) {
 	var root *cli.Command
 	AssertPanics(t, func() {
 		AddGitCommands(root)
@@ -22,7 +22,7 @@ func TestAX7_AddGitCommands_Bad(t *T) {
 	AssertNil(t, root)
 }
 
-func TestAX7_AddGitCommands_Ugly(t *T) {
+func TestCmdGit_AddGitCommands_Ugly(t *T) {
 	root := &cli.Command{Use: "root"}
 	root.AddCommand(&cli.Command{Use: "existing"})
 	AddGitCommands(root)

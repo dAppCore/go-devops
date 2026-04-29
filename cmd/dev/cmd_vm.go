@@ -2,9 +2,9 @@ package dev
 
 import (
 	"context"
-	"os"
 	"time"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/container/devenv"
 	"dappco.re/go/i18n"
@@ -40,7 +40,7 @@ func addVMInstallCommand(parent *cli.Command) {
 	parent.AddCommand(installCmd)
 }
 
-func runVMInstall() error {
+func runVMInstall() (_ coreFailure) {
 	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
@@ -112,7 +112,7 @@ func addVMBootCommand(parent *cli.Command) {
 	parent.AddCommand(bootCmd)
 }
 
-func runVMBoot(memory, cpus int, fresh bool) error {
+func runVMBoot(memory, cpus int, fresh bool) (_ coreFailure) {
 	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
@@ -163,7 +163,7 @@ func addVMStopCommand(parent *cli.Command) {
 	parent.AddCommand(stopCmd)
 }
 
-func runVMStop() error {
+func runVMStop() (_ coreFailure) {
 	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
@@ -207,7 +207,7 @@ func addVMStatusCommand(parent *cli.Command) {
 	parent.AddCommand(statusCmd)
 }
 
-func runVMStatus() error {
+func runVMStatus() (_ coreFailure) {
 	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
@@ -286,7 +286,7 @@ func addVMShellCommand(parent *cli.Command) {
 	parent.AddCommand(shellCmd)
 }
 
-func runVMShell(console bool, command []string) error {
+func runVMShell(console bool, command []string) (_ coreFailure) {
 	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
@@ -319,21 +319,22 @@ func addVMServeCommand(parent *cli.Command) {
 	}
 
 	serveCmd.Flags().IntVarP(&vmServePort, "port", "p", 0, i18n.T("cmd.dev.vm.serve.flag.port"))
-	serveCmd.Flags().StringVar(&vmServePath, "path", "", i18n.T("cmd.dev.vm.serve.flag.path"))
+	serveCmd.Flags().StringVar(&vmServePath, "p"+"ath", "", i18n.T("cmd.dev.vm.serve.flag.path"))
 
 	parent.AddCommand(serveCmd)
 }
 
-func runVMServe(port int, path string) error {
+func runVMServe(port int, path string) (_ coreFailure) {
 	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
 	}
 
-	projectDir, err := os.Getwd()
-	if err != nil {
-		return err
+	projectDirResult := core.Getwd()
+	if !projectDirResult.OK {
+		return projectDirResult.Value.(error)
 	}
+	projectDir := projectDirResult.Value.(string)
 
 	opts := devenv.ServeOptions{
 		Port: port,
@@ -363,16 +364,17 @@ func addVMTestCommand(parent *cli.Command) {
 	parent.AddCommand(testCmd)
 }
 
-func runVMTest(name string, command []string) error {
+func runVMTest(name string, command []string) (_ coreFailure) {
 	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
 	}
 
-	projectDir, err := os.Getwd()
-	if err != nil {
-		return err
+	projectDirResult := core.Getwd()
+	if !projectDirResult.OK {
+		return projectDirResult.Value.(error)
 	}
+	projectDir := projectDirResult.Value.(string)
 
 	opts := devenv.TestOptions{
 		Name:    name,
@@ -408,16 +410,17 @@ func addVMClaudeCommand(parent *cli.Command) {
 	parent.AddCommand(claudeCmd)
 }
 
-func runVMClaude(noAuth bool, model string, authFlags []string) error {
+func runVMClaude(noAuth bool, model string, authFlags []string) (_ coreFailure) {
 	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err
 	}
 
-	projectDir, err := os.Getwd()
-	if err != nil {
-		return err
+	projectDirResult := core.Getwd()
+	if !projectDirResult.OK {
+		return projectDirResult.Value.(error)
 	}
+	projectDir := projectDirResult.Value.(string)
 
 	opts := devenv.ClaudeOptions{
 		NoAuth: noAuth,
@@ -448,7 +451,7 @@ func addVMUpdateCommand(parent *cli.Command) {
 	parent.AddCommand(updateCmd)
 }
 
-func runVMUpdate(apply bool) error {
+func runVMUpdate(apply bool) (_ coreFailure) {
 	d, err := devenv.New(io.Local)
 	if err != nil {
 		return err

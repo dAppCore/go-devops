@@ -5,7 +5,7 @@ import (
 	"dappco.re/go/cli/pkg/cli"
 )
 
-func TestAX7_AddDeployCommands_Good(t *core.T) {
+func TestCmdCommands_AddDeployCommands_Good(t *core.T) {
 	root := &cli.Command{Use: "root"}
 	AddDeployCommands(root)
 	commands := root.Commands()
@@ -14,7 +14,7 @@ func TestAX7_AddDeployCommands_Good(t *core.T) {
 	core.AssertEqual(t, "deploy", commands[0].Use)
 }
 
-func TestAX7_AddDeployCommands_Bad(t *core.T) {
+func TestCmdCommands_AddDeployCommands_Bad(t *core.T) {
 	var root *cli.Command
 	core.AssertPanics(t, func() {
 		AddDeployCommands(root)
@@ -22,7 +22,7 @@ func TestAX7_AddDeployCommands_Bad(t *core.T) {
 	core.AssertNil(t, root)
 }
 
-func TestAX7_AddDeployCommands_Ugly(t *core.T) {
+func TestCmdCommands_AddDeployCommands_Ugly(t *core.T) {
 	root := &cli.Command{Use: "root"}
 	root.AddCommand(&cli.Command{Use: "existing"})
 	AddDeployCommands(root)

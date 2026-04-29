@@ -1,6 +1,6 @@
 module dappco.re/go/devops
 
-go 1.26.0
+go 1.26.2
 
 require (
 	code.gitea.io/sdk/gitea v0.24.1 // Note: Gitea SDK for repository and automation API integration; no core.* equivalent.
@@ -42,14 +42,13 @@ require (
 	github.com/spf13/pflag v1.0.10 // indirect
 	github.com/spf13/viper v1.21.0 // indirect
 	github.com/subosito/gotenv v1.6.0 // indirect
-	github.com/xeipuuv/gojsonpointer v0.0.0-20180127040702-4e3ac2762d5f // indirect
-	github.com/xeipuuv/gojsonreference v0.0.0-20180127040603-bd5ef7bd5415 // indirect
-	github.com/xeipuuv/gojsonschema v1.2.0 // indirect
 	go.yaml.in/yaml/v3 v3.0.4 // indirect
 	golang.org/x/crypto v0.50.0 // indirect
 	golang.org/x/sync v0.20.0 // indirect
 	golang.org/x/sys v0.43.0 // indirect
 )
+
+require dappco.re/go/process v0.0.0-00010101000000-000000000000
 
 require (
 	dappco.re/go/core v0.8.0-alpha.1 // indirect
@@ -80,14 +79,14 @@ replace (
 	dappco.re/go/ai => github.com/dAppCore/go-ai v0.8.0-alpha.1
 	dappco.re/go/api => github.com/dAppCore/api v0.8.0-alpha.1
 	dappco.re/go/config => ../go-config
-	dappco.re/go/container => github.com/dAppCore/go-container v0.8.0-alpha.1
+	dappco.re/go/container => ../go-container
 	dappco.re/go/forge => github.com/dAppCore/go-forge v0.8.0-alpha.1
 	dappco.re/go/i18n => github.com/dAppCore/go-i18n v0.8.0-alpha.1
 	dappco.re/go/inference => github.com/dAppCore/go-inference v0.8.0-alpha.1
 	dappco.re/go/io => github.com/dAppCore/go-io v0.8.0-alpha.1
 	dappco.re/go/log => github.com/dAppCore/go-log v0.8.0-alpha.1
 	dappco.re/go/mcp => github.com/dAppCore/mcp v0.8.0-alpha.1
-	dappco.re/go/process => github.com/dAppCore/go-process v0.8.0-alpha.1
+	dappco.re/go/process => ../go-process
 	dappco.re/go/rag => github.com/dAppCore/go-rag v0.8.0-alpha.1
 	dappco.re/go/scm => github.com/dAppCore/go-scm v0.8.0-alpha.1
 	dappco.re/go/store => github.com/dAppCore/go-store v0.8.0-alpha.1

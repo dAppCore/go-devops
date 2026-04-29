@@ -1,15 +1,14 @@
 package setup
 
 import (
-	"os"
-	"path/filepath"
+	. "dappco.re/go"
 	"testing"
 )
 
-func TestRunRepoSetup_CreatesCoreConfigs_Good(t *testing.T) {
+func TestRunRepoSetupCreatesCoreConfigs(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "go.mod"), []byte("module example.com/test\n"), 0o644); err != nil {
-		t.Fatalf("write go.mod: %v", err)
+	if r := WriteFile(PathJoin(dir, "go.mod"), []byte("module example.com/test\n"), 0o644); !r.OK {
+		t.Fatalf("write go.mod: %v", r.Error())
 	}
 
 	if err := runRepoSetup(dir, false); err != nil {
@@ -17,20 +16,20 @@ func TestRunRepoSetup_CreatesCoreConfigs_Good(t *testing.T) {
 	}
 
 	for _, name := range []string{"build.yaml", "release.yaml", "test.yaml"} {
-		path := filepath.Join(dir, ".core", name)
-		if _, err := os.Stat(path); err != nil {
-			t.Fatalf("expected %s to exist: %v", path, err)
+		path := PathJoin(dir, ".core", name)
+		if r := Stat(path); !r.OK {
+			t.Fatalf("expected %s to exist: %v", path, r.Error())
 		}
 	}
 }
 
-func TestDetectProjectType_PrefersPackageOverComposer_Good(t *testing.T) {
+func TestDetectProjectTypePrefersPackageOverComposer(t *testing.T) {
 	dir := t.TempDir()
-	if err := os.WriteFile(filepath.Join(dir, "package.json"), []byte("{}\n"), 0o644); err != nil {
-		t.Fatalf("write package.json: %v", err)
+	if r := WriteFile(PathJoin(dir, "package.json"), []byte("{}\n"), 0o644); !r.OK {
+		t.Fatalf("write package.json: %v", r.Error())
 	}
-	if err := os.WriteFile(filepath.Join(dir, "composer.json"), []byte("{}\n"), 0o644); err != nil {
-		t.Fatalf("write composer.json: %v", err)
+	if r := WriteFile(PathJoin(dir, "composer.json"), []byte("{}\n"), 0o644); !r.OK {
+		t.Fatalf("write composer.json: %v", r.Error())
 	}
 
 	if got := detectProjectType(dir); got != "node" {

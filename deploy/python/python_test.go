@@ -1,14 +1,21 @@
 package python
 
 import (
-	"os/exec"
-	"sync"
-
 	. "dappco.re/go"
 	embedpython "github.com/kluctl/go-embed-python/python"
+	"sync"
 )
 
-func ax7ResetPythonHooks(t *T) {
+type fakePythonRunner struct {
+	output []byte
+	err    error
+}
+
+func (f fakePythonRunner) Output() ([]byte, error) {
+	return f.output, f.err
+}
+
+func resetPythonHooks(t *T) {
 	oldEP := ep
 	oldInitErr := initErr
 	oldNew := newEmbeddedPython
@@ -29,8 +36,8 @@ func ax7ResetPythonHooks(t *T) {
 	})
 }
 
-func TestAX7_Init_Good(t *T) {
-	ax7ResetPythonHooks(t)
+func TestPython_Init_Good(t *T) {
+	resetPythonHooks(t)
 	newEmbeddedPython = func(string) (*embedpython.EmbeddedPython, error) {
 		return &embedpython.EmbeddedPython{}, nil
 	}
@@ -40,8 +47,8 @@ func TestAX7_Init_Good(t *T) {
 	AssertNotNil(t, GetPython())
 }
 
-func TestAX7_Init_Bad(t *T) {
-	ax7ResetPythonHooks(t)
+func TestPython_Init_Bad(t *T) {
+	resetPythonHooks(t)
 	newEmbeddedPython = func(string) (*embedpython.EmbeddedPython, error) {
 		return nil, AnError
 	}
@@ -51,8 +58,8 @@ func TestAX7_Init_Bad(t *T) {
 	AssertNil(t, GetPython())
 }
 
-func TestAX7_Init_Ugly(t *T) {
-	ax7ResetPythonHooks(t)
+func TestPython_Init_Ugly(t *T) {
+	resetPythonHooks(t)
 	calls := 0
 	newEmbeddedPython = func(string) (*embedpython.EmbeddedPython, error) {
 		calls++
@@ -64,8 +71,8 @@ func TestAX7_Init_Ugly(t *T) {
 	AssertEqual(t, 1, calls)
 }
 
-func TestAX7_GetPython_Good(t *T) {
-	ax7ResetPythonHooks(t)
+func TestPython_GetPython_Good(t *T) {
+	resetPythonHooks(t)
 	ep = &embedpython.EmbeddedPython{}
 	got := GetPython()
 
@@ -73,16 +80,16 @@ func TestAX7_GetPython_Good(t *T) {
 	AssertTrue(t, got == ep)
 }
 
-func TestAX7_GetPython_Bad(t *T) {
-	ax7ResetPythonHooks(t)
+func TestPython_GetPython_Bad(t *T) {
+	resetPythonHooks(t)
 	got := GetPython()
 
 	AssertNil(t, got)
 	AssertNil(t, ep)
 }
 
-func TestAX7_GetPython_Ugly(t *T) {
-	ax7ResetPythonHooks(t)
+func TestPython_GetPython_Ugly(t *T) {
+	resetPythonHooks(t)
 	newEmbeddedPython = func(string) (*embedpython.EmbeddedPython, error) {
 		return &embedpython.EmbeddedPython{}, nil
 	}
@@ -92,12 +99,12 @@ func TestAX7_GetPython_Ugly(t *T) {
 	AssertTrue(t, GetPython() == ep)
 }
 
-func TestAX7_RunScript_Good(t *T) {
-	ax7ResetPythonHooks(t)
+func TestPython_RunScript_Good(t *T) {
+	resetPythonHooks(t)
 	initRuntime = func() error { return nil }
-	pythonCommand = func(args ...string) (*exec.Cmd, error) {
+	pythonCommand = func(args ...string) (pythonRunner, error) {
 		AssertLen(t, args, 1)
-		return exec.Command("sh", "-c", "printf script-ok"), nil
+		return fakePythonRunner{output: []byte("script-ok")}, nil
 	}
 
 	out, err := RunScript(Background(), "print('ignored')")
@@ -105,8 +112,8 @@ func TestAX7_RunScript_Good(t *T) {
 	AssertEqual(t, "script-ok", out)
 }
 
-func TestAX7_RunScript_Bad(t *T) {
-	ax7ResetPythonHooks(t)
+func TestPython_RunScript_Bad(t *T) {
+	resetPythonHooks(t)
 	initRuntime = func() error { return AnError }
 
 	out, err := RunScript(Background(), "print('ignored')")
@@ -114,12 +121,12 @@ func TestAX7_RunScript_Bad(t *T) {
 	AssertEqual(t, "", out)
 }
 
-func TestAX7_RunScript_Ugly(t *T) {
-	ax7ResetPythonHooks(t)
+func TestPython_RunScript_Ugly(t *T) {
+	resetPythonHooks(t)
 	initRuntime = func() error { return nil }
-	pythonCommand = func(args ...string) (*exec.Cmd, error) {
+	pythonCommand = func(args ...string) (pythonRunner, error) {
 		AssertLen(t, args, 2)
-		return exec.Command("sh", "-c", "printf script-failed >&2; exit 7"), nil
+		return fakePythonRunner{err: AnError}, nil
 	}
 
 	out, err := RunScript(Background(), "print('ignored')", "--flag")
@@ -127,12 +134,12 @@ func TestAX7_RunScript_Ugly(t *T) {
 	AssertEqual(t, "", out)
 }
 
-func TestAX7_RunModule_Good(t *T) {
-	ax7ResetPythonHooks(t)
+func TestPython_RunModule_Good(t *T) {
+	resetPythonHooks(t)
 	initRuntime = func() error { return nil }
-	pythonCommand = func(args ...string) (*exec.Cmd, error) {
+	pythonCommand = func(args ...string) (pythonRunner, error) {
 		AssertEqual(t, []string{"-m", "json.tool"}, args)
-		return exec.Command("sh", "-c", "printf module-ok"), nil
+		return fakePythonRunner{output: []byte("module-ok")}, nil
 	}
 
 	out, err := RunModule(Background(), "json.tool")
@@ -140,8 +147,8 @@ func TestAX7_RunModule_Good(t *T) {
 	AssertEqual(t, "module-ok", out)
 }
 
-func TestAX7_RunModule_Bad(t *T) {
-	ax7ResetPythonHooks(t)
+func TestPython_RunModule_Bad(t *T) {
+	resetPythonHooks(t)
 	initRuntime = func() error { return AnError }
 
 	out, err := RunModule(Background(), "json.tool")
@@ -149,12 +156,12 @@ func TestAX7_RunModule_Bad(t *T) {
 	AssertEqual(t, "", out)
 }
 
-func TestAX7_RunModule_Ugly(t *T) {
-	ax7ResetPythonHooks(t)
+func TestPython_RunModule_Ugly(t *T) {
+	resetPythonHooks(t)
 	initRuntime = func() error { return nil }
-	pythonCommand = func(args ...string) (*exec.Cmd, error) {
+	pythonCommand = func(args ...string) (pythonRunner, error) {
 		AssertEqual(t, []string{"-m", "missing.module", "--help"}, args)
-		return exec.Command("sh", "-c", "exit 9"), nil
+		return fakePythonRunner{err: AnError}, nil
 	}
 
 	out, err := RunModule(Background(), "missing.module", "--help")
@@ -162,7 +169,7 @@ func TestAX7_RunModule_Ugly(t *T) {
 	AssertEqual(t, "", out)
 }
 
-func TestAX7_DevOpsPath_Good(t *T) {
+func TestPython_DevOpsPath_Good(t *T) {
 	t.Setenv("DEVOPS_PATH", "/tmp/devops")
 	path, err := DevOpsPath()
 
@@ -170,7 +177,7 @@ func TestAX7_DevOpsPath_Good(t *T) {
 	AssertEqual(t, "/tmp/devops", path)
 }
 
-func TestAX7_DevOpsPath_Bad(t *T) {
+func TestPython_DevOpsPath_Bad(t *T) {
 	t.Setenv("DEVOPS_PATH", "")
 	path, err := DevOpsPath()
 
@@ -178,7 +185,7 @@ func TestAX7_DevOpsPath_Bad(t *T) {
 	AssertContains(t, path, "Code/DevOps")
 }
 
-func TestAX7_DevOpsPath_Ugly(t *T) {
+func TestPython_DevOpsPath_Ugly(t *T) {
 	t.Setenv("DEVOPS_PATH", "/tmp/dev ops")
 	path, err := DevOpsPath()
 
@@ -186,7 +193,7 @@ func TestAX7_DevOpsPath_Ugly(t *T) {
 	AssertEqual(t, "/tmp/dev ops", path)
 }
 
-func TestAX7_CoolifyModulePath_Good(t *T) {
+func TestPython_CoolifyModulePath_Good(t *T) {
 	t.Setenv("DEVOPS_PATH", "/tmp/devops")
 	path, err := CoolifyModulePath()
 
@@ -194,7 +201,7 @@ func TestAX7_CoolifyModulePath_Good(t *T) {
 	AssertEqual(t, "/tmp/devops/playbooks/roles/coolify/module_utils", path)
 }
 
-func TestAX7_CoolifyModulePath_Bad(t *T) {
+func TestPython_CoolifyModulePath_Bad(t *T) {
 	t.Setenv("DEVOPS_PATH", "")
 	path, err := CoolifyModulePath()
 
@@ -202,7 +209,7 @@ func TestAX7_CoolifyModulePath_Bad(t *T) {
 	AssertContains(t, path, "playbooks/roles/coolify/module_utils")
 }
 
-func TestAX7_CoolifyModulePath_Ugly(t *T) {
+func TestPython_CoolifyModulePath_Ugly(t *T) {
 	t.Setenv("DEVOPS_PATH", "/tmp/dev ops")
 	path, err := CoolifyModulePath()
 
@@ -210,7 +217,7 @@ func TestAX7_CoolifyModulePath_Ugly(t *T) {
 	AssertContains(t, path, "/tmp/dev ops/")
 }
 
-func TestAX7_CoolifyScript_Good(t *T) {
+func TestPython_CoolifyScript_Good(t *T) {
 	t.Setenv("DEVOPS_PATH", "/tmp/devops")
 	script, err := CoolifyScript("https://coolify.example", "token", "list-servers", map[string]any{"limit": 1})
 
@@ -219,7 +226,7 @@ func TestAX7_CoolifyScript_Good(t *T) {
 	AssertContains(t, script, "https://coolify.example")
 }
 
-func TestAX7_CoolifyScript_Bad(t *T) {
+func TestPython_CoolifyScript_Bad(t *T) {
 	t.Setenv("DEVOPS_PATH", "/tmp/devops")
 	script, err := CoolifyScript("https://coolify.example", "token", "bad", map[string]any{"bad": func() {}})
 
@@ -227,7 +234,7 @@ func TestAX7_CoolifyScript_Bad(t *T) {
 	AssertEqual(t, "", script)
 }
 
-func TestAX7_CoolifyScript_Ugly(t *T) {
+func TestPython_CoolifyScript_Ugly(t *T) {
 	t.Setenv("DEVOPS_PATH", "/tmp/devops")
 	script, err := CoolifyScript("", "", "", nil)
 

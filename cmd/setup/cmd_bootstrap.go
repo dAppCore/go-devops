@@ -8,11 +8,9 @@ package setup
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"path/filepath"
-	"strings"
 
+	core "dappco.re/go"
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/devops/cmd/workspace"
 	"dappco.re/go/i18n"
 	coreio "dappco.re/go/io"
@@ -21,7 +19,7 @@ import (
 )
 
 // runSetupOrchestrator decides between registry mode and bootstrap mode.
-func runSetupOrchestrator(registryPath, only string, dryRun, all bool, projectName string, runBuild bool) error {
+func runSetupOrchestrator(registryPath, only string, dryRun, all bool, projectName string, runBuild bool) (_ coreFailure) {
 	ctx := context.Background()
 
 	// Try to find an existing registry
@@ -44,13 +42,14 @@ func runSetupOrchestrator(registryPath, only string, dryRun, all bool, projectNa
 }
 
 // runBootstrap handles the case where no repos.yaml exists.
-func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectName string, runBuild bool) error {
-	cwd, err := os.Getwd()
-	if err != nil {
-		return log.E("setup.bootstrap", "failed to get working directory", err)
+func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectName string, runBuild bool) (_ coreFailure) {
+	cwdResult := core.Getwd()
+	if !cwdResult.OK {
+		return log.E("setup.bootstrap", "failed to get working directory", cwdResult.Value.(error))
 	}
+	cwd := cwdResult.Value.(string)
 
-	fmt.Printf("%s %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.bootstrap_mode"))
+	cli.Print("%s %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.bootstrap_mode"))
 
 	var targetDir string
 
@@ -63,7 +62,7 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 	if empty {
 		// Clone into current directory
 		targetDir = cwd
-		fmt.Printf("%s %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.cloning_current_dir"))
+		cli.Print("%s %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.cloning_current_dir"))
 	} else {
 		// Directory has content - check if it's a git repo root
 		isRepo := isGitRepoRoot(cwd)
@@ -94,8 +93,8 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 			}
 		}
 
-		targetDir = filepath.Join(cwd, projectName)
-		fmt.Printf("%s %s: %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.creating_project_dir"), projectName)
+		targetDir = core.PathJoin(cwd, projectName)
+		cli.Print("%s %s: %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.creating_project_dir"), projectName)
 
 		if !dryRun {
 			if err := coreio.Local.EnsureDir(targetDir); err != nil {
@@ -105,33 +104,33 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 	}
 
 	// Clone core-devops first
-	devopsPath := filepath.Join(targetDir, devopsRepo)
-	if !coreio.Local.Exists(filepath.Join(devopsPath, ".git")) {
-		fmt.Printf("%s %s %s...\n", dimStyle.Render(">>"), i18n.T("common.status.cloning"), devopsRepo)
+	devopsPath := core.PathJoin(targetDir, devopsRepo)
+	if !coreio.Local.Exists(core.PathJoin(devopsPath, ".git")) {
+		cli.Print("%s %s %s...\n", dimStyle.Render(">>"), i18n.T("common.status.cloning"), devopsRepo)
 
 		if !dryRun {
 			if err := gitClone(ctx, defaultOrg, devopsRepo, devopsPath); err != nil {
-				return log.E("setup.bootstrap", fmt.Sprintf("failed to clone %s", devopsRepo), err)
+				return log.E("setup.bootstrap", core.Sprintf("failed to clone %s", devopsRepo), err)
 			}
-			fmt.Printf("%s %s %s\n", successStyle.Render(">>"), devopsRepo, i18n.T("cmd.setup.cloned"))
+			cli.Print("%s %s %s\n", successStyle.Render(">>"), devopsRepo, i18n.T("cmd.setup.cloned"))
 		} else {
-			fmt.Printf("  %s %s/%s to %s\n", i18n.T("cmd.setup.would_clone"), defaultOrg, devopsRepo, devopsPath)
+			cli.Print("  %s %s/%s to %s\n", i18n.T("cmd.setup.would_clone"), defaultOrg, devopsRepo, devopsPath)
 		}
 	} else {
-		fmt.Printf("%s %s %s\n", dimStyle.Render(">>"), devopsRepo, i18n.T("cmd.setup.already_exists"))
+		cli.Print("%s %s %s\n", dimStyle.Render(">>"), devopsRepo, i18n.T("cmd.setup.already_exists"))
 	}
 
 	// Load the repos.yaml from core-devops
-	registryPath := filepath.Join(devopsPath, devopsReposYaml)
+	registryPath := core.PathJoin(devopsPath, devopsReposYaml)
 
 	if dryRun {
-		fmt.Printf("\n%s %s %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.would_load_registry"), registryPath)
+		cli.Print("\n%s %s %s\n", dimStyle.Render(">>"), i18n.T("cmd.setup.would_load_registry"), registryPath)
 		return nil
 	}
 
 	reg, err := repos.LoadRegistry(coreio.Local, registryPath)
 	if err != nil {
-		return log.E("setup.bootstrap", fmt.Sprintf("failed to load registry from %s", devopsRepo), err)
+		return log.E("setup.bootstrap", core.Sprintf("failed to load registry from %s", devopsRepo), err)
 	}
 
 	// Override base path to target directory
@@ -140,7 +139,7 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 	// Check workspace config for default_only if no filter specified
 	if only == "" {
 		if wsConfig, err := workspace.LoadConfig(devopsPath); err == nil && wsConfig != nil && len(wsConfig.DefaultOnly) > 0 {
-			only = strings.Join(wsConfig.DefaultOnly, ",")
+			only = core.Join(",", wsConfig.DefaultOnly...)
 		}
 	}
 
@@ -151,11 +150,11 @@ func runBootstrap(ctx context.Context, only string, dryRun, all bool, projectNam
 // isGitRepoRoot returns true if the directory is a git repository root.
 // Handles both regular repos (.git is a directory) and worktrees (.git is a file).
 func isGitRepoRoot(path string) bool {
-	return coreio.Local.Exists(filepath.Join(path, ".git"))
+	return coreio.Local.Exists(core.PathJoin(path, ".git"))
 }
 
 // isDirEmpty returns true if the directory is empty or contains only hidden files.
-func isDirEmpty(path string) (bool, error) {
+func isDirEmpty(path string) (bool, coreFailure) {
 	entries, err := coreio.Local.List(path)
 	if err != nil {
 		return false, err

@@ -7,22 +7,19 @@ package setup
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/devops/cmd/workspace"
 	"dappco.re/go/i18n"
 	coreio "dappco.re/go/io"
 	log "dappco.re/go/log"
+	coreexec "dappco.re/go/process/exec"
 	"dappco.re/go/scm/repos"
 )
 
 // runRegistrySetup loads a registry from path and runs setup.
-func runRegistrySetup(ctx context.Context, registryPath, only string, dryRun, all, runBuild bool) error {
+func runRegistrySetup(ctx context.Context, registryPath, only string, dryRun, all, runBuild bool) (_ coreFailure) {
 	reg, err := repos.LoadRegistry(coreio.Local, registryPath)
 	if err != nil {
 		return log.E("setup.registry", "failed to load registry", err)
@@ -30,9 +27,9 @@ func runRegistrySetup(ctx context.Context, registryPath, only string, dryRun, al
 
 	// Check workspace config for default_only if no filter specified
 	if only == "" {
-		registryDir := filepath.Dir(registryPath)
+		registryDir := core.PathDir(registryPath)
 		if wsConfig, err := workspace.LoadConfig(registryDir); err == nil && wsConfig != nil && len(wsConfig.DefaultOnly) > 0 {
-			only = strings.Join(wsConfig.DefaultOnly, ",")
+			only = core.Join(",", wsConfig.DefaultOnly...)
 		}
 	}
 
@@ -40,11 +37,11 @@ func runRegistrySetup(ctx context.Context, registryPath, only string, dryRun, al
 }
 
 // runRegistrySetupWithReg runs setup with an already-loaded registry.
-func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryPath, only string, dryRun, all, runBuild bool) error {
-	fmt.Printf("%s %s\n", dimStyle.Render(i18n.Label("registry")), registryPath)
-	fmt.Printf("%s %s\n", dimStyle.Render(i18n.T("cmd.setup.org_label")), reg.Org)
+func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryPath, only string, dryRun, all, runBuild bool) (_ coreFailure) {
+	cli.Print("%s %s\n", dimStyle.Render(i18n.Label("registry")), registryPath)
+	cli.Print("%s %s\n", dimStyle.Render(i18n.T("cmd.setup.org_label")), reg.Org)
 
-	registryDir := filepath.Dir(registryPath)
+	registryDir := core.PathDir(registryPath)
 
 	// Determine base path for cloning
 	basePath := reg.BasePath
@@ -59,25 +56,27 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 	}
 
 	// Expand ~
-	if strings.HasPrefix(basePath, "~/") {
-		home, _ := os.UserHomeDir()
-		basePath = filepath.Join(home, basePath[2:])
+	if core.HasPrefix(basePath, "~/") {
+		homeResult := core.UserHomeDir()
+		if homeResult.OK {
+			basePath = core.PathJoin(homeResult.Value.(string), basePath[2:])
+		}
 	}
 
 	// Resolve relative to registry location
-	if !filepath.IsAbs(basePath) {
-		basePath = filepath.Join(registryDir, basePath)
+	if !core.PathIsAbs(basePath) {
+		basePath = core.PathJoin(registryDir, basePath)
 	}
 
-	fmt.Printf("%s %s\n", dimStyle.Render(i18n.Label("target")), basePath)
+	cli.Print("%s %s\n", dimStyle.Render(i18n.Label("target")), basePath)
 
 	// Parse type filter
 	var typeFilter []string
 	if only != "" {
-		for _, t := range strings.Split(only, ",") {
-			typeFilter = append(typeFilter, strings.TrimSpace(t))
+		for _, t := range core.Split(only, ",") {
+			typeFilter = append(typeFilter, core.Trim(t))
 		}
-		fmt.Printf("%s %s\n", dimStyle.Render(i18n.Label("filter")), only)
+		cli.Print("%s %s\n", dimStyle.Render(i18n.Label("filter")), only)
 	}
 
 	// Ensure base path exists
@@ -117,9 +116,9 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 			}
 
 			// Check if already exists
-			repoPath := filepath.Join(basePath, repo.Name)
+			repoPath := core.PathJoin(basePath, repo.Name)
 			// Check .git dir existence via Exists
-			if coreio.Local.Exists(filepath.Join(repoPath, ".git")) {
+			if coreio.Local.Exists(core.PathJoin(repoPath, ".git")) {
 				exists++
 				continue
 			}
@@ -147,8 +146,8 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 			}
 
 			// Check if already exists
-			repoPath := filepath.Join(basePath, repo.Name)
-			if coreio.Local.Exists(filepath.Join(repoPath, ".git")) {
+			repoPath := core.PathJoin(basePath, repo.Name)
+			if coreio.Local.Exists(core.PathJoin(repoPath, ".git")) {
 				exists++
 				continue
 			}
@@ -158,21 +157,21 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 	}
 
 	// Summary
-	fmt.Println()
-	fmt.Printf("%s, %s, %s\n",
+	cli.Blank()
+	cli.Print("%s, %s, %s\n",
 		i18n.T("cmd.setup.to_clone", map[string]any{"Count": len(toClone)}),
 		i18n.T("cmd.setup.exist", map[string]any{"Count": exists}),
 		i18n.T("common.count.skipped", map[string]any{"Count": skipped}))
 
 	if len(toClone) == 0 {
-		fmt.Printf("\n%s\n", i18n.T("cmd.setup.nothing_to_clone"))
+		cli.Print("\n%s\n", i18n.T("cmd.setup.nothing_to_clone"))
 		return nil
 	}
 
 	if dryRun {
-		fmt.Printf("\n%s\n", i18n.T("cmd.setup.would_clone_list"))
+		cli.Print("\n%s\n", i18n.T("cmd.setup.would_clone_list"))
 		for _, repo := range toClone {
-			fmt.Printf("  %s (%s)\n", repoNameStyle.Render(repo.Name), repo.Type)
+			cli.Print("  %s (%s)\n", repoNameStyle.Render(repo.Name), repo.Type)
 		}
 		return nil
 	}
@@ -184,50 +183,50 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 			return err
 		}
 		if !confirmed {
-			fmt.Println(i18n.T("cmd.setup.cancelled"))
+			cli.Text(i18n.T("cmd.setup.cancelled"))
 			return nil
 		}
 	}
 
 	// Clone repos
-	fmt.Println()
+	cli.Blank()
 	var succeeded, failed int
 
 	for _, repo := range toClone {
-		fmt.Printf("  %s %s... ", dimStyle.Render(i18n.T("common.status.cloning")), repo.Name)
+		cli.Print("  %s %s... ", dimStyle.Render(i18n.T("common.status.cloning")), repo.Name)
 
-		repoPath := filepath.Join(basePath, repo.Name)
+		repoPath := core.PathJoin(basePath, repo.Name)
 
 		err := gitClone(ctx, reg.Org, repo.Name, repoPath)
 		if err != nil {
-			fmt.Printf("%s\n", errorStyle.Render("x "+err.Error()))
+			cli.Print("%s\n", errorStyle.Render("x "+err.Error()))
 			failed++
 		} else {
-			fmt.Printf("%s\n", successStyle.Render(i18n.T("cmd.setup.done")))
+			cli.Print("%s\n", successStyle.Render(i18n.T("cmd.setup.done")))
 			succeeded++
 		}
 	}
 
 	// Summary
-	fmt.Println()
-	fmt.Printf("%s %s", successStyle.Render(i18n.Label("done")), i18n.T("cmd.setup.cloned_count", map[string]any{"Count": succeeded}))
+	cli.Blank()
+	cli.Print("%s %s", successStyle.Render(i18n.Label("done")), i18n.T("cmd.setup.cloned_count", map[string]any{"Count": succeeded}))
 	if failed > 0 {
-		fmt.Printf(", %s", errorStyle.Render(i18n.T("i18n.count.failed", failed)))
+		cli.Print(", %s", errorStyle.Render(i18n.T("i18n.count.failed", failed)))
 	}
 	if exists > 0 {
-		fmt.Printf(", %s", i18n.T("cmd.setup.already_exist_count", map[string]any{"Count": exists}))
+		cli.Print(", %s", i18n.T("cmd.setup.already_exist_count", map[string]any{"Count": exists}))
 	}
-	fmt.Println()
+	cli.Blank()
 
 	// Run build if requested
 	if runBuild && succeeded > 0 {
-		fmt.Println()
-		fmt.Printf("%s %s\n", dimStyle.Render(">>"), i18n.ProgressSubject("run", "build"))
-		buildCmd := exec.Command("core", "build")
-		buildCmd.Dir = basePath
-		buildCmd.Stdout = os.Stdout
-		buildCmd.Stderr = os.Stderr
-		if err := buildCmd.Run(); err != nil {
+		cli.Blank()
+		cli.Print("%s %s\n", dimStyle.Render(">>"), i18n.ProgressSubject("run", "build"))
+		buildCmd := coreexec.Command(ctx, "core", "build").
+			WithDir(basePath).
+			WithStdout(core.Stdout()).
+			WithStderr(core.Stderr())
+		if err := commandResultError(buildCmd.Run()); err != nil {
 			return log.E("setup.registry", i18n.T("i18n.fail.run", "build"), err)
 		}
 	}
@@ -236,30 +235,30 @@ func runRegistrySetupWithReg(ctx context.Context, reg *repos.Registry, registryP
 }
 
 // gitClone clones a repository using gh CLI or git.
-func gitClone(ctx context.Context, org, repo, path string) error {
+func gitClone(ctx context.Context, org, repo, path string) (_ coreFailure) {
 	// Try gh clone first with HTTPS (works without SSH keys)
 	if cli.GhAuthenticated() {
 		// Use HTTPS URL directly to bypass git_protocol config
-		httpsURL := fmt.Sprintf("https://github.com/%s/%s.git", org, repo)
-		cmd := exec.CommandContext(ctx, "gh", "repo", "clone", httpsURL, path)
+		httpsURL := core.Sprintf("https://github.com/%s/%s.git", org, repo)
+		cmd := coreexec.Command(ctx, "gh", "repo", "clone", httpsURL, path)
 		output, err := cmd.CombinedOutput()
 		if err == nil {
 			return nil
 		}
-		errStr := strings.TrimSpace(string(output))
+		errStr := core.Trim(string(output))
 		// Only fall through to SSH if it's an auth error
-		if !strings.Contains(errStr, "Permission denied") &&
-			!strings.Contains(errStr, "could not read") {
+		if !core.Contains(errStr, "Permission denied") &&
+			!core.Contains(errStr, "could not read") {
 			return log.E("setup.registry", errStr, nil)
 		}
 	}
 
 	// Fallback to git clone via SSH
-	url := fmt.Sprintf("git@github.com:%s/%s.git", org, repo)
-	cmd := exec.CommandContext(ctx, "git", "clone", url, path)
+	url := core.Sprintf("git@github.com:%s/%s.git", org, repo)
+	cmd := coreexec.Command(ctx, "git", "clone", url, path)
 	output, err := cmd.CombinedOutput()
 	if err != nil {
-		return log.E("setup.registry", strings.TrimSpace(string(output)), nil)
+		return log.E("setup.registry", core.Trim(string(output)), nil)
 	}
 	return nil
 }
