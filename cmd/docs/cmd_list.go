@@ -1,8 +1,7 @@
 package docs
 
 import (
-	"strings"
-
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 )
@@ -13,7 +12,7 @@ var docsListRegistryPath string
 var docsListCmd = &cli.Command{
 	Use: "list",
 	RunE: func(cmd *cli.Command, args []string) error {
-		return runDocsList(docsListRegistryPath)
+		return resultError(runDocsList(docsListRegistryPath))
 	},
 }
 
@@ -21,10 +20,10 @@ func init() {
 	docsListCmd.Flags().StringVar(&docsListRegistryPath, "registry", "", i18n.T("common.flag.registry"))
 }
 
-func runDocsList(registryPath string) error {
-	reg, _, err := loadRegistry(registryPath)
-	if err != nil {
-		return err
+func runDocsList(registryPath string) (_ core.Result) {
+	reg, _, r := loadRegistry(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	cli.Print("\n%-20s  %-8s  %-8s  %-10s  %s\n",
@@ -34,7 +33,7 @@ func runDocsList(registryPath string) error {
 		headerStyle.Render(i18n.T("cmd.docs.list.header.changelog")),
 		headerStyle.Render(i18n.T("cmd.docs.list.header.docs")),
 	)
-	cli.Text(strings.Repeat("─", 70))
+	cli.Text("──────────────────────────────────────────────────────────────────────")
 
 	var withDocs, withoutDocs int
 	for _, repo := range reg.List() {
@@ -70,7 +69,7 @@ func runDocsList(registryPath string) error {
 		i18n.T("cmd.docs.list.coverage_summary", map[string]any{"WithDocs": withDocs, "WithoutDocs": withoutDocs}),
 	)
 
-	return nil
+	return core.Ok(nil)
 }
 
 func checkMark(ok bool) string {

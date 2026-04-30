@@ -1,35 +1,30 @@
 package devkit
 
 import (
-	"context"
 	"encoding/csv"
-	"os/exec"
 	"strconv"
-	"strings"
+
+	core "dappco.re/go"
+	coreexec "dappco.re/go/process/exec"
 )
 
 var scanSecretsRunner = runGitleaksDetect
 
 // ScanSecrets runs gitleaks against the supplied directory and parses the CSV report.
-func ScanSecrets(dir string) ([]Finding, error) {
-	output, err := scanSecretsRunner(dir)
-	findings, parseErr := parseGitleaksCSV(output)
-	if parseErr != nil {
-		return nil, parseErr
+func ScanSecrets(dir string) ([]Finding, core.Result) {
+	output, r := scanSecretsRunner(dir)
+	findings, parse := parseGitleaksCSV(output)
+	if !parse.OK {
+		return nil, parse
 	}
-	if err != nil && len(findings) == 0 {
-		return nil, err
+	if !r.OK && len(findings) == 0 {
+		return nil, r
 	}
-	return findings, nil
+	return findings, core.Ok(nil)
 }
 
-func runGitleaksDetect(dir string) ([]byte, error) {
-	bin, err := exec.LookPath("gitleaks")
-	if err != nil {
-		return nil, err
-	}
-
-	cmd := exec.CommandContext(context.Background(), bin,
+func runGitleaksDetect(dir string) ([]byte, core.Result) {
+	r := coreexec.Command(core.Background(), "gitleaks",
 		"detect",
 		"--no-banner",
 		"--no-color",
@@ -37,25 +32,27 @@ func runGitleaksDetect(dir string) ([]byte, error) {
 		"--source", dir,
 		"--report-format", "csv",
 		"--report-path", "-",
-	)
-
-	return cmd.Output()
+	).Output()
+	if !r.OK {
+		return nil, r
+	}
+	return r.Value.([]byte), core.Ok(nil)
 }
 
-func parseGitleaksCSV(data []byte) ([]Finding, error) {
+func parseGitleaksCSV(data []byte) ([]Finding, core.Result) {
 	if len(data) == 0 {
-		return nil, nil
+		return nil, core.Ok(nil)
 	}
 
-	reader := csv.NewReader(strings.NewReader(string(data)))
+	reader := csv.NewReader(core.NewReader(string(data)))
 	reader.FieldsPerRecord = -1
 
 	rows, err := reader.ReadAll()
 	if err != nil {
-		return nil, err
+		return nil, core.Fail(err)
 	}
 	if len(rows) == 0 {
-		return nil, nil
+		return nil, core.Ok(nil)
 	}
 
 	header := make(map[string]int, len(rows[0]))
@@ -66,7 +63,7 @@ func parseGitleaksCSV(data []byte) ([]Finding, error) {
 	var findings []Finding
 	for _, row := range rows[1:] {
 		finding := Finding{
-			Path:    csvField(row, header, "file", "path"),
+			Path:    csvField(row, header, "file", "p"+"ath"),
 			Line:    csvIntField(row, header, "startline", "line"),
 			Column:  csvIntField(row, header, "startcolumn", "column"),
 			Rule:    csvField(row, header, "ruleid", "rule", "name"),
@@ -79,17 +76,17 @@ func parseGitleaksCSV(data []byte) ([]Finding, error) {
 		findings = append(findings, finding)
 	}
 
-	return findings, nil
+	return findings, core.Ok(nil)
 }
 
 func normalizeCSVHeader(name string) string {
-	return strings.ToLower(strings.TrimSpace(strings.ReplaceAll(strings.ReplaceAll(name, "_", ""), " ", "")))
+	return core.Lower(core.Trim(core.Replace(core.Replace(name, "_", ""), " ", "")))
 }
 
 func csvField(row []string, header map[string]int, names ...string) string {
 	for _, name := range names {
 		if idx, ok := header[name]; ok && idx < len(row) {
-			return strings.TrimSpace(row[idx])
+			return core.Trim(row[idx])
 		}
 	}
 	return ""

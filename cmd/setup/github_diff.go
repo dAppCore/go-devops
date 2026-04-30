@@ -3,11 +3,10 @@
 package setup
 
 import (
-	"fmt"
 	"maps"
 	"slices"
-	"strings"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 )
@@ -130,28 +129,28 @@ func (cs *ChangeSet) Print(verbose bool) {
 	creates, updates, deletes, skips := cs.Count()
 
 	// Print header
-	fmt.Printf("\n%s %s\n", dimStyle.Render(i18n.Label("repo")), repoNameStyle.Render(cs.Repo))
+	cli.Print("\n%s %s\n", dimStyle.Render(i18n.Label("repo")), repoNameStyle.Render(cs.Repo))
 
 	if !cs.HasChanges() {
-		fmt.Printf("  %s\n", dimStyle.Render(i18n.T("cmd.setup.github.no_changes")))
+		cli.Print("  %s\n", dimStyle.Render(i18n.T("cmd.setup.github.no_changes")))
 		return
 	}
 
 	// Print summary
 	var parts []string
 	if creates > 0 {
-		parts = append(parts, successStyle.Render(fmt.Sprintf("+%d", creates)))
+		parts = append(parts, successStyle.Render(core.Sprintf("+%d", creates)))
 	}
 	if updates > 0 {
-		parts = append(parts, warningStyle.Render(fmt.Sprintf("~%d", updates)))
+		parts = append(parts, warningStyle.Render(core.Sprintf("~%d", updates)))
 	}
 	if deletes > 0 {
-		parts = append(parts, errorStyle.Render(fmt.Sprintf("-%d", deletes)))
+		parts = append(parts, errorStyle.Render(core.Sprintf("-%d", deletes)))
 	}
 	if skips > 0 && verbose {
-		parts = append(parts, dimStyle.Render(fmt.Sprintf("=%d", skips)))
+		parts = append(parts, dimStyle.Render(core.Sprintf("=%d", skips)))
 	}
-	fmt.Printf("  %s\n", strings.Join(parts, " "))
+	cli.Print("  %s\n", core.Join(" ", parts...))
 
 	// Print details if verbose
 	if verbose {
@@ -174,19 +173,19 @@ func (cs *ChangeSet) printByCategory(category ChangeCategory, title string) {
 		return
 	}
 
-	fmt.Printf("\n  %s:\n", dimStyle.Render(title))
+	cli.Print("\n  %s:\n", dimStyle.Render(title))
 	for _, c := range categoryChanges {
 		icon := getChangeIcon(c.Type)
 		style := getChangeStyle(c.Type)
-		fmt.Printf("    %s %s", style.Render(icon), c.Name)
+		cli.Print("    %s %s", style.Render(icon), c.Name)
 		if c.Description != "" {
-			fmt.Printf(" %s", dimStyle.Render(c.Description))
+			cli.Print(" %s", dimStyle.Render(c.Description))
 		}
-		fmt.Println()
+		cli.Blank()
 
 		// Print details (sorted for deterministic output)
 		for _, k := range slices.Sorted(maps.Keys(c.Details)) {
-			fmt.Printf("      %s: %s\n", dimStyle.Render(k), c.Details[k])
+			cli.Print("      %s: %s\n", dimStyle.Render(k), c.Details[k])
 		}
 	}
 }
@@ -262,23 +261,23 @@ func (a *Aggregate) PrintSummary() {
 	creates, updates, deletes, _ := a.TotalChanges()
 	reposWithChanges := a.ReposWithChanges()
 
-	fmt.Println()
-	fmt.Printf("%s\n", dimStyle.Render(i18n.Label("summary")))
-	fmt.Printf("  %s: %d\n", i18n.T("cmd.setup.github.repos_checked"), len(a.Sets))
+	cli.Blank()
+	cli.Print("%s\n", dimStyle.Render(i18n.Label("summary")))
+	cli.Print("  %s: %d\n", i18n.T("cmd.setup.github.repos_checked"), len(a.Sets))
 
 	if reposWithChanges == 0 {
-		fmt.Printf("  %s\n", dimStyle.Render(i18n.T("cmd.setup.github.all_up_to_date")))
+		cli.Print("  %s\n", dimStyle.Render(i18n.T("cmd.setup.github.all_up_to_date")))
 		return
 	}
 
-	fmt.Printf("  %s: %d\n", i18n.T("cmd.setup.github.repos_with_changes"), reposWithChanges)
+	cli.Print("  %s: %d\n", i18n.T("cmd.setup.github.repos_with_changes"), reposWithChanges)
 	if creates > 0 {
-		fmt.Printf("  %s: %s\n", i18n.T("cmd.setup.github.to_create"), successStyle.Render(fmt.Sprintf("%d", creates)))
+		cli.Print("  %s: %s\n", i18n.T("cmd.setup.github.to_create"), successStyle.Render(core.Sprintf("%d", creates)))
 	}
 	if updates > 0 {
-		fmt.Printf("  %s: %s\n", i18n.T("cmd.setup.github.to_update"), warningStyle.Render(fmt.Sprintf("%d", updates)))
+		cli.Print("  %s: %s\n", i18n.T("cmd.setup.github.to_update"), warningStyle.Render(core.Sprintf("%d", updates)))
 	}
 	if deletes > 0 {
-		fmt.Printf("  %s: %s\n", i18n.T("cmd.setup.github.to_delete"), errorStyle.Render(fmt.Sprintf("%d", deletes)))
+		cli.Print("  %s: %s\n", i18n.T("cmd.setup.github.to_delete"), errorStyle.Render(core.Sprintf("%d", deletes)))
 	}
 }

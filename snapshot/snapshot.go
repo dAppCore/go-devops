@@ -2,9 +2,9 @@
 package snapshot
 
 import (
-	"encoding/json"
 	"time"
 
+	core "dappco.re/go"
 	log "dappco.re/go/log"
 
 	"dappco.re/go/scm/manifest"
@@ -29,14 +29,14 @@ type Snapshot struct {
 
 // Generate creates a core.json snapshot from a manifest.
 // The built timestamp is set to the current time.
-func Generate(m *manifest.Manifest, commit, tag string) ([]byte, error) {
+func Generate(m *manifest.Manifest, commit, tag string) ([]byte, core.Result) {
 	return GenerateAt(m, commit, tag, time.Now().UTC())
 }
 
 // GenerateAt creates a core.json snapshot with an explicit build timestamp.
-func GenerateAt(m *manifest.Manifest, commit, tag string, built time.Time) ([]byte, error) {
+func GenerateAt(m *manifest.Manifest, commit, tag string, built time.Time) ([]byte, core.Result) {
 	if m == nil {
-		return nil, log.E("snapshot", "manifest is nil", nil)
+		return nil, core.Fail(log.E("snapshot", "manifest is nil", nil))
 	}
 
 	snap := Snapshot{
@@ -59,5 +59,9 @@ func GenerateAt(m *manifest.Manifest, commit, tag string, built time.Time) ([]by
 		snap.Permissions = &m.Permissions
 	}
 
-	return json.MarshalIndent(snap, "", "  ")
+	r := core.JSONMarshalIndent(snap, "", "  ")
+	if !r.OK {
+		return nil, r
+	}
+	return r.Value.([]byte), core.Ok(nil)
 }

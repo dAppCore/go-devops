@@ -1,16 +1,12 @@
 package devkit
 
 import (
-	"encoding/json"
-	"fmt"
-	"os"
-	"path"
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strconv"
-	"strings"
 	"time"
+
+	core "dappco.re/go"
 )
 
 // CoveragePackage describes coverage for a single package or directory.
@@ -64,90 +60,95 @@ func NewCoverageStore(path string) *CoverageStore {
 }
 
 // Append stores a new snapshot, creating the parent directory if needed.
-func (s *CoverageStore) Append(snapshot CoverageSnapshot) error {
-	if err := os.MkdirAll(filepath.Dir(s.path), 0o755); err != nil {
-		return err
+func (s *CoverageStore) Append(snapshot CoverageSnapshot) (_ core.Result) {
+	if r := core.MkdirAll(core.PathDir(s.path), 0o755); !r.OK {
+		return r
 	}
 
-	snapshots, err := s.Load()
-	if err != nil {
-		return err
+	snapshots, r := s.Load()
+	if !r.OK {
+		return r
 	}
 
 	snapshot.CapturedAt = snapshot.CapturedAt.UTC()
 	snapshots = append(snapshots, snapshot)
 
-	data, err := json.MarshalIndent(snapshots, "", "  ")
-	if err != nil {
-		return err
+	data := core.JSONMarshalIndent(snapshots, "", "  ")
+	if !data.OK {
+		return data
 	}
 
-	return os.WriteFile(s.path, data, 0o600)
+	if r := core.WriteFile(s.path, data.Value.([]byte), 0o600); !r.OK {
+		return r
+	}
+	return core.Ok(nil)
 }
 
 // Load reads all snapshots from disk.
-func (s *CoverageStore) Load() ([]CoverageSnapshot, error) {
-	data, err := os.ReadFile(s.path)
-	if err != nil {
-		if os.IsNotExist(err) {
-			return nil, nil
+func (s *CoverageStore) Load() ([]CoverageSnapshot, core.Result) {
+	read := core.ReadFile(s.path)
+	if !read.OK {
+		err := read.Value.(error)
+		if core.IsNotExist(err) {
+			return nil, core.Ok(nil)
 		}
-		return nil, err
+		return nil, read
 	}
-	if len(strings.TrimSpace(string(data))) == 0 {
-		return nil, nil
+	data := read.Value.([]byte)
+	if len(core.Trim(string(data))) == 0 {
+		return nil, core.Ok(nil)
 	}
 
 	var snapshots []CoverageSnapshot
-	if err := json.Unmarshal(data, &snapshots); err != nil {
-		return nil, err
+	if r := core.JSONUnmarshal(data, &snapshots); !r.OK {
+		return nil, r
 	}
-	return snapshots, nil
+	return snapshots, core.Ok(nil)
 }
 
 // Latest returns the newest snapshot in the store.
-func (s *CoverageStore) Latest() (CoverageSnapshot, error) {
-	snapshots, err := s.Load()
-	if err != nil {
-		return CoverageSnapshot{}, err
+func (s *CoverageStore) Latest() (CoverageSnapshot, core.Result) {
+	snapshots, r := s.Load()
+	if !r.OK {
+		return CoverageSnapshot{}, r
 	}
 	if len(snapshots) == 0 {
-		return CoverageSnapshot{}, fmt.Errorf("coverage store is empty")
+		return CoverageSnapshot{}, core.Fail(core.Errorf("coverage store is empty"))
 	}
-	return snapshots[len(snapshots)-1], nil
+	return snapshots[len(snapshots)-1], core.Ok(nil)
 }
 
 // ParseCoverProfile parses go test -coverprofile output into a coverage snapshot.
-func ParseCoverProfile(data string) (CoverageSnapshot, error) {
-	if strings.TrimSpace(data) == "" {
-		return CoverageSnapshot{}, nil
+func ParseCoverProfile(data string) (CoverageSnapshot, core.Result) {
+	if core.Trim(data) == "" {
+		return CoverageSnapshot{}, core.Ok(nil)
 	}
 
 	packages := make(map[string]*coverageBucket)
 	total := coverageBucket{}
 
-	for _, rawLine := range strings.Split(strings.TrimSpace(data), "\n") {
-		line := strings.TrimSpace(rawLine)
-		if line == "" || strings.HasPrefix(line, "mode:") {
+	for _, rawLine := range core.Split(core.Trim(data), "\n") {
+		line := core.Trim(rawLine)
+		if line == "" || core.HasPrefix(line, "mode:") {
 			continue
 		}
 
 		match := coverProfileLineRE.FindStringSubmatch(line)
 		if match == nil {
-			return CoverageSnapshot{}, fmt.Errorf("invalid cover profile line: %s", line)
+			return CoverageSnapshot{}, core.Fail(core.Errorf("invalid cover profile line: %s", line))
 		}
 
-		file := filepath.ToSlash(match[1])
+		file := core.PathToSlash(match[1])
 		stmts, err := strconv.Atoi(match[2])
 		if err != nil {
-			return CoverageSnapshot{}, err
+			return CoverageSnapshot{}, core.Fail(err)
 		}
 		count, err := strconv.Atoi(match[3])
 		if err != nil {
-			return CoverageSnapshot{}, err
+			return CoverageSnapshot{}, core.Fail(err)
 		}
 
-		dir := path.Dir(file)
+		dir := core.PathDir(file)
 		if dir == "" {
 			dir = "."
 		}
@@ -165,20 +166,20 @@ func ParseCoverProfile(data string) (CoverageSnapshot, error) {
 		}
 	}
 
-	return snapshotFromBuckets(packages, total), nil
+	return snapshotFromBuckets(packages, total), core.Ok(nil)
 }
 
 // ParseCoverOutput parses human-readable go test -cover output into a snapshot.
-func ParseCoverOutput(output string) (CoverageSnapshot, error) {
-	if strings.TrimSpace(output) == "" {
-		return CoverageSnapshot{}, nil
+func ParseCoverOutput(output string) (CoverageSnapshot, core.Result) {
+	if core.Trim(output) == "" {
+		return CoverageSnapshot{}, core.Ok(nil)
 	}
 
 	packages := make(map[string]*CoveragePackage)
 	var total CoveragePackage
 
-	for _, rawLine := range strings.Split(strings.TrimSpace(output), "\n") {
-		line := strings.TrimSpace(rawLine)
+	for _, rawLine := range core.Split(core.Trim(output), "\n") {
+		line := core.Trim(rawLine)
 		if line == "" {
 			continue
 		}
@@ -191,7 +192,7 @@ func ParseCoverOutput(output string) (CoverageSnapshot, error) {
 		name := match[1]
 		coverage, err := strconv.ParseFloat(match[2], 64)
 		if err != nil {
-			return CoverageSnapshot{}, err
+			return CoverageSnapshot{}, core.Fail(err)
 		}
 
 		pkg := &CoveragePackage{
@@ -205,7 +206,7 @@ func ParseCoverOutput(output string) (CoverageSnapshot, error) {
 	}
 
 	if len(packages) == 0 {
-		return CoverageSnapshot{}, nil
+		return CoverageSnapshot{}, core.Ok(nil)
 	}
 
 	snapshot := CoverageSnapshot{
@@ -224,7 +225,7 @@ func ParseCoverOutput(output string) (CoverageSnapshot, error) {
 	if total.TotalStatements > 0 {
 		snapshot.Total.Coverage = total.Coverage / float64(total.TotalStatements)
 	}
-	return snapshot, nil
+	return snapshot, core.Ok(nil)
 }
 
 // CompareCoverage compares two snapshots and reports regressions and improvements.

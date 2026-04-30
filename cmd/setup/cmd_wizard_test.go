@@ -1,6 +1,7 @@
 package setup
 
 import (
+	"slices"
 	"testing"
 
 	"dappco.re/go/scm/repos"
@@ -15,12 +16,18 @@ func TestFilterReposByTypes_Good(t *testing.T) {
 
 	filtered := filterReposByTypes(reposList, []string{"module", "product"})
 
-	mustLen(t, filtered, 2)
-	mustEqual(t, "module-a", filtered[0].Name)
-	mustEqual(t, "product-a", filtered[1].Name)
+	if len(filtered) != 2 {
+		t.Fatalf("filtered length = %d, want 2", len(filtered))
+	}
+	if filtered[0].Name != "module-a" {
+		t.Fatalf("filtered[0].Name = %q, want %q", filtered[0].Name, "module-a")
+	}
+	if filtered[1].Name != "product-a" {
+		t.Fatalf("filtered[1].Name = %q, want %q", filtered[1].Name, "product-a")
+	}
 }
 
-func TestFilterReposByTypes_EmptyFilter_Good(t *testing.T) {
+func TestFilterReposByTypesEmptyFilter(t *testing.T) {
 	reposList := []*repos.Repo{
 		{Name: "foundation-a", Type: "foundation"},
 		{Name: "module-a", Type: "module"},
@@ -28,6 +35,10 @@ func TestFilterReposByTypes_EmptyFilter_Good(t *testing.T) {
 
 	filtered := filterReposByTypes(reposList, nil)
 
-	mustLen(t, filtered, 2)
-	mustDeepEqual(t, reposList, filtered)
+	if len(filtered) != 2 {
+		t.Fatalf("filtered length = %d, want 2", len(filtered))
+	}
+	if !slices.Equal(filtered, reposList) {
+		t.Fatalf("filtered = %v, want %v", filtered, reposList)
+	}
 }

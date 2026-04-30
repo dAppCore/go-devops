@@ -3,41 +3,42 @@ package setup
 
 import (
 	"cmp"
-	"fmt"
-	"os"
 	"slices"
 
+	core "dappco.re/go"
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/scm/repos"
-	"dappco.re/go/cli/pkg/cli"
 	"golang.org/x/term"
 )
 
 // isTerminal returns true if stdin is a terminal.
 func isTerminal() bool {
-	return term.IsTerminal(int(os.Stdin.Fd()))
+	stdin, ok := core.Stdin().(*core.OSFile)
+	return ok && term.IsTerminal(int(stdin.Fd()))
 }
 
 // promptSetupChoice asks the user whether to setup the working directory or create a package.
-func promptSetupChoice() (string, error) {
-	fmt.Println(cli.TitleStyle.Render(i18n.T("cmd.setup.wizard.git_repo_title")))
-	fmt.Println(i18n.T("cmd.setup.wizard.what_to_do"))
+func promptSetupChoice() (string, core.Result) {
+	cli.Text(cli.TitleStyle.Render(i18n.T("cmd.setup.wizard.git_repo_title")))
+	cli.Text(i18n.T("cmd.setup.wizard.what_to_do"))
 
 	choice, err := cli.Select("Choose action", []string{"setup", "package"})
 	if err != nil {
-		return "", err
+		return "", core.Fail(err)
 	}
-	return choice, nil
+	return choice, core.Ok(nil)
 }
 
 // promptProjectName asks the user for a project directory name.
-func promptProjectName(defaultName string) (string, error) {
-	fmt.Println(cli.TitleStyle.Render(i18n.T("cmd.setup.wizard.project_name_title")))
-	return cli.Prompt(i18n.T("cmd.setup.wizard.project_name_desc"), defaultName)
+func promptProjectName(defaultName string) (string, core.Result) {
+	cli.Text(cli.TitleStyle.Render(i18n.T("cmd.setup.wizard.project_name_title")))
+	value, err := cli.Prompt(i18n.T("cmd.setup.wizard.project_name_desc"), defaultName)
+	return value, core.ResultOf(value, err)
 }
 
 // runPackageWizard presents an interactive multi-select UI for package selection.
-func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string, error) {
+func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string, core.Result) {
 	allRepos := reg.List()
 	if len(preselectedTypes) > 0 {
 		allRepos = filterReposByTypes(allRepos, preselectedTypes)
@@ -56,20 +57,20 @@ func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string,
 			continue
 		}
 		// Format: name (type)
-		label := fmt.Sprintf("%s (%s)", repo.Name, repo.Type)
+		label := core.Sprintf("%s (%s)", repo.Name, repo.Type)
 		options = append(options, label)
 	}
 
 	if len(options) == 0 {
-		return nil, nil
+		return nil, core.Ok(nil)
 	}
 
-	fmt.Println(cli.TitleStyle.Render(i18n.T("cmd.setup.wizard.package_selection")))
-	fmt.Println(i18n.T("cmd.setup.wizard.selection_hint"))
+	cli.Text(cli.TitleStyle.Render(i18n.T("cmd.setup.wizard.package_selection")))
+	cli.Text(i18n.T("cmd.setup.wizard.selection_hint"))
 
 	selectedLabels, err := cli.MultiSelect(i18n.T("cmd.setup.wizard.select_packages"), options)
 	if err != nil {
-		return nil, err
+		return nil, core.Fail(err)
 	}
 
 	// Extract names from labels
@@ -82,7 +83,7 @@ func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string,
 		// but repo name might have spaces? Repos usually don't.
 		// Let's iterate repos to find match
 		for _, repo := range allRepos {
-			if label == fmt.Sprintf("%s (%s)", repo.Name, repo.Type) {
+			if label == core.Sprintf("%s (%s)", repo.Name, repo.Type) {
 				name = repo.Name
 				break
 			}
@@ -91,7 +92,7 @@ func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string,
 			selected = append(selected, name)
 		}
 	}
-	return selected, nil
+	return selected, core.Ok(nil)
 }
 
 func filterReposByTypes(repoList []*repos.Repo, allowedTypes []string) []*repos.Repo {
@@ -122,7 +123,7 @@ func filterReposByTypes(repoList []*repos.Repo, allowedTypes []string) []*repos.
 }
 
 // confirmClone asks for confirmation before cloning.
-func confirmClone(count int, target string) (bool, error) {
+func confirmClone(count int, target string) (bool, core.Result) {
 	confirmed := cli.Confirm(i18n.T("cmd.setup.wizard.confirm_clone", map[string]any{"Count": count, "Target": target}))
-	return confirmed, nil
+	return confirmed, core.Ok(nil)
 }

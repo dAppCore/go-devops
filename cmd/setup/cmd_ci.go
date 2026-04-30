@@ -1,13 +1,11 @@
 package setup
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
 	"runtime"
 
-	coreio "dappco.re/go/io"
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
+	coreio "dappco.re/go/io"
 	"gopkg.in/yaml.v3"
 )
 
@@ -44,13 +42,14 @@ func LoadCIConfig() *CIConfig {
 	cfg := DefaultCIConfig()
 
 	// Try to find .core/ci.yaml in current directory or parents
-	dir, err := os.Getwd()
-	if err != nil {
+	dirResult := core.Getwd()
+	if !dirResult.OK {
 		return cfg
 	}
+	dir := dirResult.Value.(string)
 
 	for {
-		configPath := filepath.Join(dir, ".core", "ci.yaml")
+		configPath := core.PathJoin(dir, ".core", "ci.yaml")
 		data, err := coreio.Local.Read(configPath)
 		if err == nil {
 			if err := yaml.Unmarshal([]byte(data), cfg); err == nil {
@@ -58,7 +57,7 @@ func LoadCIConfig() *CIConfig {
 			}
 		}
 
-		parent := filepath.Dir(dir)
+		parent := core.PathDir(dir)
 		if parent == dir {
 			break
 		}
@@ -109,7 +108,7 @@ Examples:
 
   # Use in GitHub Actions (pipe to shell)
   eval "$(core setup ci --shell=bash)"`,
-		RunE: runSetupCI,
+		RunE: resultRunE(runSetupCI),
 	}
 
 	ciCmd.Flags().StringVar(&ciShell, "shell", "", "Output format: bash, powershell, yaml (auto-detected if not specified)")
@@ -118,7 +117,7 @@ Examples:
 	setupCmd.AddCommand(ciCmd)
 }
 
-func runSetupCI(cmd *cli.Command, args []string) error {
+func runSetupCI(cmd *cli.Command, args []string) (_ core.Result) {
 	cfg := LoadCIConfig()
 
 	// Use flag version or config default
@@ -145,12 +144,12 @@ func runSetupCI(cmd *cli.Command, args []string) error {
 	case "yaml", "yml", "gha", "github":
 		return outputGitHubActionsYAML(cfg, version)
 	default:
-		return cli.Err("unsupported shell: %s (use bash, powershell, or yaml)", shell)
+		return core.Fail(cli.Err("unsupported shell: %s (use bash, powershell, or yaml)", shell))
 	}
 }
 
-func outputBashInstall(cfg *CIConfig, version string) error {
-	script := fmt.Sprintf(`#!/bin/bash
+func outputBashInstall(cfg *CIConfig, version string) (_ core.Result) {
+	script := core.Sprintf(`#!/bin/bash
 set -e
 
 VERSION="%s"
@@ -203,12 +202,12 @@ echo "Installed:"
 		cfg.Formula, cfg.Formula, cfg.Formula,
 		cfg.Formula, cfg.Formula, cfg.Formula, cfg.Formula, cfg.Formula, cfg.Formula, cfg.Formula)
 
-	fmt.Print(script)
-	return nil
+	cli.Print("%s", script)
+	return core.Ok(nil)
 }
 
-func outputPowershellInstall(cfg *CIConfig, version string) error {
-	script := fmt.Sprintf(`# PowerShell installation script for %s CLI
+func outputPowershellInstall(cfg *CIConfig, version string) (_ core.Result) {
+	script := core.Sprintf(`# PowerShell installation script for %s CLI
 $ErrorActionPreference = "Stop"
 
 $Version = "%s"
@@ -259,12 +258,12 @@ Write-Host "Installed:"
 & $BinaryPath --version
 `, cfg.Formula, version, cfg.Repository, cfg.ScoopBucket, cfg.ChocolateyPkg, cfg.Formula)
 
-	fmt.Print(script)
-	return nil
+	cli.Print("%s", script)
+	return core.Ok(nil)
 }
 
-func outputGitHubActionsYAML(cfg *CIConfig, version string) error {
-	yaml := fmt.Sprintf(`# GitHub Actions steps to install %s CLI
+func outputGitHubActionsYAML(cfg *CIConfig, version string) (_ core.Result) {
+	yaml := core.Sprintf(`# GitHub Actions steps to install %s CLI
 # Add these to your workflow file
 
 # Option 1: Direct download (fastest, no extra dependencies)
@@ -294,6 +293,6 @@ func outputGitHubActionsYAML(cfg *CIConfig, version string) error {
 `, cfg.Formula, cfg.Formula, version, cfg.Repository, cfg.Formula, cfg.Formula,
 		cfg.Formula, cfg.Tap, cfg.Tap, cfg.Formula, cfg.Formula)
 
-	fmt.Print(yaml)
-	return nil
+	cli.Print("%s", yaml)
+	return core.Ok(nil)
 }

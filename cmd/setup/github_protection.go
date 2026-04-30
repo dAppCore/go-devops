@@ -7,13 +7,10 @@
 package setup
 
 import (
-	"encoding/json"
-	"fmt"
-	"os/exec"
-	"strings"
-
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	log "dappco.re/go/log"
+	coreexec "dappco.re/go/process/exec"
 )
 
 // GitHubBranchProtection represents branch protection rules from the GitHub API.
@@ -66,43 +63,42 @@ type RequiredConversationResolution struct {
 }
 
 // GetBranchProtection fetches branch protection rules for a branch.
-func GetBranchProtection(repoFullName, branch string) (*GitHubBranchProtection, error) {
-	parts := strings.Split(repoFullName, "/")
+func GetBranchProtection(repoFullName, branch string) (*GitHubBranchProtection, core.Result) {
+	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return nil, log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return nil, core.Fail(log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil))
 	}
 
-	endpoint := fmt.Sprintf("repos/%s/%s/branches/%s/protection", parts[0], parts[1], branch)
-	cmd := exec.Command("gh", "api", endpoint)
-	output, err := cmd.Output()
-	if err != nil {
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			stderr := strings.TrimSpace(string(exitErr.Stderr))
-			// Branch protection not enabled returns 404
-			if strings.Contains(stderr, "404") || strings.Contains(stderr, "Branch not protected") {
-				return nil, nil // No protection set
-			}
-			if strings.Contains(stderr, "403") {
-				return nil, cli.Err("insufficient permissions to manage branch protection (requires admin)")
-			}
-			return nil, cli.Err("%s", stderr)
+	endpoint := core.Sprintf("repos/%s/%s/branches/%s/protection", parts[0], parts[1], branch)
+	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint)
+	output, outputResult := commandCombinedOutput(cmd)
+	if !outputResult.OK {
+		stderr := core.Trim(string(output))
+		if stderr == "" {
+			stderr = outputResult.Error()
 		}
-		return nil, err
+		if core.Contains(stderr, "404") || core.Contains(stderr, "Branch not protected") {
+			return nil, core.Ok(nil)
+		}
+		if core.Contains(stderr, "403") {
+			return nil, core.Fail(cli.Err("insufficient permissions to manage branch protection (requires admin)"))
+		}
+		return nil, core.Fail(cli.Err("%s", stderr))
 	}
 
 	var protection GitHubBranchProtection
-	if err := json.Unmarshal(output, &protection); err != nil {
-		return nil, err
+	if r := core.JSONUnmarshal(output, &protection); !r.OK {
+		return nil, r
 	}
 
-	return &protection, nil
+	return &protection, core.Ok(nil)
 }
 
 // SetBranchProtection sets branch protection rules for a branch.
-func SetBranchProtection(repoFullName, branch string, config BranchProtectionConfig) error {
-	parts := strings.Split(repoFullName, "/")
+func SetBranchProtection(repoFullName, branch string, config BranchProtectionConfig) (_ core.Result) {
+	parts := core.Split(repoFullName, "/")
 	if len(parts) != 2 {
-		return log.E("setup.github", fmt.Sprintf("invalid repo format: %s", repoFullName), nil)
+		return core.Fail(log.E("setup.github", core.Sprintf("invalid repo format: %s", repoFullName), nil))
 	}
 
 	// Build the protection payload
@@ -138,28 +134,28 @@ func SetBranchProtection(repoFullName, branch string, config BranchProtectionCon
 	// Restrictions (required but can be empty for non-org repos)
 	payload["restrictions"] = nil
 
-	payloadJSON, err := json.Marshal(payload)
-	if err != nil {
-		return err
+	payloadJSON := core.JSONMarshal(payload)
+	if !payloadJSON.OK {
+		return payloadJSON
 	}
 
-	endpoint := fmt.Sprintf("repos/%s/%s/branches/%s/protection", parts[0], parts[1], branch)
-	cmd := exec.Command("gh", "api", endpoint, "--method", "PUT", "--input", "-")
-	cmd.Stdin = strings.NewReader(string(payloadJSON))
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return cli.Err("%s", strings.TrimSpace(string(output)))
+	endpoint := core.Sprintf("repos/%s/%s/branches/%s/protection", parts[0], parts[1], branch)
+	cmd := coreexec.Command(core.Background(), "gh", "api", endpoint, "--method", "PUT", "--input", "-")
+	cmd = cmd.WithStdin(core.NewReader(string(payloadJSON.Value.([]byte))))
+	_, r := commandCombinedOutput(cmd)
+	if !r.OK {
+		return r
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 // SyncBranchProtection synchronizes branch protection for a repository.
-func SyncBranchProtection(repoFullName string, config *GitHubConfig, dryRun bool) (*ChangeSet, error) {
+func SyncBranchProtection(repoFullName string, config *GitHubConfig, dryRun bool) (*ChangeSet, core.Result) {
 	changes := NewChangeSet(repoFullName)
 
 	// Skip if no branch protection configured
 	if len(config.BranchProtection) == 0 {
-		return changes, nil
+		return changes, core.Ok(nil)
 	}
 
 	// Process each configured branch
@@ -167,14 +163,14 @@ func SyncBranchProtection(repoFullName string, config *GitHubConfig, dryRun bool
 		branch := wantProtection.Branch
 
 		// Get existing protection
-		existing, err := GetBranchProtection(repoFullName, branch)
-		if err != nil {
+		existing, r := GetBranchProtection(repoFullName, branch)
+		if !r.OK {
 			// If permission denied, note it but don't fail
-			if strings.Contains(err.Error(), "insufficient permissions") {
+			if core.Contains(r.Error(), "insufficient permissions") {
 				changes.Add(CategoryProtection, ChangeSkip, branch, "insufficient permissions")
 				continue
 			}
-			return nil, cli.Wrap(err, "failed to get protection for "+branch)
+			return nil, core.Fail(cli.Wrap(r.Value.(error), "failed to get protection for "+branch))
 		}
 
 		// Check if protection needs to be created or updated
@@ -182,8 +178,8 @@ func SyncBranchProtection(repoFullName string, config *GitHubConfig, dryRun bool
 			// Create new protection
 			changes.Add(CategoryProtection, ChangeCreate, branch, describeProtection(wantProtection))
 			if !dryRun {
-				if err := SetBranchProtection(repoFullName, branch, wantProtection); err != nil {
-					return changes, cli.Wrap(err, "failed to set protection for "+branch)
+				if r := SetBranchProtection(repoFullName, branch, wantProtection); !r.OK {
+					return changes, core.Fail(cli.Wrap(r.Value.(error), "failed to set protection for "+branch))
 				}
 			}
 			continue
@@ -205,15 +201,15 @@ func SyncBranchProtection(repoFullName string, config *GitHubConfig, dryRun bool
 
 		if existingReviews != wantProtection.RequiredReviews {
 			needsUpdate = true
-			details["required_reviews"] = fmt.Sprintf("%d -> %d", existingReviews, wantProtection.RequiredReviews)
+			details["required_reviews"] = core.Sprintf("%d -> %d", existingReviews, wantProtection.RequiredReviews)
 		}
 		if existingDismissStale != wantProtection.DismissStale {
 			needsUpdate = true
-			details["dismiss_stale"] = fmt.Sprintf("%v -> %v", existingDismissStale, wantProtection.DismissStale)
+			details["dismiss_stale"] = core.Sprintf("%v -> %v", existingDismissStale, wantProtection.DismissStale)
 		}
 		if existingCodeOwner != wantProtection.RequireCodeOwnerReviews {
 			needsUpdate = true
-			details["code_owner_reviews"] = fmt.Sprintf("%v -> %v", existingCodeOwner, wantProtection.RequireCodeOwnerReviews)
+			details["code_owner_reviews"] = core.Sprintf("%v -> %v", existingCodeOwner, wantProtection.RequireCodeOwnerReviews)
 		}
 
 		// Check enforce admins
@@ -223,7 +219,7 @@ func SyncBranchProtection(repoFullName string, config *GitHubConfig, dryRun bool
 		}
 		if existingEnforceAdmins != wantProtection.EnforceAdmins {
 			needsUpdate = true
-			details["enforce_admins"] = fmt.Sprintf("%v -> %v", existingEnforceAdmins, wantProtection.EnforceAdmins)
+			details["enforce_admins"] = core.Sprintf("%v -> %v", existingEnforceAdmins, wantProtection.EnforceAdmins)
 		}
 
 		// Check linear history
@@ -233,7 +229,7 @@ func SyncBranchProtection(repoFullName string, config *GitHubConfig, dryRun bool
 		}
 		if existingLinear != wantProtection.RequireLinearHistory {
 			needsUpdate = true
-			details["linear_history"] = fmt.Sprintf("%v -> %v", existingLinear, wantProtection.RequireLinearHistory)
+			details["linear_history"] = core.Sprintf("%v -> %v", existingLinear, wantProtection.RequireLinearHistory)
 		}
 
 		// Check force pushes
@@ -243,7 +239,7 @@ func SyncBranchProtection(repoFullName string, config *GitHubConfig, dryRun bool
 		}
 		if existingForcePush != wantProtection.AllowForcePushes {
 			needsUpdate = true
-			details["allow_force_pushes"] = fmt.Sprintf("%v -> %v", existingForcePush, wantProtection.AllowForcePushes)
+			details["allow_force_pushes"] = core.Sprintf("%v -> %v", existingForcePush, wantProtection.AllowForcePushes)
 		}
 
 		// Check deletions
@@ -253,7 +249,7 @@ func SyncBranchProtection(repoFullName string, config *GitHubConfig, dryRun bool
 		}
 		if existingDeletions != wantProtection.AllowDeletions {
 			needsUpdate = true
-			details["allow_deletions"] = fmt.Sprintf("%v -> %v", existingDeletions, wantProtection.AllowDeletions)
+			details["allow_deletions"] = core.Sprintf("%v -> %v", existingDeletions, wantProtection.AllowDeletions)
 		}
 
 		// Check required status checks
@@ -263,14 +259,14 @@ func SyncBranchProtection(repoFullName string, config *GitHubConfig, dryRun bool
 		}
 		if !stringSliceEqual(existingStatusChecks, wantProtection.RequiredStatusChecks) {
 			needsUpdate = true
-			details["status_checks"] = fmt.Sprintf("%v -> %v", existingStatusChecks, wantProtection.RequiredStatusChecks)
+			details["status_checks"] = core.Sprintf("%v -> %v", existingStatusChecks, wantProtection.RequiredStatusChecks)
 		}
 
 		if needsUpdate {
 			changes.AddWithDetails(CategoryProtection, ChangeUpdate, branch, "", details)
 			if !dryRun {
-				if err := SetBranchProtection(repoFullName, branch, wantProtection); err != nil {
-					return changes, cli.Wrap(err, "failed to update protection for "+branch)
+				if r := SetBranchProtection(repoFullName, branch, wantProtection); !r.OK {
+					return changes, core.Fail(cli.Wrap(r.Value.(error), "failed to update protection for "+branch))
 				}
 			}
 		} else {
@@ -278,14 +274,14 @@ func SyncBranchProtection(repoFullName string, config *GitHubConfig, dryRun bool
 		}
 	}
 
-	return changes, nil
+	return changes, core.Ok(nil)
 }
 
 // describeProtection returns a human-readable description of protection rules.
 func describeProtection(p BranchProtectionConfig) string {
 	var parts []string
 	if p.RequiredReviews > 0 {
-		parts = append(parts, fmt.Sprintf("%d review(s)", p.RequiredReviews))
+		parts = append(parts, core.Sprintf("%d review(s)", p.RequiredReviews))
 	}
 	if p.DismissStale {
 		parts = append(parts, "dismiss stale")
@@ -296,5 +292,5 @@ func describeProtection(p BranchProtectionConfig) string {
 	if len(parts) == 0 {
 		return "basic protection"
 	}
-	return strings.Join(parts, ", ")
+	return core.Join(", ", parts...)
 }

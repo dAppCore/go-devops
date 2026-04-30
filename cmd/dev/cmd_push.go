@@ -2,12 +2,11 @@ package dev
 
 import (
 	"context"
-	"os"
-	"path/filepath"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/scm/git"
 	"dappco.re/go/i18n"
+	"dappco.re/go/scm/git"
 )
 
 // Push command flags
@@ -23,7 +22,7 @@ func AddPushCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.push.short"),
 		Long:  i18n.T("cmd.dev.push.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runPush(pushRegistryPath, pushForce)
+			return resultToError(runPush(pushRegistryPath, pushForce))
 		},
 	}
 
@@ -33,9 +32,12 @@ func AddPushCommand(parent *cli.Command) {
 	parent.AddCommand(pushCmd)
 }
 
-func runPush(registryPath string, force bool) error {
+func runPush(registryPath string, force bool) (_ core.Result) {
 	ctx := context.Background()
-	cwd, _ := os.Getwd()
+	cwd := "."
+	if cwdResult := core.Getwd(); cwdResult.OK {
+		cwd = cwdResult.Value.(string)
+	}
 
 	// Check if current directory is a git repo (single-repo mode)
 	if registryPath == "" && isGitRepo(cwd) {
@@ -43,9 +45,9 @@ func runPush(registryPath string, force bool) error {
 	}
 
 	// Multi-repo mode: find or use provided registry
-	reg, _, err := loadRegistryWithConfig(registryPath)
-	if err != nil {
-		return err
+	reg, _, r := loadRegistryWithConfig(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	// Build paths and names for git operations
@@ -61,7 +63,7 @@ func runPush(registryPath string, force bool) error {
 
 	if len(paths) == 0 {
 		cli.Text(i18n.T("cmd.dev.no_git_repos"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Get status for all repos
@@ -80,7 +82,7 @@ func runPush(registryPath string, force bool) error {
 
 	if len(aheadRepos) == 0 {
 		cli.Text(i18n.T("cmd.dev.push.all_up_to_date"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Show repos to push
@@ -99,7 +101,7 @@ func runPush(registryPath string, force bool) error {
 		cli.Blank()
 		if !cli.Confirm(i18n.T("cmd.dev.push.confirm_push", map[string]any{"Commits": totalCommits, "Repos": len(aheadRepos)})) {
 			cli.Text(i18n.T("cli.aborted"))
-			return nil
+			return core.Ok(nil)
 		}
 	}
 
@@ -164,12 +166,12 @@ func runPush(registryPath string, force bool) error {
 	}
 	cli.Blank()
 
-	return nil
+	return core.Ok(nil)
 }
 
 // runPushSingleRepo handles push for a single repo (current directory).
-func runPushSingleRepo(ctx context.Context, repoPath string, force bool) error {
-	repoName := filepath.Base(repoPath)
+func runPushSingleRepo(ctx context.Context, repoPath string, force bool) (_ core.Result) {
+	repoName := core.PathBase(repoPath)
 
 	// Get status
 	statuses := git.Status(ctx, git.StatusOptions{
@@ -178,12 +180,12 @@ func runPushSingleRepo(ctx context.Context, repoPath string, force bool) error {
 	})
 
 	if len(statuses) == 0 {
-		return cli.Err("failed to get repo status")
+		return core.Fail(cli.Err("failed to get repo status"))
 	}
 
 	s := statuses[0]
 	if s.Error != nil {
-		return s.Error
+		return core.Fail(s.Error)
 	}
 
 	if !s.HasUnpushed() {
@@ -204,14 +206,14 @@ func runPushSingleRepo(ctx context.Context, repoPath string, force bool) error {
 			if cli.Confirm(i18n.T("cmd.dev.push.uncommitted_changes_commit")) {
 				cli.Blank()
 				// Use edit-enabled commit if only untracked files (may need .gitignore fix)
-				var err error
+				var r core.Result
 				if s.Modified == 0 && s.Staged == 0 && s.Untracked > 0 {
-					err = doCommit(ctx, repoPath, true)
+					r = doCommit(ctx, repoPath, true)
 				} else {
-					err = runCommitSingleRepo(ctx, repoPath, false)
+					r = runCommitSingleRepo(ctx, repoPath, false)
 				}
-				if err != nil {
-					return err
+				if !r.OK {
+					return r
 				}
 				// Re-check - only push if Claude created commits
 				newStatuses := git.Status(ctx, git.StatusOptions{
@@ -222,10 +224,10 @@ func runPushSingleRepo(ctx context.Context, repoPath string, force bool) error {
 					return runPushSingleRepo(ctx, repoPath, force)
 				}
 			}
-			return nil
+			return core.Ok(nil)
 		}
 		cli.Text(i18n.T("cmd.dev.push.all_up_to_date"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Show commits to push
@@ -237,7 +239,7 @@ func runPushSingleRepo(ctx context.Context, repoPath string, force bool) error {
 		cli.Blank()
 		if !cli.Confirm(i18n.T("cmd.dev.push.confirm_push", map[string]any{"Commits": s.Ahead, "Repos": 1})) {
 			cli.Text(i18n.T("cli.aborted"))
-			return nil
+			return core.Ok(nil)
 		}
 	}
 
@@ -255,21 +257,21 @@ func runPushSingleRepo(ctx context.Context, repoPath string, force bool) error {
 				cli.Print("  %s %s...\n", dimStyle.Render("↓"), repoName)
 				if pullErr := git.Pull(ctx, repoPath); pullErr != nil {
 					cli.Print("  %s %s: %s\n", errorStyle.Render("x"), repoName, pullErr)
-					return pullErr
+					return core.Fail(pullErr)
 				}
 				cli.Print("  %s %s...\n", dimStyle.Render("↑"), repoName)
 				if pushErr := git.Push(ctx, repoPath); pushErr != nil {
 					cli.Print("  %s %s: %s\n", errorStyle.Render("x"), repoName, pushErr)
-					return pushErr
+					return core.Fail(pushErr)
 				}
 				cli.Print("  %s %s\n", successStyle.Render("v"), repoName)
-				return nil
+				return core.Ok(nil)
 			}
 		}
 		cli.Print("  %s %s: %s\n", errorStyle.Render("x"), repoName, err)
-		return err
+		return core.Fail(err)
 	}
 
 	cli.Print("  %s %s\n", successStyle.Render("v"), repoName)
-	return nil
+	return core.Ok(nil)
 }

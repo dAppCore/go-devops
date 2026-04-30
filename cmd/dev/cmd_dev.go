@@ -34,8 +34,9 @@
 package dev
 
 import (
-	"dappco.re/go/i18n"
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
+	"dappco.re/go/i18n"
 
 	_ "dappco.re/go/devops/locales"
 )
@@ -54,6 +55,19 @@ var (
 	headerStyle   = cli.HeaderStyle
 	repoNameStyle = cli.RepoStyle
 )
+
+var resultToError = func(r core.Result) error {
+	if !r.OK {
+		return r.Value.(error)
+	}
+	return nil
+}
+
+var resultRunE = func(fn func(*cli.Command, []string) core.Result) func(*cli.Command, []string) error {
+	return func(cmd *cli.Command, args []string) error {
+		return resultToError(fn(cmd, args))
+	}
+}
 
 // Table styles for status display (extends shared styles with cell padding)
 var (

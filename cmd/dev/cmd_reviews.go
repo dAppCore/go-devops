@@ -2,9 +2,9 @@ package dev
 
 import (
 	"slices"
-	"strings"
 	"time"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 
@@ -48,7 +48,7 @@ func addReviewsCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.reviews.short"),
 		Long:  i18n.T("cmd.dev.reviews.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runReviews(reviewsRegistryPath, reviewsAuthor, reviewsShowAll)
+			return resultToError(runReviews(reviewsRegistryPath, reviewsAuthor, reviewsShowAll))
 		},
 	}
 
@@ -59,16 +59,16 @@ func addReviewsCommand(parent *cli.Command) {
 	parent.AddCommand(reviewsCmd)
 }
 
-func runReviews(registryPath string, author string, showAll bool) error {
-	client, err := forgeAPIClient()
-	if err != nil {
-		return err
+func runReviews(registryPath string, author string, showAll bool) (_ core.Result) {
+	client, r := forgeAPIClient()
+	if !r.OK {
+		return r
 	}
 
 	// Find or use provided registry
-	reg, _, err := loadRegistryWithConfig(registryPath)
-	if err != nil {
-		return err
+	reg, _, r := loadRegistryWithConfig(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	// Fetch PRs sequentially
@@ -80,9 +80,9 @@ func runReviews(registryPath string, author string, showAll bool) error {
 		cli.Print("\033[2K\r%s %d/%d %s", dimStyle.Render(i18n.T("i18n.progress.fetch")), i+1, len(repoList), repo.Name)
 
 		owner, apiRepo := forgeRepoIdentity(repo.Path, reg.Org, repo.Name)
-		prs, err := fetchPRs(client, owner, apiRepo, repo.Name, author)
-		if err != nil {
-			fetchErrors = append(fetchErrors, cli.Wrap(err, repo.Name))
+		prs, r := fetchPRs(client, owner, apiRepo, repo.Name, author)
+		if !r.OK {
+			fetchErrors = append(fetchErrors, cli.Wrap(r.Value.(error), repo.Name))
 			continue
 		}
 
@@ -113,7 +113,7 @@ func runReviews(registryPath string, author string, showAll bool) error {
 	// Print PRs
 	if len(allPRs) == 0 {
 		cli.Text(i18n.T("cmd.dev.reviews.no_prs"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Count by status
@@ -155,20 +155,20 @@ func runReviews(registryPath string, author string, showAll bool) error {
 		}
 	}
 
-	return nil
+	return core.Ok(nil)
 }
 
-func fetchPRs(client *gitea.Client, owner, apiRepo, displayName string, author string) ([]ForgePR, error) {
+func fetchPRs(client *gitea.Client, owner, apiRepo, displayName string, author string) ([]ForgePR, core.Result) {
 	prs, _, err := client.ListRepoPullRequests(owner, apiRepo, gitea.ListPullRequestsOptions{
 		ListOptions: gitea.ListOptions{Page: 1, PageSize: 50},
 		State:       gitea.StateOpen,
 	})
 	if err != nil {
 		errMsg := err.Error()
-		if strings.Contains(errMsg, "404") || strings.Contains(errMsg, "Not Found") {
-			return nil, nil
+		if core.Contains(errMsg, "404") || core.Contains(errMsg, "Not Found") {
+			return nil, core.Ok(nil)
 		}
-		return nil, err
+		return nil, core.Fail(err)
 	}
 
 	var result []ForgePR
@@ -198,7 +198,7 @@ func fetchPRs(client *gitea.Client, owner, apiRepo, displayName string, author s
 		result = append(result, fp)
 	}
 
-	return result, nil
+	return result, core.Ok(nil)
 }
 
 // determineReviewDecision fetches reviews for a PR and determines the overall status.

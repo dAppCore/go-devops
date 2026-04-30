@@ -77,7 +77,7 @@ Configuration lives in `.core/build.yaml` (targets, ldflags) and `.core/release.
 ## Coding Standards
 
 - **UK English**: colour, organisation, centre
-- **Tests**: testify assert/require, `_Good`/`_Bad`/`_Ugly` naming convention
+- **Tests**: standard `testing` checks only; no testify. Use `_Good`/`_Bad`/`_Ugly` naming convention
 - **Conventional commits**: `feat(ansible):`, `fix(infra):`, `refactor(build):`
 - **Co-Author**: `Co-Authored-By: Virgil <virgil@lethean.io>`
 - **Licence**: EUPL-1.2

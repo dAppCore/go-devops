@@ -4,8 +4,8 @@ import (
 	"cmp"
 	"context"
 	"slices"
-	"strings"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/scm/git"
@@ -25,7 +25,7 @@ func AddWorkCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.work.short"),
 		Long:  i18n.T("cmd.dev.work.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runWork(workRegistryPath, workStatusOnly, workAutoCommit)
+			return resultToError(runWork(workRegistryPath, workStatusOnly, workAutoCommit))
 		},
 	}
 
@@ -36,27 +36,31 @@ func AddWorkCommand(parent *cli.Command) {
 	parent.AddCommand(workCmd)
 }
 
-func runWork(registryPath string, statusOnly, autoCommit bool) error {
+func runWork(registryPath string, statusOnly, autoCommit bool) (_ core.Result) {
 	ctx := context.Background()
 
 	// Build worker bundle with required services
 	bundle, err := NewWorkBundle(WorkBundleOptions{
 		RegistryPath: registryPath,
 	})
-	if err != nil {
+	if !err.OK {
 		return err
 	}
 
 	// Start services (registers handlers)
-	if err := bundle.Start(ctx); err != nil {
-		return err
+	if r := bundle.Start(ctx); !r.OK {
+		return r
 	}
-	defer func() { _ = bundle.Stop(ctx) }()
+	defer func() {
+		if r := bundle.Stop(ctx); !r.OK {
+			cli.Print("  %s %s\n", errorStyle.Render("x"), r.Value.(error))
+		}
+	}()
 
 	// Load registry and get paths
-	reg, _, err := loadRegistryWithConfig(registryPath)
-	if err != nil {
-		return err
+	reg, _, r := loadRegistryWithConfig(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	var paths []string
@@ -70,7 +74,7 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 
 	if len(paths) == 0 {
 		cli.Text(i18n.T("cmd.dev.no_git_repos"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Query git status directly
@@ -110,9 +114,9 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 		cli.Blank()
 
 		for _, s := range dirtyRepos {
-			err := doCommit(ctx, s.Path, false)
-			if err != nil {
-				cli.Print("  %s %s: %s\n", errorStyle.Render("x"), s.Name, err)
+			r := doCommit(ctx, s.Path, false)
+			if !r.OK {
+				cli.Print("  %s %s: %s\n", errorStyle.Render("x"), s.Name, r.Value.(error))
 			} else {
 				cli.Print("  %s %s\n", successStyle.Render("v"), s.Name)
 			}
@@ -139,14 +143,14 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 			cli.Blank()
 			cli.Print("%s\n", dimStyle.Render(i18n.T("cmd.dev.work.use_commit_flag")))
 		}
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Push repos with unpushed commits
 	if len(aheadRepos) == 0 {
 		cli.Blank()
 		cli.Text(i18n.T("cmd.dev.work.all_up_to_date"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	cli.Blank()
@@ -158,7 +162,7 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 	cli.Blank()
 	if !cli.Confirm(i18n.T("cmd.dev.push.confirm")) {
 		cli.Text(i18n.T("cli.aborted"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	cli.Blank()
@@ -210,7 +214,7 @@ func runWork(registryPath string, statusOnly, autoCommit bool) error {
 		}
 	}
 
-	return nil
+	return core.Ok(nil)
 }
 
 func printStatusTable(statuses []git.RepoStatus) {
@@ -233,7 +237,7 @@ func printStatusTable(statuses []git.RepoStatus) {
 	)
 
 	// Print separator
-	cli.Text(strings.Repeat("-", nameWidth+2+10+11+8+7))
+	cli.Text(repeatStatusSeparator(nameWidth + 2 + 10 + 11 + 8 + 7))
 
 	// Print rows
 	for _, s := range statuses {
@@ -287,3 +291,10 @@ func printStatusTable(statuses []git.RepoStatus) {
 	}
 }
 
+func repeatStatusSeparator(width int) string {
+	parts := make([]string, width)
+	for i := range parts {
+		parts[i] = "-"
+	}
+	return core.Join("", parts...)
+}

@@ -2,29 +2,38 @@ package python
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"sync"
 
+	core "dappco.re/go"
 	"dappco.re/go/log"
 	"github.com/kluctl/go-embed-python/python"
 )
+
+type pythonRunner interface {
+	Output() ([]byte, error)
+}
 
 var (
 	once    sync.Once
 	ep      *python.EmbeddedPython
 	initErr error
+
+	newEmbeddedPython = python.NewEmbeddedPython
+	initRuntime       = Init
+	pythonCommand     = func(args ...string) (pythonRunner, error) {
+		return ep.PythonCmd(args...)
+	}
 )
 
 // Init initializes the embedded Python runtime.
-func Init() error {
+func Init() (_ core.Result) {
 	once.Do(func() {
-		ep, initErr = python.NewEmbeddedPython("core-deploy")
+		ep, initErr = newEmbeddedPython("core-deploy")
 	})
-	return initErr
+	if initErr != nil {
+		return core.Fail(initErr)
+	}
+	return core.Ok(ep)
 }
 
 // GetPython returns the embedded Python instance.
@@ -33,100 +42,100 @@ func GetPython() *python.EmbeddedPython {
 }
 
 // RunScript runs a Python script with the given code and returns stdout.
-func RunScript(ctx context.Context, code string, args ...string) (string, error) {
-	if err := Init(); err != nil {
-		return "", err
+func RunScript(ctx context.Context, code string, args ...string) (string, core.Result) {
+	if r := initRuntime(); !r.OK {
+		return "", r
 	}
 
 	// Write code to temp file
-	tmpFile, err := os.CreateTemp("", "core-*.py")
-	if err != nil {
-		return "", log.E("python", "create temp file", err)
+	tmpResult := core.MkdirTemp("", "core-python-*")
+	if !tmpResult.OK {
+		return "", core.Fail(log.E("python", "create temp dir", tmpResult.Value.(error)))
 	}
-	defer func() { _ = os.Remove(tmpFile.Name()) }()
+	tmpDir := tmpResult.Value.(string)
+	defer func() {
+		if r := core.RemoveAll(tmpDir); !r.OK {
+			log.Warn("failed to remove temporary Python script directory", "script_dir", tmpDir, "error", r.Error())
+		}
+	}()
 
-	if _, err := tmpFile.WriteString(code); err != nil {
-		_ = tmpFile.Close()
-		return "", log.E("python", "write script", err)
+	tmpPath := core.PathJoin(tmpDir, "script.py")
+	if r := core.WriteFile(tmpPath, []byte(code), 0o600); !r.OK {
+		return "", core.Fail(log.E("python", "write script", r.Value.(error)))
 	}
-	_ = tmpFile.Close()
 
 	// Build args: script path + any additional args
-	cmdArgs := append([]string{tmpFile.Name()}, args...)
+	cmdArgs := append([]string{tmpPath}, args...)
 
 	// Get the command
-	cmd, err := ep.PythonCmd(cmdArgs...)
+	cmd, err := pythonCommand(cmdArgs...)
 	if err != nil {
-		return "", log.E("python", "create command", err)
+		return "", core.Fail(log.E("python", "create command", err))
 	}
 
 	// Run with context
 	output, err := cmd.Output()
 	if err != nil {
-		// Include stderr in the error message for better diagnostics
-		if exitErr, ok := err.(*exec.ExitError); ok {
-			return "", log.E("python", "run script: "+string(exitErr.Stderr), err)
-		}
-		return "", log.E("python", "run script", err)
+		return "", core.Fail(log.E("python", "run script", err))
 	}
 
-	return string(output), nil
+	return string(output), core.Ok(nil)
 }
 
 // RunModule runs a Python module (python -m module_name).
-func RunModule(ctx context.Context, module string, args ...string) (string, error) {
-	if err := Init(); err != nil {
-		return "", err
+func RunModule(ctx context.Context, module string, args ...string) (string, core.Result) {
+	if r := initRuntime(); !r.OK {
+		return "", r
 	}
 
 	cmdArgs := append([]string{"-m", module}, args...)
-	cmd, err := ep.PythonCmd(cmdArgs...)
+	cmd, err := pythonCommand(cmdArgs...)
 	if err != nil {
-		return "", log.E("python", "create command", err)
+		return "", core.Fail(log.E("python", "create command", err))
 	}
 
 	output, err := cmd.Output()
 	if err != nil {
-		return "", log.E("python", "run module "+module, err)
+		return "", core.Fail(log.E("python", "run module "+module, err))
 	}
 
-	return string(output), nil
+	return string(output), core.Ok(nil)
 }
 
 // DevOpsPath returns the path to the DevOps repo.
-func DevOpsPath() (string, error) {
-	if path := os.Getenv("DEVOPS_PATH"); path != "" {
-		return path, nil
+func DevOpsPath() (string, core.Result) {
+	if path := core.Getenv("DEVOPS_PATH"); path != "" {
+		return path, core.Ok(nil)
 	}
-	home, err := os.UserHomeDir()
-	if err != nil {
-		return "", log.E("python", "get user home", err)
+	r := core.UserHomeDir()
+	if !r.OK {
+		return "", core.Fail(log.E("python", "get user home", r.Value.(error)))
 	}
-	return filepath.Join(home, "Code", "DevOps"), nil
+	return core.PathJoin(r.Value.(string), "Code", "DevOps"), core.Ok(nil)
 }
 
 // CoolifyModulePath returns the path to the Coolify module_utils.
-func CoolifyModulePath() (string, error) {
-	path, err := DevOpsPath()
-	if err != nil {
-		return "", err
+func CoolifyModulePath() (string, core.Result) {
+	path, r := DevOpsPath()
+	if !r.OK {
+		return "", r
 	}
-	return filepath.Join(path, "playbooks", "roles", "coolify", "module_utils"), nil
+	return core.PathJoin(path, "playbooks", "roles", "coolify", "module_utils"), core.Ok(nil)
 }
 
 // CoolifyScript generates Python code to call the Coolify API.
-func CoolifyScript(baseURL, apiToken, operation string, params map[string]any) (string, error) {
-	paramsJSON, err := json.Marshal(params)
-	if err != nil {
-		return "", log.E("python", "marshal params", err)
+func CoolifyScript(baseURL, apiToken, operation string, params map[string]any) (string, core.Result) {
+	paramsResult := core.JSONMarshal(params)
+	if !paramsResult.OK {
+		return "", core.Fail(log.E("python", "marshal params", paramsResult.Value.(error)))
 	}
 
-	modulePath, err := CoolifyModulePath()
-	if err != nil {
-		return "", err
+	modulePath, r := CoolifyModulePath()
+	if !r.OK {
+		return "", r
 	}
 
-	return fmt.Sprintf(`
+	return core.Sprintf(`
 import sys
 import json
 sys.path.insert(0, %q)
@@ -143,5 +152,5 @@ client = CoolifyClient(
 params = json.loads(%q)
 result = client._call(%q, params, check_response=False)
 print(json.dumps(result))
-`, modulePath, baseURL, apiToken, string(paramsJSON), operation), nil
+`, modulePath, baseURL, apiToken, string(paramsResult.Value.([]byte)), operation), core.Ok(nil)
 }

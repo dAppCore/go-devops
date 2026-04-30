@@ -2,9 +2,9 @@ package dev
 
 import (
 	"slices"
-	"strings"
 	"time"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 
@@ -51,7 +51,7 @@ func addIssuesCommand(parent *cli.Command) {
 			if limit == 0 {
 				limit = 10
 			}
-			return runIssues(issuesRegistryPath, limit, issuesAssignee)
+			return resultToError(runIssues(issuesRegistryPath, limit, issuesAssignee))
 		},
 	}
 
@@ -62,16 +62,16 @@ func addIssuesCommand(parent *cli.Command) {
 	parent.AddCommand(issuesCmd)
 }
 
-func runIssues(registryPath string, limit int, assignee string) error {
-	client, err := forgeAPIClient()
-	if err != nil {
-		return err
+func runIssues(registryPath string, limit int, assignee string) (_ core.Result) {
+	client, r := forgeAPIClient()
+	if !r.OK {
+		return r
 	}
 
 	// Find or use provided registry
-	reg, _, err := loadRegistryWithConfig(registryPath)
-	if err != nil {
-		return err
+	reg, _, r := loadRegistryWithConfig(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	// Fetch issues sequentially
@@ -83,9 +83,9 @@ func runIssues(registryPath string, limit int, assignee string) error {
 		cli.Print("\033[2K\r%s %d/%d %s", dimStyle.Render(i18n.T("i18n.progress.fetch")), i+1, len(repoList), repo.Name)
 
 		owner, apiRepo := forgeRepoIdentity(repo.Path, reg.Org, repo.Name)
-		issues, err := fetchIssues(client, owner, apiRepo, repo.Name, limit, assignee)
-		if err != nil {
-			fetchErrors = append(fetchErrors, cli.Wrap(err, repo.Name))
+		issues, r := fetchIssues(client, owner, apiRepo, repo.Name, limit, assignee)
+		if !r.OK {
+			fetchErrors = append(fetchErrors, cli.Wrap(r.Value.(error), repo.Name))
 			continue
 		}
 		allIssues = append(allIssues, issues...)
@@ -100,7 +100,7 @@ func runIssues(registryPath string, limit int, assignee string) error {
 	// Print issues
 	if len(allIssues) == 0 {
 		cli.Text(i18n.T("cmd.dev.issues.no_issues"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	cli.Print("\n%s\n\n", i18n.T("cmd.dev.issues.open_issues", map[string]any{"Count": len(allIssues)}))
@@ -117,10 +117,10 @@ func runIssues(registryPath string, limit int, assignee string) error {
 		}
 	}
 
-	return nil
+	return core.Ok(nil)
 }
 
-func fetchIssues(client *gitea.Client, owner, apiRepo, displayName string, limit int, assignee string) ([]ForgeIssue, error) {
+func fetchIssues(client *gitea.Client, owner, apiRepo, displayName string, limit int, assignee string) ([]ForgeIssue, core.Result) {
 	opts := gitea.ListIssueOption{
 		ListOptions: gitea.ListOptions{Page: 1, PageSize: limit},
 		State:       gitea.StateOpen,
@@ -133,10 +133,10 @@ func fetchIssues(client *gitea.Client, owner, apiRepo, displayName string, limit
 	issues, _, err := client.ListRepoIssues(owner, apiRepo, opts)
 	if err != nil {
 		errMsg := err.Error()
-		if strings.Contains(errMsg, "404") || strings.Contains(errMsg, "Not Found") {
-			return nil, nil
+		if core.Contains(errMsg, "404") || core.Contains(errMsg, "Not Found") {
+			return nil, core.Ok(nil)
 		}
-		return nil, err
+		return nil, core.Fail(err)
 	}
 
 	var result []ForgeIssue
@@ -160,7 +160,7 @@ func fetchIssues(client *gitea.Client, owner, apiRepo, displayName string, limit
 		result = append(result, fi)
 	}
 
-	return result, nil
+	return result, core.Ok(nil)
 }
 
 func printIssue(issue ForgeIssue) {
@@ -173,7 +173,7 @@ func printIssue(issue ForgeIssue) {
 
 	// Add labels if any
 	if len(issue.Labels) > 0 {
-		line += " " + issueLabelStyle.Render("["+strings.Join(issue.Labels, ", ")+"]")
+		line += " " + issueLabelStyle.Render("["+core.Join(", ", issue.Labels...)+"]")
 	}
 
 	// Add assignee if any
@@ -182,7 +182,7 @@ func printIssue(issue ForgeIssue) {
 		for _, a := range issue.Assignees {
 			tagged = append(tagged, "@"+a)
 		}
-		line += " " + issueAssigneeStyle.Render(strings.Join(tagged, ", "))
+		line += " " + issueAssigneeStyle.Render(core.Join(", ", tagged...))
 	}
 
 	// Add age

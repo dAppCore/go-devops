@@ -1,12 +1,11 @@
 package dev
 
 import (
-	"path/filepath"
-	"strings"
 	"time"
 
 	"code.gitea.io/sdk/gitea"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 )
@@ -49,7 +48,7 @@ func addCICommand(parent *cli.Command) {
 			if branch == "" {
 				branch = "main"
 			}
-			return runCI(ciRegistryPath, branch, ciFailedOnly)
+			return resultToError(runCI(ciRegistryPath, branch, ciFailedOnly))
 		},
 	}
 
@@ -60,16 +59,16 @@ func addCICommand(parent *cli.Command) {
 	parent.AddCommand(ciCmd)
 }
 
-func runCI(registryPath string, branch string, failedOnly bool) error {
-	client, err := forgeAPIClient()
-	if err != nil {
-		return err
+func runCI(registryPath string, branch string, failedOnly bool) (_ core.Result) {
+	client, r := forgeAPIClient()
+	if !r.OK {
+		return r
 	}
 
 	// Find or use provided registry
-	reg, _, err := loadRegistryWithConfig(registryPath)
-	if err != nil {
-		return err
+	reg, _, r := loadRegistryWithConfig(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	// Fetch CI status sequentially
@@ -82,12 +81,12 @@ func runCI(registryPath string, branch string, failedOnly bool) error {
 		cli.Print("\033[2K\r%s %d/%d %s", dimStyle.Render(i18n.T("i18n.progress.check")), i+1, len(repoList), repo.Name)
 
 		owner, apiRepo := forgeRepoIdentity(repo.Path, reg.Org, repo.Name)
-		runs, err := fetchWorkflowRuns(client, owner, apiRepo, repo.Name, branch)
-		if err != nil {
-			if strings.Contains(err.Error(), "404") || strings.Contains(err.Error(), "no workflows") {
+		runs, r := fetchWorkflowRuns(client, owner, apiRepo, repo.Name, branch)
+		if !r.OK {
+			if core.Contains(r.Error(), "404") || core.Contains(r.Error(), "no workflows") {
 				noCI = append(noCI, repo.Name)
 			} else {
-				fetchErrors = append(fetchErrors, cli.Wrap(err, repo.Name))
+				fetchErrors = append(fetchErrors, cli.Wrap(r.Value.(error), repo.Name))
 			}
 			continue
 		}
@@ -163,10 +162,10 @@ func runCI(registryPath string, branch string, failedOnly bool) error {
 		}
 	}
 
-	return nil
+	return core.Ok(nil)
 }
 
-func fetchWorkflowRuns(client *gitea.Client, owner, apiRepo, displayName string, branch string) ([]WorkflowRun, error) {
+func fetchWorkflowRuns(client *gitea.Client, owner, apiRepo, displayName string, branch string) ([]WorkflowRun, core.Result) {
 	// Try ListRepoActionRuns first (Gitea 1.25+ / modern Forgejo)
 	resp, _, err := client.ListRepoActionRuns(owner, apiRepo, gitea.ListRepoActionRunsOptions{
 		ListOptions: gitea.ListOptions{Page: 1, PageSize: 5},
@@ -178,7 +177,7 @@ func fetchWorkflowRuns(client *gitea.Client, owner, apiRepo, displayName string,
 			name := r.DisplayTitle
 			if r.Path != "" {
 				// Use workflow filename as name: ".forgejo/workflows/ci.yml" → "ci"
-				name = strings.TrimSuffix(filepath.Base(r.Path), filepath.Ext(r.Path))
+				name = core.TrimSuffix(core.PathBase(r.Path), core.PathExt(r.Path))
 			}
 			updated := r.CompletedAt
 			if updated.IsZero() {
@@ -195,16 +194,16 @@ func fetchWorkflowRuns(client *gitea.Client, owner, apiRepo, displayName string,
 				RepoName:   displayName,
 			})
 		}
-		return runs, nil
+		return runs, core.Ok(nil)
 	}
 
 	// Fallback: ListRepoActionTasks (older API, no version check)
 	taskResp, _, taskErr := client.ListRepoActionTasks(owner, apiRepo, gitea.ListOptions{Page: 1, PageSize: 10})
 	if taskErr != nil {
 		if err != nil {
-			return nil, err
+			return nil, core.Fail(err)
 		}
-		return nil, taskErr
+		return nil, core.Fail(taskErr)
 	}
 
 	var runs []WorkflowRun
@@ -230,7 +229,7 @@ func fetchWorkflowRuns(client *gitea.Client, owner, apiRepo, displayName string,
 		})
 	}
 
-	return runs, nil
+	return runs, core.Ok(nil)
 }
 
 func printWorkflowRun(run WorkflowRun) {

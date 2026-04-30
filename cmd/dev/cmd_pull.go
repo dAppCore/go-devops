@@ -2,11 +2,12 @@ package dev
 
 import (
 	"context"
-	"os/exec"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/scm/git"
 	"dappco.re/go/i18n"
+	coreexec "dappco.re/go/process/exec"
+	"dappco.re/go/scm/git"
 )
 
 // Pull command flags
@@ -22,7 +23,7 @@ func AddPullCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.pull.short"),
 		Long:  i18n.T("cmd.dev.pull.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runPull(pullRegistryPath, pullAll)
+			return resultToError(runPull(pullRegistryPath, pullAll))
 		},
 	}
 
@@ -32,13 +33,13 @@ func AddPullCommand(parent *cli.Command) {
 	parent.AddCommand(pullCmd)
 }
 
-func runPull(registryPath string, all bool) error {
+func runPull(registryPath string, all bool) (_ core.Result) {
 	ctx := context.Background()
 
 	// Find or use provided registry
-	reg, _, err := loadRegistryWithConfig(registryPath)
-	if err != nil {
-		return err
+	reg, _, r := loadRegistryWithConfig(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	// Build paths and names for git operations
@@ -54,7 +55,7 @@ func runPull(registryPath string, all bool) error {
 
 	if len(paths) == 0 {
 		cli.Text(i18n.T("cmd.dev.no_git_repos"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Get status for all repos
@@ -76,7 +77,7 @@ func runPull(registryPath string, all bool) error {
 
 	if len(toPull) == 0 {
 		cli.Text(i18n.T("cmd.dev.pull.all_up_to_date"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Show what we're pulling
@@ -98,9 +99,9 @@ func runPull(registryPath string, all bool) error {
 	for _, s := range toPull {
 		cli.Print("  %s %s... ", dimStyle.Render(i18n.T("cmd.dev.pull.pulling")), s.Name)
 
-		err := gitPull(ctx, s.Path)
-		if err != nil {
-			cli.Print("%s\n", errorStyle.Render("x "+err.Error()))
+		r := gitPull(ctx, s.Path)
+		if !r.OK {
+			cli.Print("%s\n", errorStyle.Render("x "+r.Error()))
 			failed++
 		} else {
 			cli.Print("%s\n", successStyle.Render("v"))
@@ -116,15 +117,14 @@ func runPull(registryPath string, all bool) error {
 	}
 	cli.Blank()
 
-	return nil
+	return core.Ok(nil)
 }
 
-func gitPull(ctx context.Context, path string) error {
-	cmd := exec.CommandContext(ctx, "git", "pull", "--ff-only")
-	cmd.Dir = path
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return cli.Err("%s", string(output))
+func gitPull(ctx context.Context, path string) (_ core.Result) {
+	cmd := coreexec.Command(ctx, "git", "pull", "--ff-only").WithDir(path)
+	r := cmd.CombinedOutput()
+	if !r.OK {
+		return core.Fail(cli.Err("%s", r.Value.(error).Error()))
 	}
-	return nil
+	return core.Ok(nil)
 }

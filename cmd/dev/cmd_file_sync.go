@@ -9,17 +9,15 @@ package dev
 
 import (
 	"context"
-	"os"
-	"os/exec"
-	"path/filepath"
-	"strings"
 
+	core "dappco.re/go"
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	coreio "dappco.re/go/io"
 	"dappco.re/go/log"
+	coreexec "dappco.re/go/process/exec"
 	"dappco.re/go/scm/git"
 	"dappco.re/go/scm/repos"
-	"dappco.re/go/cli/pkg/cli"
 )
 
 // File sync command flags
@@ -40,7 +38,7 @@ func AddFileSyncCommand(parent *cli.Command) {
 		Long:  i18n.T("cmd.dev.file_sync.long"),
 		Args:  cli.MinimumNArgs(1),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runFileSync(args[0])
+			return resultToError(runFileSync(args[0]))
 		},
 	}
 
@@ -51,33 +49,36 @@ func AddFileSyncCommand(parent *cli.Command) {
 	syncCmd.Flags().BoolVar(&fileSyncPush, "push", false, i18n.T("cmd.dev.file_sync.flag.push"))
 	syncCmd.Flags().BoolVarP(&fileSyncYes, "yes", "y", false, i18n.T("cmd.dev.file_sync.flag.yes"))
 
-	_ = syncCmd.MarkFlagRequired("to")
+	if err := syncCmd.MarkFlagRequired("to"); err != nil {
+		panic(err)
+	}
 
 	parent.AddCommand(syncCmd)
 }
 
-func runFileSync(source string) error {
+func runFileSync(source string) (_ core.Result) {
 	ctx := context.Background()
 
 	// Security: Reject path traversal attempts
-	if strings.Contains(source, "..") {
-		return log.E("dev.sync", "path traversal not allowed", nil)
+	if core.Contains(source, "..") {
+		return core.Fail(log.E("dev.sync", "path traversal not allowed", nil))
 	}
 
 	// Validate source exists
-	sourceInfo, err := os.Stat(source) // Keep os.Stat for local source check or use coreio? coreio.Local.IsFile is bool.
-	if err != nil {
-		return log.E("dev.sync", i18n.T("cmd.dev.file_sync.error.source_not_found", map[string]any{"Path": source}), err)
+	sourceInfoResult := core.Stat(source)
+	if !sourceInfoResult.OK {
+		return core.Fail(log.E("dev.sync", i18n.T("cmd.dev.file_sync.error.source_not_found", map[string]any{"Path": source}), sourceInfoResult.Value.(error)))
 	}
+	sourceInfo := sourceInfoResult.Value.(core.FsFileInfo)
 
 	// Find target repos
-	targetRepos, err := resolveTargetRepos(fileSyncTo)
-	if err != nil {
-		return err
+	targetRepos, r := resolveTargetRepos(fileSyncTo)
+	if !r.OK {
+		return r
 	}
 
 	if len(targetRepos) == 0 {
-		return cli.Err("%s", i18n.T("cmd.dev.file_sync.error.no_targets"))
+		return core.Fail(cli.Err("%s", i18n.T("cmd.dev.file_sync.error.no_targets")))
 	}
 
 	// Show plan
@@ -93,7 +94,7 @@ func runFileSync(source string) error {
 		cli.Blank()
 		if !cli.Confirm(i18n.T("cmd.dev.file_sync.confirm")) {
 			cli.Text(i18n.T("cli.aborted"))
-			return nil
+			return core.Ok(nil)
 		}
 		cli.Blank()
 	}
@@ -101,7 +102,7 @@ func runFileSync(source string) error {
 	var succeeded, skipped, failed int
 
 	for _, repo := range targetRepos {
-		repoName := filepath.Base(repo.Path)
+		repoName := core.PathBase(repo.Path)
 
 		if fileSyncDryRun {
 			cli.Print("  %s %s\n", dimStyle.Render("[dry-run]"), repoName)
@@ -110,23 +111,23 @@ func runFileSync(source string) error {
 		}
 
 		// Step 1: Pull latest (safe sync)
-		if err := safePull(ctx, repo.Path); err != nil {
-			cli.Print("  %s %s: pull failed: %s\n", errorStyle.Render("x"), repoName, err)
+		if r := safePull(ctx, repo.Path); !r.OK {
+			cli.Print("  %s %s: pull failed: %s\n", errorStyle.Render("x"), repoName, r.Error())
 			failed++
 			continue
 		}
 
 		// Step 2: Copy file(s)
-		destPath := filepath.Join(repo.Path, source)
+		destPath := core.PathJoin(repo.Path, source)
 		if sourceInfo.IsDir() {
-			if err := copyDir(source, destPath); err != nil {
-				cli.Print("  %s %s: copy failed: %s\n", errorStyle.Render("x"), repoName, err)
+			if r := copyDir(source, destPath); !r.OK {
+				cli.Print("  %s %s: copy failed: %s\n", errorStyle.Render("x"), repoName, r.Error())
 				failed++
 				continue
 			}
 		} else {
 			// Ensure dir exists
-			if err := coreio.Local.EnsureDir(filepath.Dir(destPath)); err != nil {
+			if err := coreio.Local.EnsureDir(core.PathDir(destPath)); err != nil {
 				cli.Print("  %s %s: copy failed: %s\n", errorStyle.Render("x"), repoName, err)
 				failed++
 				continue
@@ -156,16 +157,16 @@ func runFileSync(source string) error {
 				commitMsg += "\n\nCo-Authored-By: " + fileSyncCoAuthor
 			}
 
-			if err := gitAddCommit(ctx, repo.Path, source, commitMsg); err != nil {
-				cli.Print("  %s %s: commit failed: %s\n", errorStyle.Render("x"), repoName, err)
+			if r := gitAddCommit(ctx, repo.Path, source, commitMsg); !r.OK {
+				cli.Print("  %s %s: commit failed: %s\n", errorStyle.Render("x"), repoName, r.Error())
 				failed++
 				continue
 			}
 
 			// Step 5: Push if requested
 			if fileSyncPush {
-				if err := safePush(ctx, repo.Path); err != nil {
-					cli.Print("  %s %s: push failed: %s\n", errorStyle.Render("x"), repoName, err)
+				if r := safePush(ctx, repo.Path); !r.OK {
+					cli.Print("  %s %s: push failed: %s\n", errorStyle.Render("x"), repoName, r.Error())
 					failed++
 					continue
 				}
@@ -196,20 +197,20 @@ func runFileSync(source string) error {
 	}
 	cli.Blank()
 
-	return nil
+	return core.Ok(nil)
 }
 
 // resolveTargetRepos resolves the --to pattern to actual repos
-func resolveTargetRepos(pattern string) ([]*repos.Repo, error) {
+func resolveTargetRepos(pattern string) ([]*repos.Repo, core.Result) {
 	// Load registry
 	registryPath, err := repos.FindRegistry(coreio.Local)
 	if err != nil {
-		return nil, log.E("dev.sync", "failed to find registry", err)
+		return nil, core.Fail(log.E("dev.sync", "failed to find registry", err))
 	}
 
 	registry, err := repos.LoadRegistry(coreio.Local, registryPath)
 	if err != nil {
-		return nil, log.E("dev.sync", "failed to load registry", err)
+		return nil, core.Fail(log.E("dev.sync", "failed to load registry", err))
 	}
 
 	// Match pattern against repo names
@@ -224,16 +225,16 @@ func resolveTargetRepos(pattern string) ([]*repos.Repo, error) {
 		}
 	}
 
-	return matched, nil
+	return matched, core.Ok(nil)
 }
 
 // splitPatterns normalises comma-separated glob patterns.
 func splitPatterns(pattern string) []string {
-	raw := strings.Split(pattern, ",")
+	raw := core.Split(pattern, ",")
 	out := make([]string, 0, len(raw))
 
 	for _, p := range raw {
-		p = strings.TrimSpace(p)
+		p = core.Trim(p)
 		if p == "" {
 			continue
 		}
@@ -250,112 +251,111 @@ func matchGlob(s, pattern string) bool {
 		return true
 	}
 
-	matched, err := filepath.Match(pattern, s)
-	if err == nil {
-		return matched
+	matchResult := core.PathMatch(pattern, s)
+	if matchResult.OK {
+		return matchResult.Value.(bool)
 	}
 
 	// Fallback to legacy wildcard rules for invalid glob patterns.
 	// Handle * at end
-	if strings.HasSuffix(pattern, "*") {
-		prefix := strings.TrimSuffix(pattern, "*")
-		return strings.HasPrefix(s, prefix)
+	if core.HasSuffix(pattern, "*") {
+		prefix := core.TrimSuffix(pattern, "*")
+		return core.HasPrefix(s, prefix)
 	}
 
 	// Handle * at start
-	if strings.HasPrefix(pattern, "*") {
-		suffix := strings.TrimPrefix(pattern, "*")
-		return strings.HasSuffix(s, suffix)
+	if core.HasPrefix(pattern, "*") {
+		suffix := core.TrimPrefix(pattern, "*")
+		return core.HasSuffix(s, suffix)
 	}
 
 	// Handle * in middle
-	if strings.Contains(pattern, "*") {
-		parts := strings.SplitN(pattern, "*", 2)
-		return strings.HasPrefix(s, parts[0]) && strings.HasSuffix(s, parts[1])
+	if core.Contains(pattern, "*") {
+		parts := core.SplitN(pattern, "*", 2)
+		return core.HasPrefix(s, parts[0]) && core.HasSuffix(s, parts[1])
 	}
 
 	return false
 }
 
 // safePull pulls with rebase, handling errors gracefully
-func safePull(ctx context.Context, path string) error {
+func safePull(ctx context.Context, path string) (_ core.Result) {
 	// Check if we have upstream
-	_, err := gitCommandQuiet(ctx, path, "rev-parse", "--abbrev-ref", "@{u}")
-	if err != nil {
+	_, r := gitCommandQuiet(ctx, path, "rev-parse", "--abbrev-ref", "@{u}")
+	if !r.OK {
 		// No upstream set, skip pull
-		return nil
+		return core.Ok(nil)
 	}
 
-	return git.Pull(ctx, path)
+	return core.ResultOf(nil, git.Pull(ctx, path))
 }
 
 // safePush pushes with automatic pull-rebase on rejection
-func safePush(ctx context.Context, path string) error {
+func safePush(ctx context.Context, path string) (_ core.Result) {
 	err := git.Push(ctx, path)
 	if err == nil {
-		return nil
+		return core.Ok(nil)
 	}
 
 	// If non-fast-forward, try pull and push again
 	if git.IsNonFastForward(err) {
 		if pullErr := git.Pull(ctx, path); pullErr != nil {
-			return pullErr
+			return core.Fail(pullErr)
 		}
-		return git.Push(ctx, path)
+		return core.ResultOf(nil, git.Push(ctx, path))
 	}
 
-	return err
+	return core.Fail(err)
 }
 
 // gitAddCommit stages and commits a file/directory
-func gitAddCommit(ctx context.Context, repoPath, filePath, message string) error {
+func gitAddCommit(ctx context.Context, repoPath, filePath, message string) (_ core.Result) {
 	// Stage the file(s)
-	if _, err := gitCommandQuiet(ctx, repoPath, "add", filePath); err != nil {
-		return err
+	if _, r := gitCommandQuiet(ctx, repoPath, "add", filePath); !r.OK {
+		return r
 	}
 
 	// Commit
-	_, err := gitCommandQuiet(ctx, repoPath, "commit", "-m", message)
-	return err
+	_, r := gitCommandQuiet(ctx, repoPath, "commit", "-m", message)
+	return r
 }
 
 // gitCommandQuiet runs a git command without output
-func gitCommandQuiet(ctx context.Context, dir string, args ...string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git", args...)
-	cmd.Dir = dir
+func gitCommandQuiet(ctx context.Context, dir string, args ...string) (string, core.Result) {
+	cmd := coreexec.Command(ctx, "git", args...).WithDir(dir)
 
-	output, err := cmd.CombinedOutput()
-	if err != nil {
-		return "", cli.Err("%s", strings.TrimSpace(string(output)))
+	r := cmd.CombinedOutput()
+	if !r.OK {
+		return "", core.Fail(cli.Err("%s", r.Value.(error).Error()))
 	}
-	return string(output), nil
+	return string(r.Value.([]byte)), core.Ok(nil)
 }
 
 // copyDir recursively copies a directory
-func copyDir(src, dst string) error {
+func copyDir(src, dst string) (_ core.Result) {
 	entries, err := coreio.Local.List(src)
 	if err != nil {
-		return err
+		return core.Fail(err)
 	}
 
 	if err := coreio.Local.EnsureDir(dst); err != nil {
-		return err
+		return core.Fail(err)
 	}
 
 	for _, entry := range entries {
-		srcPath := filepath.Join(src, entry.Name())
-		dstPath := filepath.Join(dst, entry.Name())
+		srcPath := core.PathJoin(src, entry.Name())
+		dstPath := core.PathJoin(dst, entry.Name())
 
 		if entry.IsDir() {
-			if err := copyDir(srcPath, dstPath); err != nil {
-				return err
+			if r := copyDir(srcPath, dstPath); !r.OK {
+				return r
 			}
 		} else {
 			if err := coreio.Copy(coreio.Local, srcPath, coreio.Local, dstPath); err != nil {
-				return err
+				return core.Fail(err)
 			}
 		}
 	}
 
-	return nil
+	return core.Ok(nil)
 }

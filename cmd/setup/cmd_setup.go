@@ -2,8 +2,9 @@
 package setup
 
 import (
-	"dappco.re/go/i18n"
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
+	"dappco.re/go/i18n"
 )
 
 // Style aliases from shared package
@@ -14,6 +15,19 @@ var (
 	warningStyle  = cli.WarningStyle
 	dimStyle      = cli.DimStyle
 )
+
+var resultError = func(r core.Result) error {
+	if !r.OK {
+		return r.Value.(error)
+	}
+	return nil
+}
+
+var resultRunE = func(fn func(*cli.Command, []string) core.Result) func(*cli.Command, []string) error {
+	return func(cmd *cli.Command, args []string) error {
+		return resultError(fn(cmd, args))
+	}
+}
 
 // Default organization and devops repo for bootstrap
 const (
@@ -35,7 +49,7 @@ var (
 var setupCmd = &cli.Command{
 	Use: "setup",
 	RunE: func(cmd *cli.Command, args []string) error {
-		return runSetupOrchestrator(registryPath, only, dryRun, all, name, build)
+		return resultError(runSetupOrchestrator(registryPath, only, dryRun, all, name, build))
 	},
 }
 

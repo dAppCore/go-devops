@@ -2,16 +2,13 @@ package dev
 
 import (
 	"context"
-	"fmt"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"strconv"
-	"strings"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	log "dappco.re/go/log"
+	coreexec "dappco.re/go/process/exec"
 )
 
 // Tag command flags
@@ -28,7 +25,7 @@ func AddTagCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.tag.short"),
 		Long:  i18n.T("cmd.dev.tag.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runTag(tagRegistryPath, tagDryRun, tagForce)
+			return resultToError(runTag(tagRegistryPath, tagDryRun, tagForce))
 		},
 	}
 
@@ -48,19 +45,19 @@ type tagPlan struct {
 	IsGoMod bool   // whether the repo has a go.mod
 }
 
-func runTag(registryPath string, dryRun, force bool) error {
+func runTag(registryPath string, dryRun, force bool) (_ core.Result) {
 	ctx := context.Background()
 
 	// Load registry
-	reg, _, err := loadRegistryWithConfig(registryPath)
-	if err != nil {
-		return err
+	reg, _, r := loadRegistryWithConfig(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	// Get topological order (dependencies first)
 	ordered, err := reg.TopologicalOrder()
 	if err != nil {
-		return cli.Wrap(err, "failed to compute dependency order")
+		return core.Fail(cli.Wrap(err, "failed to compute dependency order"))
 	}
 
 	// Build version bump plan
@@ -71,17 +68,17 @@ func runTag(registryPath string, dryRun, force bool) error {
 			continue
 		}
 
-		current, err := latestTag(ctx, repo.Path)
-		if err != nil || current == "" {
+		current, r := latestTag(ctx, repo.Path)
+		if !r.OK || current == "" {
 			current = "v0.0.0"
 		}
 
-		next, err := bumpPatch(current)
-		if err != nil {
-			return log.E("dev.tag", fmt.Sprintf("%s: failed to bump version %s", repo.Name, current), err)
+		next, r := bumpPatch(current)
+		if !r.OK {
+			return core.Fail(log.E("dev.tag", core.Sprintf("%s: failed to bump version %s", repo.Name, current), r.Value.(error)))
 		}
 
-		hasGoMod := fileExists(filepath.Join(repo.Path, "go.mod"))
+		hasGoMod := fileExists(core.PathJoin(repo.Path, "go.mod"))
 
 		plans = append(plans, tagPlan{
 			Name:    repo.Name,
@@ -94,7 +91,7 @@ func runTag(registryPath string, dryRun, force bool) error {
 
 	if len(plans) == 0 {
 		cli.Text(i18n.T("cmd.dev.no_git_repos"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Show plan
@@ -119,15 +116,15 @@ func runTag(registryPath string, dryRun, force bool) error {
 	if dryRun {
 		cli.Blank()
 		cli.Text("Dry run — no changes made.")
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Confirm unless --force
 	if !force {
 		cli.Blank()
-		if !cli.Confirm(fmt.Sprintf("Tag and push %d repos?", len(plans))) {
+		if !cli.Confirm(core.Sprintf("Tag and push %d repos?", len(plans))) {
 			cli.Text(i18n.T("cli.aborted"))
-			return nil
+			return core.Ok(nil)
 		}
 	}
 
@@ -141,37 +138,37 @@ func runTag(registryPath string, dryRun, force bool) error {
 
 		if p.IsGoMod {
 			// Step 1: GOWORK=off go get -u ./...
-			if err := goGetUpdate(ctx, p.Path); err != nil {
-				cli.Print("  %s go get -u: %s\n", errorStyle.Render("x"), err)
+			if r := goGetUpdate(ctx, p.Path); !r.OK {
+				cli.Print("  %s go get -u: %s\n", errorStyle.Render("x"), r.Value.(error))
 				failed++
 				continue
 			}
 
 			// Step 2: GOWORK=off go mod tidy
-			if err := goModTidy(ctx, p.Path); err != nil {
-				cli.Print("  %s go mod tidy: %s\n", errorStyle.Render("x"), err)
+			if r := goModTidy(ctx, p.Path); !r.OK {
+				cli.Print("  %s go mod tidy: %s\n", errorStyle.Render("x"), r.Value.(error))
 				failed++
 				continue
 			}
 
 			// Step 3: Commit go.mod/go.sum if changed
-			if err := commitGoMod(ctx, p.Path, p.Next); err != nil {
-				cli.Print("  %s commit: %s\n", errorStyle.Render("x"), err)
+			if r := commitGoMod(ctx, p.Path, p.Next); !r.OK {
+				cli.Print("  %s commit: %s\n", errorStyle.Render("x"), r.Value.(error))
 				failed++
 				continue
 			}
 		}
 
 		// Step 4: Create annotated tag
-		if err := createTag(ctx, p.Path, p.Next); err != nil {
-			cli.Print("  %s tag: %s\n", errorStyle.Render("x"), err)
+		if r := createTag(ctx, p.Path, p.Next); !r.OK {
+			cli.Print("  %s tag: %s\n", errorStyle.Render("x"), r.Value.(error))
 			failed++
 			continue
 		}
 
 		// Step 5: Push commits and tags
-		if err := pushWithTags(ctx, p.Path); err != nil {
-			cli.Print("  %s push: %s\n", errorStyle.Render("x"), err)
+		if r := pushWithTags(ctx, p.Path); !r.OK {
+			cli.Print("  %s push: %s\n", errorStyle.Render("x"), r.Value.(error))
 			failed++
 			continue
 		}
@@ -182,129 +179,121 @@ func runTag(registryPath string, dryRun, force bool) error {
 
 	// Summary
 	cli.Blank()
-	cli.Print("%s", successStyle.Render(fmt.Sprintf("%d tagged", succeeded)))
+	cli.Print("%s", successStyle.Render(core.Sprintf("%d tagged", succeeded)))
 	if failed > 0 {
 		cli.Print(", %s", errorStyle.Render(i18n.T("common.count.failed", map[string]any{"Count": failed})))
 	}
 	cli.Blank()
 
-	return nil
+	return core.Ok(nil)
 }
 
 // latestTag returns the latest semver tag in the repo.
-func latestTag(ctx context.Context, repoPath string) (string, error) {
-	cmd := exec.CommandContext(ctx, "git", "describe", "--tags", "--abbrev=0", "--match", "v*")
-	cmd.Dir = repoPath
-	out, err := cmd.Output()
-	if err != nil {
-		return "", err
+func latestTag(ctx context.Context, repoPath string) (string, core.Result) {
+	cmd := coreexec.Command(ctx, "git", "describe", "--tags", "--abbrev=0", "--match", "v*").WithDir(repoPath)
+	r := cmd.Output()
+	if !r.OK {
+		return "", r
 	}
-	return strings.TrimSpace(string(out)), nil
+	return core.Trim(string(r.Value.([]byte))), core.Ok(nil)
 }
 
 // bumpPatch increments the patch version of a semver tag.
 // "v0.3.1" → "v0.3.2"
-func bumpPatch(tag string) (string, error) {
-	v := strings.TrimPrefix(tag, "v")
-	parts := strings.Split(v, ".")
+func bumpPatch(tag string) (string, core.Result) {
+	v := core.TrimPrefix(tag, "v")
+	parts := core.Split(v, ".")
 	if len(parts) != 3 {
-		return "", log.E("dev.tag", fmt.Sprintf("invalid semver: %s", tag), nil)
+		return "", core.Fail(log.E("dev.tag", core.Sprintf("invalid semver: %s", tag), nil))
 	}
 	patch, err := strconv.Atoi(parts[2])
 	if err != nil {
-		return "", log.E("dev.tag", fmt.Sprintf("invalid patch version: %s", parts[2]), nil)
+		return "", core.Fail(log.E("dev.tag", core.Sprintf("invalid patch version: %s", parts[2]), err))
 	}
-	return fmt.Sprintf("v%s.%s.%d", parts[0], parts[1], patch+1), nil
+	return core.Sprintf("v%s.%s.%d", parts[0], parts[1], patch+1), core.Ok(nil)
 }
 
 // goGetUpdate runs GOWORK=off go get -u ./... in the repo.
-func goGetUpdate(ctx context.Context, repoPath string) error {
-	cmd := exec.CommandContext(ctx, "go", "get", "-u", "./...")
-	cmd.Dir = repoPath
-	cmd.Env = append(os.Environ(), "GOWORK=off")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return log.E("dev.tag", strings.TrimSpace(string(out)), err)
+func goGetUpdate(ctx context.Context, repoPath string) (_ core.Result) {
+	cmd := coreexec.Command(ctx, "go", "get", "-u", "./...").
+		WithDir(repoPath).
+		WithEnv(append(core.Environ(), "GOWORK=off"))
+	r := cmd.CombinedOutput()
+	if !r.OK {
+		return core.Fail(log.E("dev.tag", "go get -u failed", r.Value.(error)))
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 // goModTidy runs GOWORK=off go mod tidy in the repo.
-func goModTidy(ctx context.Context, repoPath string) error {
-	cmd := exec.CommandContext(ctx, "go", "mod", "tidy")
-	cmd.Dir = repoPath
-	cmd.Env = append(os.Environ(), "GOWORK=off")
-	out, err := cmd.CombinedOutput()
-	if err != nil {
-		return log.E("dev.tag", strings.TrimSpace(string(out)), err)
+func goModTidy(ctx context.Context, repoPath string) (_ core.Result) {
+	cmd := coreexec.Command(ctx, "go", "mod", "tidy").
+		WithDir(repoPath).
+		WithEnv(append(core.Environ(), "GOWORK=off"))
+	r := cmd.CombinedOutput()
+	if !r.OK {
+		return core.Fail(log.E("dev.tag", "go mod tidy failed", r.Value.(error)))
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 // commitGoMod stages and commits go.mod and go.sum if they have changes.
-func commitGoMod(ctx context.Context, repoPath, version string) error {
+func commitGoMod(ctx context.Context, repoPath, version string) (_ core.Result) {
 	// Check if go.mod or go.sum changed (staged or unstaged)
-	diffCmd := exec.CommandContext(ctx, "git", "diff", "--quiet", "go.mod", "go.sum")
-	diffCmd.Dir = repoPath
-	modChanged := diffCmd.Run() != nil
+	diffCmd := coreexec.Command(ctx, "git", "diff", "--quiet", "go.mod", "go.sum").WithDir(repoPath)
+	modChanged := !diffCmd.Run().OK
 
 	// Also check for untracked go.sum
-	lsCmd := exec.CommandContext(ctx, "git", "ls-files", "--others", "--exclude-standard", "go.sum")
-	lsCmd.Dir = repoPath
-	lsOut, _ := lsCmd.Output()
-	untrackedSum := strings.TrimSpace(string(lsOut)) != ""
+	lsCmd := coreexec.Command(ctx, "git", "ls-files", "--others", "--exclude-standard", "go.sum").WithDir(repoPath)
+	lsResult := lsCmd.Output()
+	untrackedSum := lsResult.OK && core.Trim(string(lsResult.Value.([]byte))) != ""
 
 	if !modChanged && !untrackedSum {
-		return nil // No changes
+		return core.Ok(nil) // No changes
 	}
 
 	// Stage go.mod and go.sum
-	addCmd := exec.CommandContext(ctx, "git", "add", "go.mod", "go.sum")
-	addCmd.Dir = repoPath
-	if out, err := addCmd.CombinedOutput(); err != nil {
-		return log.E("dev.tag", "git add: "+strings.TrimSpace(string(out)), err)
+	addCmd := coreexec.Command(ctx, "git", "add", "go.mod", "go.sum").WithDir(repoPath)
+	if r := addCmd.CombinedOutput(); !r.OK {
+		return core.Fail(log.E("dev.tag", "git add failed", r.Value.(error)))
 	}
 
 	// Check if anything is actually staged
-	stagedCmd := exec.CommandContext(ctx, "git", "diff", "--cached", "--quiet")
-	stagedCmd.Dir = repoPath
-	if stagedCmd.Run() == nil {
-		return nil // Nothing staged
+	stagedCmd := coreexec.Command(ctx, "git", "diff", "--cached", "--quiet").WithDir(repoPath)
+	if stagedCmd.Run().OK {
+		return core.Ok(nil) // Nothing staged
 	}
 
 	// Commit
-	msg := fmt.Sprintf("chore: sync dependencies for %s\n\nCo-Authored-By: Virgil <virgil@lethean.io>", version)
-	commitCmd := exec.CommandContext(ctx, "git", "commit", "-m", msg)
-	commitCmd.Dir = repoPath
-	if out, err := commitCmd.CombinedOutput(); err != nil {
-		return log.E("dev.tag", "git commit: "+strings.TrimSpace(string(out)), err)
+	msg := core.Sprintf("chore: sync dependencies for %s\n\nCo-Authored-By: Virgil <virgil@lethean.io>", version)
+	commitCmd := coreexec.Command(ctx, "git", "commit", "-m", msg).WithDir(repoPath)
+	if r := commitCmd.CombinedOutput(); !r.OK {
+		return core.Fail(log.E("dev.tag", "git commit failed", r.Value.(error)))
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 // createTag creates an annotated tag.
-func createTag(ctx context.Context, repoPath, tag string) error {
-	cmd := exec.CommandContext(ctx, "git", "tag", "-a", tag, "-m", tag)
-	cmd.Dir = repoPath
-	if out, err := cmd.CombinedOutput(); err != nil {
-		return log.E("dev.tag", strings.TrimSpace(string(out)), err)
+func createTag(ctx context.Context, repoPath, tag string) (_ core.Result) {
+	cmd := coreexec.Command(ctx, "git", "tag", "-a", tag, "-m", tag).WithDir(repoPath)
+	if r := cmd.CombinedOutput(); !r.OK {
+		return core.Fail(log.E("dev.tag", "git tag failed", r.Value.(error)))
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 // pushWithTags pushes commits and tags to the remote.
 // Uses interactive mode to support SSH passphrase prompts.
-func pushWithTags(ctx context.Context, repoPath string) error {
-	cmd := exec.CommandContext(ctx, "git", "push", "--follow-tags")
-	cmd.Dir = repoPath
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
-	cmd.Stdin = os.Stdin
-	return cmd.Run()
+func pushWithTags(ctx context.Context, repoPath string) (_ core.Result) {
+	cmd := coreexec.Command(ctx, "git", "push", "--follow-tags").
+		WithDir(repoPath).
+		WithStdout(core.Stdout()).
+		WithStderr(core.Stderr()).
+		WithStdin(core.Stdin())
+	return resultError(cmd.Run())
 }
 
 // fileExists checks if a file exists at the given path.
 func fileExists(path string) bool {
-	_, err := os.Stat(path)
-	return err == nil
+	return core.Stat(path).OK
 }

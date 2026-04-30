@@ -9,10 +9,7 @@
 package workspace
 
 import (
-	"fmt"
-	"os"
-	"path/filepath"
-
+	core "dappco.re/go"
 	coreio "dappco.re/go/io"
 	log "dappco.re/go/log"
 	"gopkg.in/yaml.v3"
@@ -36,56 +33,57 @@ func DefaultConfig() *WorkspaceConfig {
 
 // LoadConfig reads .core/workspace.yaml from the given directory, walking up to parent dirs.
 // Returns nil (no error) if no config file is found.
-func LoadConfig(dir string) (*WorkspaceConfig, error) {
-	absDir, err := filepath.Abs(dir)
-	if err != nil {
-		return nil, fmt.Errorf("workspace.LoadConfig: resolve %q: %w", dir, err)
+func LoadConfig(dir string) (*WorkspaceConfig, core.Result) {
+	absDirResult := core.PathAbs(dir)
+	if !absDirResult.OK {
+		return nil, core.Fail(core.Errorf("workspace.LoadConfig: resolve %q: %w", dir, absDirResult.Value.(error)))
 	}
 
-	return loadConfig(filepath.Clean(absDir))
+	return loadConfig(core.PathJoin(absDirResult.Value.(string)))
 }
 
-func loadConfig(dir string) (*WorkspaceConfig, error) {
-	path := filepath.Join(dir, ".core", "workspace.yaml")
+func loadConfig(dir string) (*WorkspaceConfig, core.Result) {
+	path := core.PathJoin(dir, ".core", "workspace.yaml")
 
 	if !coreio.Local.IsFile(path) {
-		parent := filepath.Dir(dir)
+		parent := core.PathDir(dir)
 		if parent != dir {
 			return loadConfig(parent)
 		}
-		return nil, nil
+		return nil, core.Ok(nil)
 	}
 
 	data, err := coreio.Local.Read(path)
 	if err != nil {
-		return nil, fmt.Errorf("workspace.LoadConfig: failed to read workspace config: %w", err)
+		return nil, core.Fail(core.Errorf("workspace.LoadConfig: failed to read workspace config: %w", err))
 	}
 
 	cfg := DefaultConfig()
 	if err := yaml.Unmarshal([]byte(data), cfg); err != nil {
-		return nil, fmt.Errorf("workspace.LoadConfig: failed to parse workspace config: %w", err)
+		return nil, core.Fail(core.Errorf("workspace.LoadConfig: failed to parse workspace config: %w", err))
 	}
 
-	return cfg, nil
+	return cfg, core.Ok(nil)
 }
 
 // FindRoot searches upward for the root directory containing .core/workspace.yaml.
-func FindRoot() (string, error) {
-	dir, err := os.Getwd()
-	if err != nil {
-		return "", err
+func FindRoot() (string, core.Result) {
+	dirResult := core.Getwd()
+	if !dirResult.OK {
+		return "", dirResult
 	}
+	dir := dirResult.Value.(string)
 
 	for {
-		if coreio.Local.IsFile(filepath.Join(dir, ".core", "workspace.yaml")) {
-			return dir, nil
+		if coreio.Local.IsFile(core.PathJoin(dir, ".core", "workspace.yaml")) {
+			return dir, core.Ok(nil)
 		}
-		parent := filepath.Dir(dir)
+		parent := core.PathDir(dir)
 		if parent == dir {
 			break
 		}
 		dir = parent
 	}
 
-	return "", log.E("workspace.FindRoot", "not inside a workspace", nil)
+	return "", core.Fail(log.E("workspace.FindRoot", "not inside a workspace", nil))
 }

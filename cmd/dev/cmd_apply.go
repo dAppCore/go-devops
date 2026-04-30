@@ -9,17 +9,16 @@ package dev
 
 import (
 	"context"
-	"os"
-	"os/exec"
-	"path/filepath"
 	"sort"
 
+	core "dappco.re/go"
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/io"
-	core "dappco.re/go/log"
+	log "dappco.re/go/log"
+	coreexec "dappco.re/go/process/exec"
 	"dappco.re/go/scm/git"
 	"dappco.re/go/scm/repos"
-	"dappco.re/go/cli/pkg/cli"
 )
 
 // Apply command flags
@@ -43,7 +42,7 @@ func AddApplyCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.apply.short"),
 		Long:  i18n.T("cmd.dev.apply.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runApply()
+			return resultToError(runApply())
 		},
 	}
 
@@ -61,35 +60,35 @@ func AddApplyCommand(parent *cli.Command) {
 	parent.AddCommand(applyCmd)
 }
 
-func runApply() error {
+func runApply() (_ core.Result) {
 	ctx := context.Background()
 
 	// Validate inputs
 	if applyCommand == "" && applyScript == "" {
-		return core.E("dev.apply", i18n.T("cmd.dev.apply.error.no_command"), nil)
+		return core.Fail(log.E("dev.apply", i18n.T("cmd.dev.apply.error.no_command"), nil))
 	}
 	if applyCommand != "" && applyScript != "" {
-		return core.E("dev.apply", i18n.T("cmd.dev.apply.error.both_command_script"), nil)
+		return core.Fail(log.E("dev.apply", i18n.T("cmd.dev.apply.error.both_command_script"), nil))
 	}
 	if applyCommit && applyMessage == "" {
-		return core.E("dev.apply", i18n.T("cmd.dev.apply.error.commit_needs_message"), nil)
+		return core.Fail(log.E("dev.apply", i18n.T("cmd.dev.apply.error.commit_needs_message"), nil))
 	}
 
 	// Validate script exists
 	if applyScript != "" {
 		if !io.Local.IsFile(applyScript) {
-			return core.E("dev.apply", "script not found: "+applyScript, nil) // Error mismatch? IsFile returns bool
+			return core.Fail(core.E("dev.apply", "script not found: "+applyScript, nil))
 		}
 	}
 
 	// Get target repos
-	targetRepos, err := getApplyTargetRepos()
-	if err != nil {
-		return err
+	targetRepos, r := getApplyTargetRepos()
+	if !r.OK {
+		return r
 	}
 
 	if len(targetRepos) == 0 {
-		return core.E("dev.apply", i18n.T("cmd.dev.apply.error.no_repos"), nil)
+		return core.Fail(log.E("dev.apply", i18n.T("cmd.dev.apply.error.no_repos"), nil))
 	}
 
 	// Show plan
@@ -111,7 +110,7 @@ func runApply() error {
 
 		if !cli.Confirm(i18n.T("cmd.dev.apply.confirm"), cli.Required()) {
 			cli.Print("%s\n", dimStyle.Render(i18n.T("cmd.dev.apply.cancelled")))
-			return nil
+			return core.Ok(nil)
 		}
 		cli.Blank()
 	}
@@ -119,7 +118,7 @@ func runApply() error {
 	var succeeded, skipped, failed int
 
 	for _, repo := range targetRepos {
-		repoName := filepath.Base(repo.Path)
+		repoName := core.PathBase(repo.Path)
 
 		if applyDryRun {
 			cli.Print("  %s %s\n", dimStyle.Render("[dry-run]"), repoName)
@@ -128,18 +127,18 @@ func runApply() error {
 		}
 
 		// Step 1: Run command or script
-		var cmdErr error
+		var cmdResult core.Result
 		if applyCommand != "" {
-			cmdErr = runCommandInRepo(ctx, repo.Path, applyCommand)
+			cmdResult = runCommandInRepo(ctx, repo.Path, applyCommand)
 		} else {
-			cmdErr = runScriptInRepo(ctx, repo.Path, applyScript)
+			cmdResult = runScriptInRepo(ctx, repo.Path, applyScript)
 		}
 
-		if cmdErr != nil {
-			cli.Print("  %s %s: %s\n", errorStyle.Render("x"), repoName, cmdErr)
+		if !cmdResult.OK {
+			cli.Print("  %s %s: %s\n", errorStyle.Render("x"), repoName, cmdResult.Error())
 			failed++
 			if !applyContinue {
-				return cli.Err("%s", i18n.T("cmd.dev.apply.error.command_failed"))
+				return core.Fail(cli.Err("%s", i18n.T("cmd.dev.apply.error.command_failed")))
 			}
 			continue
 		}
@@ -163,32 +162,32 @@ func runApply() error {
 			}
 
 			// Stage all changes
-			if _, err := gitCommandQuiet(ctx, repo.Path, "add", "-A"); err != nil {
-				cli.Print("  %s %s: stage failed: %s\n", errorStyle.Render("x"), repoName, err)
+			if _, r := gitCommandQuiet(ctx, repo.Path, "add", "-A"); !r.OK {
+				cli.Print("  %s %s: stage failed: %s\n", errorStyle.Render("x"), repoName, r.Error())
 				failed++
 				if !applyContinue {
-					return err
+					return r
 				}
 				continue
 			}
 
 			// Commit
-			if _, err := gitCommandQuiet(ctx, repo.Path, "commit", "-m", commitMsg); err != nil {
-				cli.Print("  %s %s: commit failed: %s\n", errorStyle.Render("x"), repoName, err)
+			if _, r := gitCommandQuiet(ctx, repo.Path, "commit", "-m", commitMsg); !r.OK {
+				cli.Print("  %s %s: commit failed: %s\n", errorStyle.Render("x"), repoName, r.Error())
 				failed++
 				if !applyContinue {
-					return err
+					return r
 				}
 				continue
 			}
 
 			// Step 4: Push if requested
 			if applyPush {
-				if err := safePush(ctx, repo.Path); err != nil {
-					cli.Print("  %s %s: push failed: %s\n", errorStyle.Render("x"), repoName, err)
+				if r := safePush(ctx, repo.Path); !r.OK {
+					cli.Print("  %s %s: push failed: %s\n", errorStyle.Render("x"), repoName, r.Error())
 					failed++
 					if !applyContinue {
-						return err
+						return r
 					}
 					continue
 				}
@@ -219,23 +218,23 @@ func runApply() error {
 	}
 	cli.Blank()
 
-	return nil
+	return core.Ok(nil)
 }
 
 // getApplyTargetRepos gets repos to apply command to
-func getApplyTargetRepos() ([]*repos.Repo, error) {
+func getApplyTargetRepos() ([]*repos.Repo, core.Result) {
 	// Load registry
 	registryPath, err := repos.FindRegistry(io.Local)
 	if err != nil {
-		return nil, core.E("dev.apply", "failed to find registry", err)
+		return nil, core.Fail(log.E("dev.apply", "failed to find registry", err))
 	}
 
 	registry, err := repos.LoadRegistry(io.Local, registryPath)
 	if err != nil {
-		return nil, core.E("dev.apply", "failed to load registry", err)
+		return nil, core.Fail(log.E("dev.apply", "failed to load registry", err))
 	}
 
-	return filterTargetRepos(registry, applyRepos), nil
+	return filterTargetRepos(registry, applyRepos), core.Ok(nil)
 }
 
 // filterTargetRepos selects repos by exact name/path or glob pattern.
@@ -271,44 +270,41 @@ func filterTargetRepos(registry *repos.Registry, selection string) []*repos.Repo
 }
 
 // runCommandInRepo runs a shell command in a repo directory
-func runCommandInRepo(ctx context.Context, repoPath, command string) error {
+func runCommandInRepo(ctx context.Context, repoPath, command string) (_ core.Result) {
 	// Use shell to execute command
-	var cmd *exec.Cmd
+	var cmd *coreexec.Cmd
 	if isWindows() {
-		cmd = exec.CommandContext(ctx, "cmd", "/C", command)
+		cmd = coreexec.Command(ctx, "cmd", "/C", command)
 	} else {
-		cmd = exec.CommandContext(ctx, "sh", "-c", command)
+		cmd = coreexec.Command(ctx, "sh", "-c", command)
 	}
-	cmd.Dir = repoPath
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd = cmd.WithDir(repoPath).WithStdout(core.Stdout()).WithStderr(core.Stderr())
 
-	return cmd.Run()
+	return resultError(cmd.Run())
 }
 
 // runScriptInRepo runs a script in a repo directory
-func runScriptInRepo(ctx context.Context, repoPath, scriptPath string) error {
+func runScriptInRepo(ctx context.Context, repoPath, scriptPath string) (_ core.Result) {
 	// Get absolute path to script
-	absScript, err := filepath.Abs(scriptPath)
-	if err != nil {
-		return err
+	absResult := core.PathAbs(scriptPath)
+	if !absResult.OK {
+		return absResult
 	}
+	absScript := absResult.Value.(string)
 
-	var cmd *exec.Cmd
+	var cmd *coreexec.Cmd
 	if isWindows() {
-		cmd = exec.CommandContext(ctx, "cmd", "/C", absScript)
+		cmd = coreexec.Command(ctx, "cmd", "/C", absScript)
 	} else {
 		// Execute script directly to honor shebang
-		cmd = exec.CommandContext(ctx, absScript)
+		cmd = coreexec.Command(ctx, absScript)
 	}
-	cmd.Dir = repoPath
-	cmd.Stdout = os.Stdout
-	cmd.Stderr = os.Stderr
+	cmd = cmd.WithDir(repoPath).WithStdout(core.Stdout()).WithStderr(core.Stderr())
 
-	return cmd.Run()
+	return resultError(cmd.Run())
 }
 
 // isWindows returns true if running on Windows
 func isWindows() bool {
-	return os.PathSeparator == '\\'
+	return core.PathSeparator == '\\'
 }

@@ -3,14 +3,13 @@ package dev
 import (
 	"cmp"
 	"maps"
-	"path/filepath"
 	"slices"
-	"strings"
 
+	core "dappco.re/go"
+	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	"dappco.re/go/io"
 	"dappco.re/go/scm/repos"
-	"dappco.re/go/cli/pkg/cli"
 )
 
 // Workflow command flags
@@ -44,7 +43,7 @@ func addWorkflowListCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.workflow.list.short"),
 		Long:  i18n.T("cmd.dev.workflow.list.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runWorkflowList(workflowRegistryPath)
+			return resultToError(runWorkflowList(workflowRegistryPath))
 		},
 	}
 
@@ -59,7 +58,7 @@ func addWorkflowSyncCommand(parent *cli.Command) {
 		Long:  i18n.T("cmd.dev.workflow.sync.long"),
 		Args:  cli.ExactArgs(1),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runWorkflowSync(workflowRegistryPath, args[0], workflowDryRun)
+			return resultToError(runWorkflowSync(workflowRegistryPath, args[0], workflowDryRun))
 		},
 	}
 
@@ -69,16 +68,16 @@ func addWorkflowSyncCommand(parent *cli.Command) {
 }
 
 // runWorkflowList shows a table of repos vs workflows.
-func runWorkflowList(registryPath string) error {
-	reg, registryDir, err := loadRegistryWithConfig(registryPath)
-	if err != nil {
-		return err
+func runWorkflowList(registryPath string) (_ core.Result) {
+	reg, registryDir, r := loadRegistryWithConfig(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	repoList := reg.List()
 	if len(repoList) == 0 {
 		cli.Text(i18n.T("cmd.dev.no_git_repos"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Sort repos by name for consistent output
@@ -104,14 +103,14 @@ func runWorkflowList(registryPath string) error {
 
 	if len(workflowNames) == 0 {
 		cli.Text(i18n.T("cmd.dev.workflow.no_workflows"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Check for template workflows in the registry directory
-	templateWorkflows := findWorkflows(filepath.Join(registryDir, ".github", "workflow-templates"))
+	templateWorkflows := findWorkflows(core.PathJoin(registryDir, ".github", "workflow-templates"))
 	if len(templateWorkflows) == 0 {
 		// Also check .github/workflows in the devops repo itself
-		templateWorkflows = findWorkflows(filepath.Join(registryDir, ".github", "workflows"))
+		templateWorkflows = findWorkflows(core.PathJoin(registryDir, ".github", "workflows"))
 	}
 	templateSet := make(map[string]bool)
 	for _, wf := range templateWorkflows {
@@ -119,7 +118,7 @@ func runWorkflowList(registryPath string) error {
 	}
 	templateNames := slices.Sorted(maps.Keys(templateSet))
 	if len(templateNames) > 0 {
-		cli.Print("%s %s\n\n", i18n.T("cmd.dev.workflow.templates"), strings.Join(templateNames, ", "))
+		cli.Print("%s %s\n\n", i18n.T("cmd.dev.workflow.templates"), core.Join(", ", templateNames...))
 	}
 
 	// Build table
@@ -142,32 +141,32 @@ func runWorkflowList(registryPath string) error {
 	cli.Blank()
 	table.Render()
 
-	return nil
+	return core.Ok(nil)
 }
 
 // runWorkflowSync copies a workflow template to all repos.
-func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) error {
-	reg, registryDir, err := loadRegistryWithConfig(registryPath)
-	if err != nil {
-		return err
+func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) (_ core.Result) {
+	reg, registryDir, r := loadRegistryWithConfig(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	// Find the template workflow
 	templatePath := findTemplateWorkflow(registryDir, workflowFile)
 	if templatePath == "" {
-		return cli.Err("%s", i18n.T("cmd.dev.workflow.template_not_found", map[string]any{"File": workflowFile}))
+		return core.Fail(cli.Err("%s", i18n.T("cmd.dev.workflow.template_not_found", map[string]any{"File": workflowFile})))
 	}
 
 	// Read template content
-	templateContent, err := io.Local.Read(templatePath)
-	if err != nil {
-		return cli.Wrap(err, i18n.T("cmd.dev.workflow.read_template_error"))
+	templateContent, readErr := io.Local.Read(templatePath)
+	if readErr != nil {
+		return core.Fail(cli.Wrap(readErr, i18n.T("cmd.dev.workflow.read_template_error")))
 	}
 
 	repoList := reg.List()
 	if len(repoList) == 0 {
 		cli.Text(i18n.T("cmd.dev.no_git_repos"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Sort repos by name for consistent output
@@ -188,11 +187,11 @@ func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) erro
 			continue
 		}
 
-		destDir := filepath.Join(repo.Path, ".github", "workflows")
-		destPath := filepath.Join(destDir, workflowFile)
+		destDir := core.PathJoin(repo.Path, ".github", "workflows")
+		destPath := core.PathJoin(destDir, workflowFile)
 
 		// Check if workflow already exists and is identical
-		if existingContent, err := io.Local.Read(destPath); err == nil {
+		if existingContent, existingErr := io.Local.Read(destPath); existingErr == nil {
 			if existingContent == templateContent {
 				cli.Print("  %s %s %s\n",
 					dimStyle.Render("-"),
@@ -213,21 +212,21 @@ func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) erro
 		}
 
 		// Create .github/workflows directory if needed
-		if err := io.Local.EnsureDir(destDir); err != nil {
+		if dirErr := io.Local.EnsureDir(destDir); dirErr != nil {
 			cli.Print("  %s %s %s\n",
 				errorStyle.Render(cli.Glyph(":cross:")),
 				repoNameStyle.Render(repo.Name),
-				err.Error())
+				dirErr.Error())
 			failed++
 			continue
 		}
 
 		// Write workflow file
-		if err := io.Local.Write(destPath, templateContent); err != nil {
+		if writeErr := io.Local.Write(destPath, templateContent); writeErr != nil {
 			cli.Print("  %s %s %s\n",
 				errorStyle.Render(cli.Glyph(":cross:")),
 				repoNameStyle.Render(repo.Name),
-				err.Error())
+				writeErr.Error())
 			failed++
 			continue
 		}
@@ -256,14 +255,14 @@ func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) erro
 		}
 	}
 
-	return nil
+	return core.Ok(nil)
 }
 
 // findWorkflows returns a list of workflow file names in a directory.
 func findWorkflows(dir string) []string {
-	workflowsDir := filepath.Join(dir, ".github", "workflows")
+	workflowsDir := core.PathJoin(dir, ".github", "workflows")
 	// If dir already ends with workflows path, use it directly
-	if strings.HasSuffix(dir, "workflows") || strings.HasSuffix(dir, "workflow-templates") {
+	if core.HasSuffix(dir, "workflows") || core.HasSuffix(dir, "workflow-templates") {
 		workflowsDir = dir
 	}
 
@@ -278,7 +277,7 @@ func findWorkflows(dir string) []string {
 			continue
 		}
 		name := entry.Name()
-		if strings.HasSuffix(name, ".yml") || strings.HasSuffix(name, ".yaml") {
+		if core.HasSuffix(name, ".yml") || core.HasSuffix(name, ".yaml") {
 			workflows = append(workflows, name)
 		}
 	}
@@ -289,15 +288,15 @@ func findWorkflows(dir string) []string {
 // findTemplateWorkflow finds a workflow template file in common locations.
 func findTemplateWorkflow(registryDir, workflowFile string) string {
 	// Ensure .yml extension
-	if !strings.HasSuffix(workflowFile, ".yml") && !strings.HasSuffix(workflowFile, ".yaml") {
+	if !core.HasSuffix(workflowFile, ".yml") && !core.HasSuffix(workflowFile, ".yaml") {
 		workflowFile = workflowFile + ".yml"
 	}
 
 	// Check common template locations
 	candidates := []string{
-		filepath.Join(registryDir, ".github", "workflow-templates", workflowFile),
-		filepath.Join(registryDir, ".github", "workflows", workflowFile),
-		filepath.Join(registryDir, "workflow-templates", workflowFile),
+		core.PathJoin(registryDir, ".github", "workflow-templates", workflowFile),
+		core.PathJoin(registryDir, ".github", "workflows", workflowFile),
+		core.PathJoin(registryDir, "workflow-templates", workflowFile),
 	}
 
 	for _, candidate := range candidates {

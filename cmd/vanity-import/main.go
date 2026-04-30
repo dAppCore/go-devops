@@ -9,11 +9,9 @@
 package main
 
 import (
-	"fmt"
-	"log"
 	"net/http"
-	"os"
-	"strings"
+
+	core "dappco.re/go"
 )
 
 var modules = map[string]string{
@@ -28,21 +26,21 @@ const (
 )
 
 func main() {
-	addr := os.Getenv("ADDR")
+	addr := core.Getenv("ADDR")
 	if addr == "" {
 		addr = defaultAddr
 	}
 
 	// Allow overriding forge base URL
-	forge := os.Getenv("FORGE_URL")
+	forge := core.Getenv("FORGE_URL")
 	if forge == "" {
 		forge = forgeBase
 	}
 
 	// Parse additional modules from VANITY_MODULES env (format: "mod1=owner/repo,mod2=owner/repo")
-	if extra := os.Getenv("VANITY_MODULES"); extra != "" {
-		for _, entry := range strings.Split(extra, ",") {
-			parts := strings.SplitN(strings.TrimSpace(entry), "=", 2)
+	if extra := core.Getenv("VANITY_MODULES"); extra != "" {
+		for _, entry := range core.Split(extra, ",") {
+			parts := core.SplitN(core.Trim(entry), "=", 2)
 			if len(parts) == 2 {
 				modules[parts[0]] = parts[1]
 			}
@@ -51,17 +49,20 @@ func main() {
 
 	http.HandleFunc("/", handler(forge))
 
-	log.Printf("vanity-import listening on %s (%d modules)", addr, len(modules))
+	core.Print(core.Stdout(), "vanity-import listening on %s (%d modules)", addr, len(modules))
 	for mod, repo := range modules {
-		log.Printf("  %s/%s → %s/%s.git", vanityHost, mod, forge, repo)
+		core.Print(core.Stdout(), "  %s/%s -> %s/%s.git", vanityHost, mod, forge, repo)
 	}
-	log.Fatal(http.ListenAndServe(addr, nil))
+	if err := http.ListenAndServe(addr, nil); err != nil {
+		core.Print(core.Stderr(), "vanity-import failed: %v", err)
+		core.Exit(1)
+	}
 }
 
 func handler(forge string) http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		// Extract the first path segment as the module name
-		path := strings.TrimPrefix(r.URL.Path, "/")
+		path := core.TrimPrefix(r.URL.Path, "/")
 		if path == "" {
 			// Root request — redirect to forge org page
 			http.Redirect(w, r, forge+"/host-uk", http.StatusFound)
@@ -69,7 +70,7 @@ func handler(forge string) http.HandlerFunc {
 		}
 
 		// Module is the first path segment (e.g., "core" from "/core/pkg/mcp")
-		mod := strings.SplitN(path, "/", 2)[0]
+		mod := core.SplitN(path, "/", 2)[0]
 
 		repo, ok := modules[mod]
 		if !ok {
@@ -80,7 +81,7 @@ func handler(forge string) http.HandlerFunc {
 		// If go-get=1, serve the vanity import HTML
 		if r.URL.Query().Get("go-get") == "1" {
 			w.Header().Set("Content-Type", "text/html; charset=utf-8")
-			fmt.Fprintf(w, `<!DOCTYPE html>
+			if result := core.WriteString(w, core.Sprintf(`<!DOCTYPE html>
 <html>
 <head>
 <meta name="go-import" content="%s/%s git %s/%s.git">
@@ -94,7 +95,9 @@ Redirecting to <a href="%s/%s">%s/%s</a>...
 `, vanityHost, mod, forge, repo,
 				vanityHost, mod, forge, repo, forge, repo, forge, repo,
 				forge, repo,
-				forge, repo, forge, repo)
+				forge, repo, forge, repo)); !result.OK {
+				return
+			}
 			return
 		}
 

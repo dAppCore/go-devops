@@ -3,13 +3,12 @@ package dev
 import (
 	"cmp"
 	"context"
-	"fmt"
 	"slices"
-	"strings"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/scm/git"
 	"dappco.re/go/i18n"
+	"dappco.re/go/scm/git"
 )
 
 // Health command flags
@@ -25,7 +24,7 @@ func AddHealthCommand(parent *cli.Command) {
 		Short: i18n.T("cmd.dev.health.short"),
 		Long:  i18n.T("cmd.dev.health.long"),
 		RunE: func(cmd *cli.Command, args []string) error {
-			return runHealth(healthRegistryPath, healthVerbose)
+			return resultToError(runHealth(healthRegistryPath, healthVerbose))
 		},
 	}
 
@@ -35,13 +34,13 @@ func AddHealthCommand(parent *cli.Command) {
 	parent.AddCommand(healthCmd)
 }
 
-func runHealth(registryPath string, verbose bool) error {
+func runHealth(registryPath string, verbose bool) (_ core.Result) {
 	ctx := context.Background()
 
 	// Load registry and get paths
-	reg, _, err := loadRegistryWithConfig(registryPath)
-	if err != nil {
-		return err
+	reg, _, r := loadRegistryWithConfig(registryPath)
+	if !r.OK {
+		return r
 	}
 
 	// Build paths and names for git operations
@@ -57,7 +56,7 @@ func runHealth(registryPath string, verbose bool) error {
 
 	if len(paths) == 0 {
 		cli.Text(i18n.T("cmd.dev.no_git_repos"))
-		return nil
+		return core.Ok(nil)
 	}
 
 	// Get status for all repos
@@ -118,7 +117,7 @@ func runHealth(registryPath string, verbose bool) error {
 		cli.Blank()
 	}
 
-	return nil
+	return core.Ok(nil)
 }
 
 func printHealthSummary(total int, dirty, ahead, behind, errors []string) {
@@ -163,11 +162,11 @@ func formatRepoList(reposList []string) string {
 }
 
 func joinRepos(reposList []string) string {
-	return strings.Join(reposList, ", ")
+	return core.Join(", ", reposList...)
 }
 
 func statusPart(count int, label string, style *cli.AnsiStyle) string {
-	return style.Render(fmt.Sprintf("%d %s", count, label))
+	return style.Render(core.Sprintf("%d %s", count, label))
 }
 
 func statusText(text string, style *cli.AnsiStyle) string {
@@ -175,5 +174,5 @@ func statusText(text string, style *cli.AnsiStyle) string {
 }
 
 func statusLine(parts ...string) string {
-	return strings.Join(parts, " | ")
+	return core.Join(" | ", parts...)
 }

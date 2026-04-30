@@ -2,10 +2,8 @@ package deploy
 
 import (
 	"context"
-	"encoding/json"
-	"fmt"
-	"os"
 
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/devops/deploy/coolify"
 	"dappco.re/go/i18n"
@@ -17,6 +15,16 @@ var (
 	coolifyToken string
 	outputJSON   bool
 )
+
+var resultRunE = func(fn func(*cli.Command, []string) core.Result) func(*cli.Command, []string) error {
+	return func(cmd *cli.Command, args []string) error {
+		r := fn(cmd, args)
+		if !r.OK {
+			return r.Value.(error)
+		}
+		return nil
+	}
+}
 
 // Cmd is the root deploy command.
 var Cmd = &cli.Command{
@@ -31,51 +39,51 @@ func setDeployI18n() {
 var serversCmd = &cli.Command{
 	Use:   "servers",
 	Short: "List Coolify servers",
-	RunE:  runListServers,
+	RunE:  resultRunE(runListServers),
 }
 
 var projectsCmd = &cli.Command{
 	Use:   "projects",
 	Short: "List Coolify projects",
-	RunE:  runListProjects,
+	RunE:  resultRunE(runListProjects),
 }
 
 var appsCmd = &cli.Command{
 	Use:   "apps",
 	Short: "List Coolify applications",
-	RunE:  runListApps,
+	RunE:  resultRunE(runListApps),
 }
 
 var dbsCmd = &cli.Command{
 	Use:     "databases",
 	Short:   "List Coolify databases",
 	Aliases: []string{"dbs", "db"},
-	RunE:    runListDatabases,
+	RunE:    resultRunE(runListDatabases),
 }
 
 var servicesCmd = &cli.Command{
 	Use:   "services",
 	Short: "List Coolify services",
-	RunE:  runListServices,
+	RunE:  resultRunE(runListServices),
 }
 
 var teamCmd = &cli.Command{
 	Use:   "team",
 	Short: "Show current team info",
-	RunE:  runTeam,
+	RunE:  resultRunE(runTeam),
 }
 
 var callCmd = &cli.Command{
 	Use:   "call <operation> [params-json]",
 	Short: "Call any Coolify API operation",
 	Args:  cli.RangeArgs(1, 2),
-	RunE:  runCall,
+	RunE:  resultRunE(runCall),
 }
 
 func init() {
 	// Global flags
-	Cmd.PersistentFlags().StringVar(&coolifyURL, "url", os.Getenv("COOLIFY_URL"), "Coolify API URL")
-	Cmd.PersistentFlags().StringVar(&coolifyToken, "token", os.Getenv("COOLIFY_TOKEN"), "Coolify API token")
+	Cmd.PersistentFlags().StringVar(&coolifyURL, "url", core.Getenv("COOLIFY_URL"), "Coolify API URL")
+	Cmd.PersistentFlags().StringVar(&coolifyToken, "token", core.Getenv("COOLIFY_TOKEN"), "Coolify API token")
 	Cmd.PersistentFlags().BoolVar(&outputJSON, "json", false, "Output as JSON")
 
 	// Add subcommands
@@ -88,7 +96,7 @@ func init() {
 	Cmd.AddCommand(callCmd)
 }
 
-func getClient() (*coolify.Client, error) {
+func getClient() (*coolify.Client, core.Result) {
 	cfg := coolify.Config{
 		BaseURL:   coolifyURL,
 		APIToken:  coolifyToken,
@@ -97,20 +105,25 @@ func getClient() (*coolify.Client, error) {
 	}
 
 	if cfg.BaseURL == "" {
-		cfg.BaseURL = os.Getenv("COOLIFY_URL")
+		cfg.BaseURL = core.Getenv("COOLIFY_URL")
 	}
 	if cfg.APIToken == "" {
-		cfg.APIToken = os.Getenv("COOLIFY_TOKEN")
+		cfg.APIToken = core.Getenv("COOLIFY_TOKEN")
 	}
 
 	return coolify.NewClient(cfg)
 }
 
-func outputResult(data any) error {
+func outputResult(data any) (_ core.Result) {
 	if outputJSON {
-		enc := json.NewEncoder(os.Stdout)
-		enc.SetIndent("", "  ")
-		return enc.Encode(data)
+		r := core.JSONMarshalIndent(data, "", "  ")
+		if !r.OK {
+			return r
+		}
+		if write := core.WriteString(core.Stdout(), string(r.Value.([]byte))+"\n"); !write.OK {
+			return write
+		}
+		return core.Ok(nil)
 	}
 
 	// Pretty print based on type
@@ -122,161 +135,161 @@ func outputResult(data any) error {
 	case map[string]any:
 		printItem(v)
 	default:
-		fmt.Printf("%v\n", data)
+		cli.Print("%v\n", data)
 	}
-	return nil
+	return core.Ok(nil)
 }
 
 func printItem(item map[string]any) {
 	// Common fields to display
 	if uuid, ok := item["uuid"].(string); ok {
-		fmt.Printf("%s  ", cli.DimStyle.Render(uuid[:8]))
+		cli.Print("%s  ", cli.DimStyle.Render(uuid[:8]))
 	}
 	if name, ok := item["name"].(string); ok {
-		fmt.Printf("%s", cli.TitleStyle.Render(name))
+		cli.Print("%s", cli.TitleStyle.Render(name))
 	}
 	if desc, ok := item["description"].(string); ok && desc != "" {
-		fmt.Printf("  %s", cli.DimStyle.Render(desc))
+		cli.Print("  %s", cli.DimStyle.Render(desc))
 	}
 	if status, ok := item["status"].(string); ok {
 		switch status {
 		case "running":
-			fmt.Printf("  %s", cli.SuccessStyle.Render("●"))
+			cli.Print("  %s", cli.SuccessStyle.Render("●"))
 		case "stopped":
-			fmt.Printf("  %s", cli.ErrorStyle.Render("○"))
+			cli.Print("  %s", cli.ErrorStyle.Render("○"))
 		default:
-			fmt.Printf("  %s", cli.DimStyle.Render(status))
+			cli.Print("  %s", cli.DimStyle.Render(status))
 		}
 	}
-	fmt.Println()
+	core.Println()
 }
 
-func runListServers(cmd *cli.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
+func runListServers(cmd *cli.Command, args []string) (_ core.Result) {
+	client, r := getClient()
+	if !r.OK {
+		return r
 	}
 
-	servers, err := client.ListServers(context.Background())
-	if err != nil {
-		return err
+	servers, r := client.ListServers(context.Background())
+	if !r.OK {
+		return r
 	}
 
 	if len(servers) == 0 {
-		fmt.Println("No servers found")
-		return nil
+		core.Println("No servers found")
+		return core.Ok(nil)
 	}
 
 	return outputResult(servers)
 }
 
-func runListProjects(cmd *cli.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
+func runListProjects(cmd *cli.Command, args []string) (_ core.Result) {
+	client, r := getClient()
+	if !r.OK {
+		return r
 	}
 
-	projects, err := client.ListProjects(context.Background())
-	if err != nil {
-		return err
+	projects, r := client.ListProjects(context.Background())
+	if !r.OK {
+		return r
 	}
 
 	if len(projects) == 0 {
-		fmt.Println("No projects found")
-		return nil
+		core.Println("No projects found")
+		return core.Ok(nil)
 	}
 
 	return outputResult(projects)
 }
 
-func runListApps(cmd *cli.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
+func runListApps(cmd *cli.Command, args []string) (_ core.Result) {
+	client, r := getClient()
+	if !r.OK {
+		return r
 	}
 
-	apps, err := client.ListApplications(context.Background())
-	if err != nil {
-		return err
+	apps, r := client.ListApplications(context.Background())
+	if !r.OK {
+		return r
 	}
 
 	if len(apps) == 0 {
-		fmt.Println("No applications found")
-		return nil
+		core.Println("No applications found")
+		return core.Ok(nil)
 	}
 
 	return outputResult(apps)
 }
 
-func runListDatabases(cmd *cli.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
+func runListDatabases(cmd *cli.Command, args []string) (_ core.Result) {
+	client, r := getClient()
+	if !r.OK {
+		return r
 	}
 
-	dbs, err := client.ListDatabases(context.Background())
-	if err != nil {
-		return err
+	dbs, r := client.ListDatabases(context.Background())
+	if !r.OK {
+		return r
 	}
 
 	if len(dbs) == 0 {
-		fmt.Println("No databases found")
-		return nil
+		core.Println("No databases found")
+		return core.Ok(nil)
 	}
 
 	return outputResult(dbs)
 }
 
-func runListServices(cmd *cli.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
+func runListServices(cmd *cli.Command, args []string) (_ core.Result) {
+	client, r := getClient()
+	if !r.OK {
+		return r
 	}
 
-	services, err := client.ListServices(context.Background())
-	if err != nil {
-		return err
+	services, r := client.ListServices(context.Background())
+	if !r.OK {
+		return r
 	}
 
 	if len(services) == 0 {
-		fmt.Println("No services found")
-		return nil
+		core.Println("No services found")
+		return core.Ok(nil)
 	}
 
 	return outputResult(services)
 }
 
-func runTeam(cmd *cli.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return err
+func runTeam(cmd *cli.Command, args []string) (_ core.Result) {
+	client, r := getClient()
+	if !r.OK {
+		return r
 	}
 
-	team, err := client.GetTeam(context.Background())
-	if err != nil {
-		return err
+	team, r := client.GetTeam(context.Background())
+	if !r.OK {
+		return r
 	}
 
 	return outputResult(team)
 }
 
-func runCall(cmd *cli.Command, args []string) error {
-	client, err := getClient()
-	if err != nil {
-		return cli.WrapVerb(err, "initialize", "client")
+func runCall(cmd *cli.Command, args []string) (_ core.Result) {
+	client, r := getClient()
+	if !r.OK {
+		return core.Fail(cli.WrapVerb(r.Value.(error), "initialize", "client"))
 	}
 
 	operation := args[0]
 	var params map[string]any
 	if len(args) > 1 {
-		if err := json.Unmarshal([]byte(args[1]), &params); err != nil {
-			return log.E("deploy", "invalid JSON params", err)
+		if r := core.JSONUnmarshal([]byte(args[1]), &params); !r.OK {
+			return core.Fail(log.E("deploy", "invalid JSON params", r.Value.(error)))
 		}
 	}
 
-	result, err := client.Call(context.Background(), operation, params)
-	if err != nil {
-		return err
+	result, r := client.Call(context.Background(), operation, params)
+	if !r.OK {
+		return r
 	}
 
 	return outputResult(result)
