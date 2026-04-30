@@ -62,27 +62,3 @@ require (
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 )
 
-replace (
-	codeberg.org/forgejo/go-sdk => github.com/dAppCore/go-scm/third_party/forgejo v0.0.0-20260424224729-c5374e1b928e
-	dappco.re/go/agent => github.com/dAppCore/agent v0.8.0-alpha.1
-	dappco.re/go/ai => github.com/dAppCore/go-ai v0.8.0-alpha.1
-	dappco.re/go/api => github.com/dAppCore/api v0.8.0-alpha.1
-	dappco.re/go/config => ../go-config
-	dappco.re/go/container => ../go-container
-	dappco.re/go/forge => github.com/dAppCore/go-forge v0.8.0-alpha.1
-	dappco.re/go/i18n => github.com/dAppCore/go-i18n v0.8.0-alpha.1
-	dappco.re/go/inference => github.com/dAppCore/go-inference v0.8.0-alpha.1
-	dappco.re/go/io => github.com/dAppCore/go-io v0.8.0-alpha.1
-	dappco.re/go/log => github.com/dAppCore/go-log v0.8.0-alpha.1
-	dappco.re/go/mcp => github.com/dAppCore/mcp v0.8.0-alpha.1
-	dappco.re/go/process => ../go-process
-	dappco.re/go/rag => github.com/dAppCore/go-rag v0.8.0-alpha.1
-	dappco.re/go/scm => github.com/dAppCore/go-scm v0.8.0-alpha.1
-	dappco.re/go/store => github.com/dAppCore/go-store v0.8.0-alpha.1
-	dappco.re/go/webview => github.com/dAppCore/go-webview v0.8.0-alpha.1
-	dappco.re/go/ws => github.com/dAppCore/go-ws v0.8.0-alpha.1
-)
-
-replace dappco.re/go => ../go
-
-replace dappco.re/go/cli => dappco.re/go/core/cli v0.5.2
