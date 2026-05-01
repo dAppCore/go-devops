@@ -12,4 +12,5 @@ use (
 	./external/go-io/go
 	./external/go-log/go
 	./external/go-scm/go
+	./external/process/go
 )
