@@ -9,13 +9,43 @@ import (
 )
 
 // ServiceOptions for configuring the dev service.
+//
+//	dev.ServiceOptions{
+//	    RegistryPath: "/etc/core/dev/registry.yaml",
+//	}
 type ServiceOptions struct {
+	// RegistryPath is the on-disk path for the dev workflow repository
+	// registry. Empty → caller-default resolution applies.
 	RegistryPath string
 }
 
 // Service provides dev workflow orchestration as a Core service.
+//
+// Usage example: `svc := core.MustServiceFor[*dev.Service](c, "dev")`
 type Service struct {
 	*core.ServiceRuntime[ServiceOptions]
+}
+
+// NewService returns a factory that constructs a *Service from the
+// supplied options and registers it under "dev" via core.WithService.
+//
+//	core.WithService(dev.NewService(dev.ServiceOptions{
+//	    RegistryPath: "/etc/core/dev/registry.yaml",
+//	}))
+func NewService(opts ServiceOptions) func(*core.Core) core.Result {
+	return func(c *core.Core) core.Result {
+		return core.Ok(&Service{
+			ServiceRuntime: core.NewServiceRuntime(c, opts),
+		})
+	}
+}
+
+// Register wires the dev service into the Core with empty
+// ServiceOptions — the imperative-style alternative to NewService.
+//
+//	core.New(core.WithService(dev.Register))
+func Register(c *core.Core) core.Result {
+	return NewService(ServiceOptions{})(c)
 }
 
 func (s *Service) handleAction(_ *core.Core, _ core.Message) core.Result {
