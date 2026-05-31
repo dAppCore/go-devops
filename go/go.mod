@@ -17,7 +17,7 @@ require (
 
 require (
 	codeberg.org/forgejo/go-sdk v0.0.0 // indirect
-	dappco.re/go v0.9.0
+	dappco.re/go v0.10.3
 	dappco.re/go/cli v0.8.0-alpha.1
 	dappco.re/go/inference v0.8.0-alpha.1 // indirect
 	github.com/42wim/httpsig v1.2.4 // indirect
@@ -38,6 +38,8 @@ require (
 )
 
 require dappco.re/go/process v0.0.0-00010101000000-000000000000
+
+replace codeberg.org/forgejo/go-sdk => ../external/go-scm/go/third_party/forgejo
 
 require (
 	dappco.re/go/core v0.8.0-alpha.1 // indirect
