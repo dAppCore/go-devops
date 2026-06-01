@@ -5,7 +5,7 @@ import (
 	"sync"
 
 	core "dappco.re/go"
-	"dappco.re/go/log"
+	log "dappco.re/go/log"
 	"github.com/kluctl/go-embed-python/python"
 )
 
