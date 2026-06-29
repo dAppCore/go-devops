@@ -6,6 +6,8 @@ Infrastructure and build automation library for the Lethean ecosystem. Provides 
 **Licence**: EUPL-1.2
 **Language**: Go 1.26
 
+> **Service registration**: go-devops is intentionally a multi-Service repo per Mantis #1336/#1379. Each independently-stateful subpackage exposes its own canonical `NewService(opts) + Register(c)` pair under its own package name (`dev`, `devkit`, `coolify`). Pure-utility subpackages (`snapshot`, `deploy/python`) intentionally have no Service wiring.
+
 ## Quick Start
 
 ```go

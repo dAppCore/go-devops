@@ -4,11 +4,11 @@ go 1.26.2
 
 require (
 	code.gitea.io/sdk/gitea v0.24.1 // Note: Gitea SDK for repository and automation API integration; no core.* equivalent.
-	dappco.re/go/agent v0.8.0-alpha.1
-	dappco.re/go/i18n v0.8.0-alpha.1
-	dappco.re/go/io v0.8.0-alpha.1
-	dappco.re/go/log v0.8.0-alpha.1
-	dappco.re/go/scm v0.8.0-alpha.1
+	dappco.re/go/agent v0.28.0
+	dappco.re/go/i18n v0.10.0
+	dappco.re/go/io v0.11.0
+	dappco.re/go/log v0.10.0
+	dappco.re/go/scm v0.17.0
 	github.com/kluctl/go-embed-python v0.0.0-3.13.1-20241219-1 // Note: CPython embedding for Ansible playbook execution; no go/* equivalent.
 	golang.org/x/term v0.42.0
 	golang.org/x/text v0.36.0
@@ -16,9 +16,8 @@ require (
 )
 
 require (
-	codeberg.org/forgejo/go-sdk v0.0.0 // indirect
-	dappco.re/go v0.9.0
-	dappco.re/go/cli v0.8.0-alpha.1
+	dappco.re/go v0.10.3
+	dappco.re/go/cli v0.10.0
 	dappco.re/go/inference v0.8.0-alpha.1 // indirect
 	github.com/42wim/httpsig v1.2.4 // indirect
 	github.com/charmbracelet/x/ansi v0.11.6 // indirect
@@ -37,7 +36,7 @@ require (
 	golang.org/x/sys v0.43.0 // indirect
 )
 
-require dappco.re/go/process v0.0.0-00010101000000-000000000000
+require dappco.re/go/process v0.14.0
 
 require (
 	dappco.re/go/core v0.8.0-alpha.1 // indirect

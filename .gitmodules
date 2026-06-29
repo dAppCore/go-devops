@@ -26,3 +26,7 @@
 	path = external/go-scm
 	url = https://github.com/dappcore/go-scm.git
 	branch = dev
+[submodule "external/process"]
+	path = external/process
+	url = https://github.com/dappcore/go-process.git
+	branch = dev

@@ -36,7 +36,7 @@ func Generate(m *manifest.Manifest, commit, tag string) ([]byte, core.Result) {
 // GenerateAt creates a core.json snapshot with an explicit build timestamp.
 func GenerateAt(m *manifest.Manifest, commit, tag string, built time.Time) ([]byte, core.Result) {
 	if m == nil {
-		return nil, core.Fail(log.E("snapshot", "manifest is nil", nil))
+		return nil, core.Fail(core.MustCast[error](log.E("snapshot", "manifest is nil", nil)))
 	}
 
 	snap := Snapshot{
