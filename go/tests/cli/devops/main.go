@@ -7,7 +7,6 @@ package main
 import (
 	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
-	deploycmd "dappco.re/go/devops/cmd/deploy"
 	devcmd "dappco.re/go/devops/cmd/dev"
 	docscmd "dappco.re/go/devops/cmd/docs"
 	gitcmd "dappco.re/go/devops/cmd/gitcmd"
@@ -19,7 +18,6 @@ import (
 func main() {
 	cli.WithAppName("devops")
 	cli.Main(
-		cli.WithCommands("deploy", deploycmd.AddDeployCommands),
 		cli.WithCommands("dev", devcmd.AddDevCommands),
 		cli.WithCommands("docs", docscmd.AddDocsCommands),
 		cli.WithCommands("git", gitcmd.AddGitCommands),
