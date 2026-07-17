@@ -41,10 +41,6 @@ import (
 	_ "dappco.re/go/devops/locales"
 )
 
-func init() {
-	cli.RegisterCommands(AddDevCommands)
-}
-
 // Style aliases from shared package
 var (
 	successStyle  = cli.SuccessStyle
@@ -56,19 +52,6 @@ var (
 	repoNameStyle = cli.RepoStyle
 )
 
-var resultToError = func(r core.Result) error {
-	if !r.OK {
-		return r.Value.(error)
-	}
-	return nil
-}
-
-var resultRunE = func(fn func(*cli.Command, []string) core.Result) func(*cli.Command, []string) error {
-	return func(cmd *cli.Command, args []string) error {
-		return resultToError(fn(cmd, args))
-	}
-}
-
 // Table styles for status display (extends shared styles with cell padding)
 var (
 	dirtyStyle = cli.NewStyle().Foreground(cli.ColourRed500)
@@ -77,38 +60,55 @@ var (
 )
 
 // AddDevCommands registers the 'dev' command and all subcommands.
-func AddDevCommands(root *cli.Command) {
-	devCmd := &cli.Command{
-		Use:   "dev",
-		Short: i18n.T("cmd.dev.short"),
-		Long:  i18n.T("cmd.dev.long"),
+//
+//	c := core.New()
+//	if r := dev.AddDevCommands(c); !r.OK { return r }
+func AddDevCommands(c *core.Core) core.Result {
+	// See cmd/deploy/cmd_commands.go's AddDeployCommands for why the group
+	// command needs its own Action (core.Cli.Run has no automatic group-help).
+	if r := c.Command("dev", core.Command{
+		Description: i18n.T("cmd.dev.short"),
+		Action: func(core.Options) core.Result {
+			cli.PrintHelp()
+			return core.Ok(nil)
+		},
+	}); !r.OK {
+		return r
 	}
-	root.AddCommand(devCmd)
 
 	// Git operations (also available under 'core git')
-	AddWorkCommand(devCmd)
-	AddHealthCommand(devCmd)
-	AddCommitCommand(devCmd)
-	AddPushCommand(devCmd)
-	AddPullCommand(devCmd)
-	AddTagCommand(devCmd)
+	for _, register := range []func(*core.Core, string) core.Result{
+		AddWorkCommand,
+		AddHealthCommand,
+		AddCommitCommand,
+		AddPushCommand,
+		AddPullCommand,
+		AddFileSyncCommand,
+		AddApplyCommand,
+	} {
+		if r := register(c, "dev"); !r.OK {
+			return r
+		}
+	}
 
-	// Safe git operations for AI agents (also available under 'core git')
-	AddFileSyncCommand(devCmd)
-	AddApplyCommand(devCmd)
+	if r := AddTagCommand(c); !r.OK {
+		return r
+	}
 
-	// GitHub integration
-	addIssuesCommand(devCmd)
-	addReviewsCommand(devCmd)
-	addCICommand(devCmd)
-	addImpactCommand(devCmd)
+	// GitHub integration, CI/workflow management, API tools, dev environment
+	for _, register := range []func(*core.Core) core.Result{
+		addIssuesCommand,
+		addReviewsCommand,
+		addCICommand,
+		addImpactCommand,
+		addWorkflowCommands,
+		addAPICommands,
+		addVMCommands,
+	} {
+		if r := register(c); !r.OK {
+			return r
+		}
+	}
 
-	// CI/Workflow management
-	addWorkflowCommands(devCmd)
-
-	// API tools
-	addAPICommands(devCmd)
-
-	// Dev environment
-	addVMCommands(devCmd)
+	return core.Ok(nil)
 }

@@ -67,57 +67,40 @@ func LoadCIConfig() *CIConfig {
 	return cfg
 }
 
-// CI setup command flags
-var (
-	ciShell   string
-	ciVersion string
-)
-
-func init() {
-	ciCmd := &cli.Command{
-		Use:   "ci",
-		Short: "Output CI installation commands for core CLI",
-		Long: `Output installation commands for the core CLI in CI environments.
-
-Generates shell commands to install the core CLI using the appropriate
-package manager for each platform:
-
-  macOS/Linux: Homebrew (brew install host-uk/tap/core)
-  Windows:     Scoop or Chocolatey, or direct download
-
-Configuration can be customized via .core/ci.yaml:
-
-  tap: host-uk/tap           # Homebrew tap
-  formula: core              # Homebrew formula name
-  scoop_bucket: https://...  # Scoop bucket URL
-  chocolatey_pkg: core-cli   # Chocolatey package name
-  repository: host-uk/core   # GitHub repo for direct downloads
-  default_version: dev       # Default version to install
-
-Examples:
-  # Output installation commands for current platform
-  core setup ci
-
-  # Output for specific shell (bash, powershell, yaml)
-  core setup ci --shell=bash
-  core setup ci --shell=powershell
-  core setup ci --shell=yaml
-
-  # Install specific version
-  core setup ci --version=v1.0.0
-
-  # Use in GitHub Actions (pipe to shell)
-  eval "$(core setup ci --shell=bash)"`,
-		RunE: resultRunE(runSetupCI),
-	}
-
-	ciCmd.Flags().StringVar(&ciShell, "shell", "", "Output format: bash, powershell, yaml (auto-detected if not specified)")
-	ciCmd.Flags().StringVar(&ciVersion, "version", "", "Version to install (tag name or 'dev' for latest dev build)")
-
-	setupCmd.AddCommand(ciCmd)
+// addSetupCICommand adds the 'setup ci' command — outputs CI installation
+// commands for the core CLI (Homebrew/Scoop/Chocolatey/direct-download).
+//
+// Configuration can be customized via .core/ci.yaml:
+//
+//	tap: host-uk/tap           # Homebrew tap
+//	formula: core              # Homebrew formula name
+//	scoop_bucket: https://...  # Scoop bucket URL
+//	chocolatey_pkg: core-cli   # Chocolatey package name
+//	repository: host-uk/core   # GitHub repo for direct downloads
+//	default_version: dev       # Default version to install
+//
+// Examples:
+//
+//	core setup ci
+//	core setup ci --shell=bash
+//	core setup ci --shell=powershell
+//	core setup ci --shell=yaml
+//	core setup ci --version=v1.0.0
+//	eval "$(core setup ci --shell=bash)"
+func addSetupCICommand(c *core.Core) core.Result {
+	return c.Command("setup/ci", core.Command{
+		Description: "Output CI installation commands for core CLI",
+		Flags: core.NewOptions(
+			core.Option{Key: "shell", Value: ""},
+			core.Option{Key: "version", Value: ""},
+		),
+		Action: func(o core.Options) core.Result {
+			return runSetupCI(o.String("shell"), o.String("version"))
+		},
+	})
 }
 
-func runSetupCI(cmd *cli.Command, args []string) (_ core.Result) {
+func runSetupCI(ciShell, ciVersion string) (_ core.Result) {
 	cfg := LoadCIConfig()
 
 	// Use flag version or config default
@@ -144,7 +127,7 @@ func runSetupCI(cmd *cli.Command, args []string) (_ core.Result) {
 	case "yaml", "yml", "gha", "github":
 		return outputGitHubActionsYAML(cfg, version)
 	default:
-		return core.Fail(cli.Err("unsupported shell: %s (use bash, powershell, or yaml)", shell))
+		return cli.Err("unsupported shell: %s (use bash, powershell, or yaml)", shell)
 	}
 }
 

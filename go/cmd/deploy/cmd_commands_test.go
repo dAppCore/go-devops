@@ -1,39 +1,33 @@
 package deploy
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func TestCmdCommands_AddDeployCommands_Good(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddDeployCommands(root)
-	commands := root.Commands()
+	c := core.New()
+	r := AddDeployCommands(c)
+	core.AssertTrue(t, r.OK)
 
-	core.AssertLen(t, commands, 1)
-	core.AssertEqual(t, "deploy", commands[0].Use)
+	root := c.Command("deploy")
+	core.AssertTrue(t, root.OK)
+
+	servers := c.Command("deploy/servers")
+	core.AssertTrue(t, servers.OK)
+	core.AssertNotNil(t, servers.Value.(*core.Command).Action)
 }
 
 func TestCmdCommands_AddDeployCommands_Bad(t *core.T) {
-	var root *cli.Command
+	var c *core.Core
 	core.AssertPanics(t, func() {
-		AddDeployCommands(root)
+		AddDeployCommands(c)
 	})
-	core.AssertNil(t, root)
+	core.AssertNil(t, c)
 }
 
 func TestCmdCommands_AddDeployCommands_Ugly(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	root.AddCommand(&cli.Command{Use: "existing"})
-	AddDeployCommands(root)
+	c := core.New()
+	core.AssertTrue(t, AddDeployCommands(c).OK)
 
-	foundExisting := false
-	foundDeploy := false
-	for _, cmd := range root.Commands() {
-		foundExisting = foundExisting || cmd.Use == "existing"
-		foundDeploy = foundDeploy || cmd.Use == "deploy"
-	}
-	core.AssertLen(t, root.Commands(), 2)
-	core.AssertTrue(t, foundExisting)
-	core.AssertTrue(t, foundDeploy)
+	// Re-registering onto the same Core hits the duplicate-executable guard.
+	r := AddDeployCommands(c)
+	core.AssertFalse(t, r.OK)
 }

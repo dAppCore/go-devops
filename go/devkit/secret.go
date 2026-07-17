@@ -62,7 +62,7 @@ var textExts = map[string]struct{}{
 func ScanDir(root string) ([]Finding, core.Result) {
 	var findings []Finding
 
-	if err := core.PathWalkDir(root, func(path string, d fs.DirEntry, err error) error {
+	if r := core.PathWalkDir(root, func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
 			return err
 		}
@@ -85,8 +85,8 @@ func ScanDir(root string) ([]Finding, core.Result) {
 		}
 		findings = append(findings, fileFindings...)
 		return nil
-	}); err != nil {
-		return nil, core.Fail(err)
+	}); !r.OK {
+		return nil, r
 	}
 
 	return findings, core.Ok(nil)

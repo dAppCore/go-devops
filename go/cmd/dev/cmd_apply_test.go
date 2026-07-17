@@ -2,7 +2,6 @@ package dev
 
 import (
 	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/scm/repos"
 	"testing"
 )
@@ -51,27 +50,28 @@ func TestFilterTargetRepos_Good(t *testing.T) {
 }
 
 func TestCmdApply_AddApplyCommand_Good(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddApplyCommand(root)
-	cmd := testCommand(root, "apply")
+	c := core.New()
+	r := AddApplyCommand(c, "dev")
+	core.AssertTrue(t, r.OK)
 
-	core.AssertNotNil(t, cmd)
-	core.AssertNotNil(t, cmd.Flag("command"))
+	cmd := c.Command("dev/apply")
+	core.AssertTrue(t, cmd.OK)
+	core.AssertNotNil(t, cmd.Value.(*core.Command).Action)
 }
 
 func TestCmdApply_AddApplyCommand_Bad(t *core.T) {
-	var root *cli.Command
+	var c *core.Core
 	core.AssertPanics(t, func() {
-		AddApplyCommand(root)
+		AddApplyCommand(c, "dev")
 	})
-	core.AssertNil(t, root)
+	core.AssertNil(t, c)
 }
 
 func TestCmdApply_AddApplyCommand_Ugly(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddApplyCommand(root)
-	AddApplyCommand(root)
+	c := core.New()
+	core.AssertTrue(t, AddApplyCommand(c, "dev").OK)
 
-	core.AssertLen(t, root.Commands(), 2)
-	core.AssertNotNil(t, testCommand(root, "apply"))
+	r := AddApplyCommand(c, "git")
+	core.AssertTrue(t, r.OK)
+	core.AssertTrue(t, c.Command("git/apply").OK)
 }

@@ -9,27 +9,21 @@ import (
 	"dappco.re/go/scm/git"
 )
 
-// Push command flags
-var (
-	pushRegistryPath string
-	pushForce        bool
-)
-
-// AddPushCommand adds the 'push' command to the given parent command.
-func AddPushCommand(parent *cli.Command) {
-	pushCmd := &cli.Command{
-		Use:   "push",
-		Short: i18n.T("cmd.dev.push.short"),
-		Long:  i18n.T("cmd.dev.push.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runPush(pushRegistryPath, pushForce))
+// AddPushCommand adds the 'push' command under prefix (e.g. "dev" or "git").
+//
+//	c := core.New()
+//	if r := dev.AddPushCommand(c, "dev"); !r.OK { return r }
+func AddPushCommand(c *core.Core, prefix string) core.Result {
+	return c.Command(prefix+"/push", core.Command{
+		Description: i18n.T("cmd.dev.push.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "registry", Value: ""},
+			core.Option{Key: "force", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
+			return runPush(o.String("registry"), o.Bool("force"))
 		},
-	}
-
-	pushCmd.Flags().StringVar(&pushRegistryPath, "registry", "", i18n.T("common.flag.registry"))
-	pushCmd.Flags().BoolVarP(&pushForce, "force", "f", false, i18n.T("cmd.dev.push.flag.force"))
-
-	parent.AddCommand(pushCmd)
+	})
 }
 
 func runPush(registryPath string, force bool) (_ core.Result) {
@@ -180,7 +174,7 @@ func runPushSingleRepo(ctx context.Context, repoPath string, force bool) (_ core
 	})
 
 	if len(statuses) == 0 {
-		return core.Fail(cli.Err("failed to get repo status"))
+		return cli.Err("failed to get repo status")
 	}
 
 	s := statuses[0]

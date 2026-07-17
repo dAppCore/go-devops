@@ -11,29 +11,22 @@ import (
 	"dappco.re/go/scm/git"
 )
 
-// Work command flags
-var (
-	workStatusOnly   bool
-	workAutoCommit   bool
-	workRegistryPath string
-)
-
-// AddWorkCommand adds the 'work' command to the given parent command.
-func AddWorkCommand(parent *cli.Command) {
-	workCmd := &cli.Command{
-		Use:   "work",
-		Short: i18n.T("cmd.dev.work.short"),
-		Long:  i18n.T("cmd.dev.work.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runWork(workRegistryPath, workStatusOnly, workAutoCommit))
+// AddWorkCommand adds the 'work' command under prefix (e.g. "dev" or "git").
+//
+//	c := core.New()
+//	if r := dev.AddWorkCommand(c, "dev"); !r.OK { return r }
+func AddWorkCommand(c *core.Core, prefix string) core.Result {
+	return c.Command(prefix+"/work", core.Command{
+		Description: i18n.T("cmd.dev.work.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "status", Value: false},
+			core.Option{Key: "commit", Value: false},
+			core.Option{Key: "registry", Value: ""},
+		),
+		Action: func(o core.Options) core.Result {
+			return runWork(o.String("registry"), o.Bool("status"), o.Bool("commit"))
 		},
-	}
-
-	workCmd.Flags().BoolVar(&workStatusOnly, "status", false, i18n.T("cmd.dev.work.flag.status"))
-	workCmd.Flags().BoolVar(&workAutoCommit, "commit", false, i18n.T("cmd.dev.work.flag.commit"))
-	workCmd.Flags().StringVar(&workRegistryPath, "registry", "", i18n.T("common.flag.registry"))
-
-	parent.AddCommand(workCmd)
+	})
 }
 
 func runWork(registryPath string, statusOnly, autoCommit bool) (_ core.Result) {

@@ -135,32 +135,35 @@ func (d *DevEnv) CheckUpdate(context.Context) (string, string, bool, core.Result
 	return "unknown", "unknown", false, core.Ok(nil)
 }
 
-// addVMCommands adds the dev environment VM commands to the dev parent command.
-// These are added as direct subcommands: core dev install, core dev boot, etc.
-func addVMCommands(parent *cli.Command) {
-	addVMInstallCommand(parent)
-	addVMBootCommand(parent)
-	addVMStopCommand(parent)
-	addVMStatusCommand(parent)
-	addVMShellCommand(parent)
-	addVMServeCommand(parent)
-	addVMTestCommand(parent)
-	addVMClaudeCommand(parent)
-	addVMUpdateCommand(parent)
+// addVMCommands adds the dev environment VM commands under "dev".
+// These are direct subcommands: core dev install, core dev boot, etc.
+func addVMCommands(c *core.Core) core.Result {
+	for _, register := range []func(*core.Core) core.Result{
+		addVMInstallCommand,
+		addVMBootCommand,
+		addVMStopCommand,
+		addVMStatusCommand,
+		addVMShellCommand,
+		addVMServeCommand,
+		addVMTestCommand,
+		addVMClaudeCommand,
+		addVMUpdateCommand,
+	} {
+		if r := register(c); !r.OK {
+			return r
+		}
+	}
+	return core.Ok(nil)
 }
 
 // addVMInstallCommand adds the 'dev install' command.
-func addVMInstallCommand(parent *cli.Command) {
-	installCmd := &cli.Command{
-		Use:   "install",
-		Short: i18n.T("cmd.dev.vm.install.short"),
-		Long:  i18n.T("cmd.dev.vm.install.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runVMInstall())
+func addVMInstallCommand(c *core.Core) core.Result {
+	return c.Command("dev/install", core.Command{
+		Description: i18n.T("cmd.dev.vm.install.short"),
+		Action: func(core.Options) core.Result {
+			return runVMInstall()
 		},
-	}
-
-	parent.AddCommand(installCmd)
+	})
 }
 
 func runVMInstall() (_ core.Result) {
@@ -198,7 +201,7 @@ func runVMInstall() (_ core.Result) {
 	cli.Blank() // Clear progress line
 
 	if !r.OK {
-		return core.Fail(cli.Wrap(r.Value.(error), "install failed"))
+		return cli.Wrap(r.Value.(error), "install failed")
 	}
 
 	elapsed := time.Since(start).Round(time.Second)
@@ -210,29 +213,19 @@ func runVMInstall() (_ core.Result) {
 	return core.Ok(nil)
 }
 
-// VM boot command flags
-var (
-	vmBootMemory int
-	vmBootCPUs   int
-	vmBootFresh  bool
-)
-
-// addVMBootCommand adds the 'devops boot' command.
-func addVMBootCommand(parent *cli.Command) {
-	bootCmd := &cli.Command{
-		Use:   "boot",
-		Short: i18n.T("cmd.dev.vm.boot.short"),
-		Long:  i18n.T("cmd.dev.vm.boot.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runVMBoot(vmBootMemory, vmBootCPUs, vmBootFresh))
+// addVMBootCommand adds the 'dev boot' command.
+func addVMBootCommand(c *core.Core) core.Result {
+	return c.Command("dev/boot", core.Command{
+		Description: i18n.T("cmd.dev.vm.boot.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "memory", Value: 0},
+			core.Option{Key: "cpus", Value: 0},
+			core.Option{Key: "fresh", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
+			return runVMBoot(o.Int("memory"), o.Int("cpus"), o.Bool("fresh"))
 		},
-	}
-
-	bootCmd.Flags().IntVar(&vmBootMemory, "memory", 0, i18n.T("cmd.dev.vm.boot.flag.memory"))
-	bootCmd.Flags().IntVar(&vmBootCPUs, "cpus", 0, i18n.T("cmd.dev.vm.boot.flag.cpus"))
-	bootCmd.Flags().BoolVar(&vmBootFresh, "fresh", false, i18n.T("cmd.dev.vm.boot.flag.fresh"))
-
-	parent.AddCommand(bootCmd)
+	})
 }
 
 func runVMBoot(memory, cpus int, fresh bool) (_ core.Result) {
@@ -272,18 +265,14 @@ func runVMBoot(memory, cpus int, fresh bool) (_ core.Result) {
 	return core.Ok(nil)
 }
 
-// addVMStopCommand adds the 'devops stop' command.
-func addVMStopCommand(parent *cli.Command) {
-	stopCmd := &cli.Command{
-		Use:   "stop",
-		Short: i18n.T("cmd.dev.vm.stop.short"),
-		Long:  i18n.T("cmd.dev.vm.stop.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runVMStop())
+// addVMStopCommand adds the 'dev stop' command.
+func addVMStopCommand(c *core.Core) core.Result {
+	return c.Command("dev/stop", core.Command{
+		Description: i18n.T("cmd.dev.vm.stop.short"),
+		Action: func(core.Options) core.Result {
+			return runVMStop()
 		},
-	}
-
-	parent.AddCommand(stopCmd)
+	})
 }
 
 func runVMStop() (_ core.Result) {
@@ -313,21 +302,22 @@ func runVMStop() (_ core.Result) {
 	return core.Ok(nil)
 }
 
-// addVMStatusCommand adds the 'dev status' command.
-func addVMStatusCommand(parent *cli.Command) {
-	statusCmd := &cli.Command{
-		Use: "status",
-		Aliases: []string{
-			"vm-status",
-		},
-		Short: i18n.T("cmd.dev.vm.status.short"),
-		Long:  i18n.T("cmd.dev.vm.status.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runVMStatus())
-		},
+// addVMStatusCommand adds the 'dev status' command, plus a 'dev vm-status'
+// alias — core.Command has no native Aliases field, so the alias is a
+// second registration of the same Action (mirrors dappco.re/go/agent's
+// multi-path registration pattern for command aliases).
+func addVMStatusCommand(c *core.Core) core.Result {
+	action := func(core.Options) core.Result { return runVMStatus() }
+	if r := c.Command("dev/status", core.Command{
+		Description: i18n.T("cmd.dev.vm.status.short"),
+		Action:      action,
+	}); !r.OK {
+		return r
 	}
-
-	parent.AddCommand(statusCmd)
+	return c.Command("dev/vm-status", core.Command{
+		Description: i18n.T("cmd.dev.vm.status.short"),
+		Action:      action,
+	})
 }
 
 func runVMStatus() (_ core.Result) {
@@ -390,23 +380,27 @@ func formatVMUptime(d time.Duration) string {
 	return cli.Sprintf("%dd %dh", int(d.Hours()/24), int(d.Hours())%24)
 }
 
-// VM shell command flags
-var vmShellConsole bool
-
-// addVMShellCommand adds the 'devops shell' command.
-func addVMShellCommand(parent *cli.Command) {
-	shellCmd := &cli.Command{
-		Use:   "shell [-- command...]",
-		Short: i18n.T("cmd.dev.vm.shell.short"),
-		Long:  i18n.T("cmd.dev.vm.shell.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runVMShell(vmShellConsole, args))
+// addVMShellCommand adds the 'dev shell [-- command...]' command. The
+// backend (DevEnv.Shell) is an unconditional stub ("backend is unavailable")
+// pending a real VM implementation, so the historical `-- command...`
+// passthrough — which needs multiple trailing positionals that
+// core.Cli.Run cannot carry (only the last bare positional survives under
+// "_arg") — is reduced to a single positional for now. Revisit once a real
+// backend lands and the full command line needs to reach it.
+func addVMShellCommand(c *core.Core) core.Result {
+	return c.Command("dev/shell", core.Command{
+		Description: i18n.T("cmd.dev.vm.shell.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "console", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
+			var command []string
+			if arg := o.String("_arg"); arg != "" {
+				command = []string{arg}
+			}
+			return runVMShell(o.Bool("console"), command)
 		},
-	}
-
-	shellCmd.Flags().BoolVar(&vmShellConsole, "console", false, i18n.T("cmd.dev.vm.shell.flag.console"))
-
-	parent.AddCommand(shellCmd)
+	})
 }
 
 func runVMShell(console bool, command []string) (_ core.Result) {
@@ -424,27 +418,18 @@ func runVMShell(console bool, command []string) (_ core.Result) {
 	return d.Shell(ctx, opts)
 }
 
-// VM serve command flags
-var (
-	vmServePort int
-	vmServePath string
-)
-
-// addVMServeCommand adds the 'devops serve' command.
-func addVMServeCommand(parent *cli.Command) {
-	serveCmd := &cli.Command{
-		Use:   "serve",
-		Short: i18n.T("cmd.dev.vm.serve.short"),
-		Long:  i18n.T("cmd.dev.vm.serve.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runVMServe(vmServePort, vmServePath))
+// addVMServeCommand adds the 'dev serve' command.
+func addVMServeCommand(c *core.Core) core.Result {
+	return c.Command("dev/serve", core.Command{
+		Description: i18n.T("cmd.dev.vm.serve.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "port", Value: 0},
+			core.Option{Key: "path", Value: ""},
+		),
+		Action: func(o core.Options) core.Result {
+			return runVMServe(o.Int("port"), o.String("path"))
 		},
-	}
-
-	serveCmd.Flags().IntVarP(&vmServePort, "port", "p", 0, i18n.T("cmd.dev.vm.serve.flag.port"))
-	serveCmd.Flags().StringVar(&vmServePath, "p"+"ath", "", i18n.T("cmd.dev.vm.serve.flag.path"))
-
-	parent.AddCommand(serveCmd)
+	})
 }
 
 func runVMServe(port int, path string) (_ core.Result) {
@@ -468,23 +453,23 @@ func runVMServe(port int, path string) (_ core.Result) {
 	return d.Serve(ctx, projectDir, opts)
 }
 
-// VM test command flags
-var vmTestName string
-
-// addVMTestCommand adds the 'devops test' command.
-func addVMTestCommand(parent *cli.Command) {
-	testCmd := &cli.Command{
-		Use:   "test [-- command...]",
-		Short: i18n.T("cmd.dev.vm.test.short"),
-		Long:  i18n.T("cmd.dev.vm.test.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runVMTest(vmTestName, args))
+// addVMTestCommand adds the 'dev test [-- command...]' command. Same
+// single-positional reduction as addVMShellCommand — see its comment; the
+// backend (DevEnv.Test) is likewise an unconditional stub.
+func addVMTestCommand(c *core.Core) core.Result {
+	return c.Command("dev/test", core.Command{
+		Description: i18n.T("cmd.dev.vm.test.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "name", Value: ""},
+		),
+		Action: func(o core.Options) core.Result {
+			var command []string
+			if arg := o.String("_arg"); arg != "" {
+				command = []string{arg}
+			}
+			return runVMTest(o.String("name"), command)
 		},
-	}
-
-	testCmd.Flags().StringVarP(&vmTestName, "name", "n", "", i18n.T("cmd.dev.vm.test.flag.name"))
-
-	parent.AddCommand(testCmd)
+	})
 }
 
 func runVMTest(name string, command []string) (_ core.Result) {
@@ -508,29 +493,29 @@ func runVMTest(name string, command []string) (_ core.Result) {
 	return d.Test(ctx, projectDir, opts)
 }
 
-// VM claude command flags
-var (
-	vmClaudeNoAuth    bool
-	vmClaudeModel     string
-	vmClaudeAuthFlags []string
-)
-
-// addVMClaudeCommand adds the 'devops claude' command.
-func addVMClaudeCommand(parent *cli.Command) {
-	claudeCmd := &cli.Command{
-		Use:   "claude",
-		Short: i18n.T("cmd.dev.vm.claude.short"),
-		Long:  i18n.T("cmd.dev.vm.claude.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runVMClaude(vmClaudeNoAuth, vmClaudeModel, vmClaudeAuthFlags))
+// addVMClaudeCommand adds the 'dev claude' command. --auth was a cobra
+// StringSlice (repeatable); core.Options only keeps the last value for a
+// repeated flag key, so --auth now takes a single comma-separated value
+// (e.g. --auth=token,cookie). The backend (DevEnv.Claude) is an
+// unconditional stub, so this is a documentation-level change for now.
+func addVMClaudeCommand(c *core.Core) core.Result {
+	return c.Command("dev/claude", core.Command{
+		Description: i18n.T("cmd.dev.vm.claude.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "no-auth", Value: false},
+			core.Option{Key: "model", Value: ""},
+			core.Option{Key: "auth", Value: ""},
+		),
+		Action: func(o core.Options) core.Result {
+			var authFlags []string
+			for _, a := range core.Split(o.String("auth"), ",") {
+				if a = core.Trim(a); a != "" {
+					authFlags = append(authFlags, a)
+				}
+			}
+			return runVMClaude(o.Bool("no-auth"), o.String("model"), authFlags)
 		},
-	}
-
-	claudeCmd.Flags().BoolVar(&vmClaudeNoAuth, "no-auth", false, i18n.T("cmd.dev.vm.claude.flag.no_auth"))
-	claudeCmd.Flags().StringVarP(&vmClaudeModel, "model", "m", "", i18n.T("cmd.dev.vm.claude.flag.model"))
-	claudeCmd.Flags().StringSliceVar(&vmClaudeAuthFlags, "auth", nil, i18n.T("cmd.dev.vm.claude.flag.auth"))
-
-	parent.AddCommand(claudeCmd)
+	})
 }
 
 func runVMClaude(noAuth bool, model string, authFlags []string) (_ core.Result) {
@@ -555,23 +540,17 @@ func runVMClaude(noAuth bool, model string, authFlags []string) (_ core.Result) 
 	return d.Claude(ctx, projectDir, opts)
 }
 
-// VM update command flags
-var vmUpdateApply bool
-
-// addVMUpdateCommand adds the 'devops update' command.
-func addVMUpdateCommand(parent *cli.Command) {
-	updateCmd := &cli.Command{
-		Use:   "update",
-		Short: i18n.T("cmd.dev.vm.update.short"),
-		Long:  i18n.T("cmd.dev.vm.update.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runVMUpdate(vmUpdateApply))
+// addVMUpdateCommand adds the 'dev update' command.
+func addVMUpdateCommand(c *core.Core) core.Result {
+	return c.Command("dev/update", core.Command{
+		Description: i18n.T("cmd.dev.vm.update.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "apply", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
+			return runVMUpdate(o.Bool("apply"))
 		},
-	}
-
-	updateCmd.Flags().BoolVar(&vmUpdateApply, "apply", false, i18n.T("cmd.dev.vm.update.flag.apply"))
-
-	parent.AddCommand(updateCmd)
+	})
 }
 
 func runVMUpdate(apply bool) (_ core.Result) {
@@ -587,7 +566,7 @@ func runVMUpdate(apply bool) (_ core.Result) {
 
 	current, latest, hasUpdate, r := d.CheckUpdate(ctx)
 	if !r.OK {
-		return core.Fail(cli.Wrap(r.Value.(error), "failed to check for updates"))
+		return cli.Wrap(r.Value.(error), "failed to check for updates")
 	}
 
 	cli.Print("%s %s\n", dimStyle.Render(i18n.Label("current")), valueStyle.Render(current))
@@ -610,12 +589,12 @@ func runVMUpdate(apply bool) (_ core.Result) {
 	// Stop if running
 	running, r := d.IsRunning(ctx)
 	if !r.OK {
-		return core.Fail(cli.Wrap(r.Value.(error), "failed to check VM state"))
+		return cli.Wrap(r.Value.(error), "failed to check VM state")
 	}
 	if running {
 		cli.Text(i18n.T("cmd.dev.vm.stopping_current"))
 		if r := d.Stop(ctx); !r.OK {
-			return core.Fail(cli.Wrap(r.Value.(error), "failed to stop current VM"))
+			return cli.Wrap(r.Value.(error), "failed to stop current VM")
 		}
 	}
 
@@ -633,7 +612,7 @@ func runVMUpdate(apply bool) (_ core.Result) {
 	cli.Blank()
 
 	if !r.OK {
-		return core.Fail(cli.Wrap(r.Value.(error), "update failed"))
+		return cli.Wrap(r.Value.(error), "update failed")
 	}
 
 	elapsed := time.Since(start).Round(time.Second)

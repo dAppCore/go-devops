@@ -34,29 +34,19 @@ type ForgePR struct {
 	RepoName       string
 }
 
-// Reviews command flags
-var (
-	reviewsRegistryPath string
-	reviewsAuthor       string
-	reviewsShowAll      bool
-)
-
-// addReviewsCommand adds the 'reviews' command to the given parent command.
-func addReviewsCommand(parent *cli.Command) {
-	reviewsCmd := &cli.Command{
-		Use:   "reviews",
-		Short: i18n.T("cmd.dev.reviews.short"),
-		Long:  i18n.T("cmd.dev.reviews.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runReviews(reviewsRegistryPath, reviewsAuthor, reviewsShowAll))
+// addReviewsCommand adds the 'reviews' command under "dev".
+func addReviewsCommand(c *core.Core) core.Result {
+	return c.Command("dev/reviews", core.Command{
+		Description: i18n.T("cmd.dev.reviews.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "registry", Value: ""},
+			core.Option{Key: "author", Value: ""},
+			core.Option{Key: "all", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
+			return runReviews(o.String("registry"), o.String("author"), o.Bool("all"))
 		},
-	}
-
-	reviewsCmd.Flags().StringVar(&reviewsRegistryPath, "registry", "", i18n.T("common.flag.registry"))
-	reviewsCmd.Flags().StringVar(&reviewsAuthor, "author", "", i18n.T("cmd.dev.reviews.flag.author"))
-	reviewsCmd.Flags().BoolVar(&reviewsShowAll, "all", false, i18n.T("cmd.dev.reviews.flag.all"))
-
-	parent.AddCommand(reviewsCmd)
+	})
 }
 
 func runReviews(registryPath string, author string, showAll bool) (_ core.Result) {

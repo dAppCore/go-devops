@@ -1,55 +1,32 @@
 package setup
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
-
-func resetSetupCommand(t *core.T) {
-	original := setupCmd
-	setupCmd = &cli.Command{
-		Use: "setup",
-		RunE: func(cmd *cli.Command, args []string) error {
-			return nil
-		},
-	}
-	t.Cleanup(func() { setupCmd = original })
-}
-
-func setupCommand(root *cli.Command, use string) *cli.Command {
-	for _, cmd := range root.Commands() {
-		if cmd.Use == use || core.HasPrefix(cmd.Use, use+" ") {
-			return cmd
-		}
-	}
-	return nil
-}
+import core "dappco.re/go"
 
 func TestCmdSetup_AddSetupCommand_Good(t *core.T) {
-	resetSetupCommand(t)
-	root := &cli.Command{Use: "root"}
-	AddSetupCommand(root)
-	cmd := setupCommand(root, "setup")
+	c := core.New()
+	r := AddSetupCommand(c)
+	core.AssertTrue(t, r.OK)
 
-	core.AssertNotNil(t, cmd)
-	core.AssertNotNil(t, cmd.Flag("registry"))
+	cmd := c.Command("setup")
+	core.AssertTrue(t, cmd.OK)
+	setupCmd := cmd.Value.(*core.Command)
+	core.AssertNotNil(t, setupCmd.Action)
+	core.AssertTrue(t, setupCmd.Flags.Has("registry"))
 }
 
 func TestCmdSetup_AddSetupCommand_Bad(t *core.T) {
-	resetSetupCommand(t)
-	var root *cli.Command
+	var c *core.Core
 	core.AssertPanics(t, func() {
-		AddSetupCommand(root)
+		AddSetupCommand(c)
 	})
-	core.AssertNil(t, root)
+	core.AssertNil(t, c)
 }
 
 func TestCmdSetup_AddSetupCommand_Ugly(t *core.T) {
-	resetSetupCommand(t)
-	root := &cli.Command{Use: "root"}
-	root.AddCommand(&cli.Command{Use: "existing"})
-	AddSetupCommand(root)
+	c := core.New()
+	core.AssertTrue(t, AddSetupCommand(c).OK)
 
-	core.AssertLen(t, root.Commands(), 2)
-	core.AssertNotNil(t, setupCommand(root, "setup"))
+	// Re-registering onto the same Core hits the duplicate-executable guard.
+	r := AddSetupCommand(c)
+	core.AssertFalse(t, r.OK)
 }

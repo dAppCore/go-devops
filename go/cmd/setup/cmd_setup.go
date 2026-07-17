@@ -16,19 +16,6 @@ var (
 	dimStyle      = cli.DimStyle
 )
 
-var resultError = func(r core.Result) error {
-	if !r.OK {
-		return r.Value.(error)
-	}
-	return nil
-}
-
-var resultRunE = func(fn func(*cli.Command, []string) core.Result) func(*cli.Command, []string) error {
-	return func(cmd *cli.Command, args []string) error {
-		return resultError(fn(cmd, args))
-	}
-}
-
 // Default organization and devops repo for bootstrap
 const (
 	defaultOrg      = "host-uk"
@@ -36,36 +23,34 @@ const (
 	devopsReposYaml = "repos.yaml"
 )
 
-// Setup command flags
-var (
-	registryPath string
-	only         string
-	dryRun       bool
-	all          bool
-	name         string
-	build        bool
-)
-
-var setupCmd = &cli.Command{
-	Use: "setup",
-	RunE: func(cmd *cli.Command, args []string) error {
-		return resultError(runSetupOrchestrator(registryPath, only, dryRun, all, name, build))
-	},
-}
-
-func initSetupFlags() {
-	setupCmd.Flags().StringVar(&registryPath, "registry", "", i18n.T("cmd.setup.flag.registry"))
-	setupCmd.Flags().StringVar(&only, "only", "", i18n.T("cmd.setup.flag.only"))
-	setupCmd.Flags().BoolVar(&dryRun, "dry-run", false, i18n.T("cmd.setup.flag.dry_run"))
-	setupCmd.Flags().BoolVar(&all, "all", false, i18n.T("cmd.setup.flag.all"))
-	setupCmd.Flags().StringVar(&name, "name", "", i18n.T("cmd.setup.flag.name"))
-	setupCmd.Flags().BoolVar(&build, "build", false, i18n.T("cmd.setup.flag.build"))
-}
-
-// AddSetupCommand adds the 'setup' command to the given parent command.
-func AddSetupCommand(root *cli.Command) {
-	initSetupFlags()
-	addRepoCommand(setupCmd)
-	addGitHubCommand(setupCmd)
-	root.AddCommand(setupCmd)
+// AddSetupCommand adds the 'setup' command (itself executable — the
+// registry/bootstrap orchestrator) plus its 'repo', 'github'/'gh', and 'ci'
+// subcommands.
+//
+//	c := core.New()
+//	if r := setup.AddSetupCommand(c); !r.OK { return r }
+func AddSetupCommand(c *core.Core) core.Result {
+	if r := c.Command("setup", core.Command{
+		Description: i18n.T("cmd.setup.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "registry", Value: ""},
+			core.Option{Key: "only", Value: ""},
+			core.Option{Key: "dry-run", Value: false},
+			core.Option{Key: "all", Value: false},
+			core.Option{Key: "name", Value: ""},
+			core.Option{Key: "build", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
+			return runSetupOrchestrator(o.String("registry"), o.String("only"), o.Bool("dry-run"), o.Bool("all"), o.String("name"), o.Bool("build"))
+		},
+	}); !r.OK {
+		return r
+	}
+	if r := addRepoCommand(c); !r.OK {
+		return r
+	}
+	if r := addGitHubCommand(c); !r.OK {
+		return r
+	}
+	return addSetupCICommand(c)
 }

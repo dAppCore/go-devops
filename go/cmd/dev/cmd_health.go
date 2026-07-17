@@ -11,27 +11,21 @@ import (
 	"dappco.re/go/scm/git"
 )
 
-// Health command flags
-var (
-	healthRegistryPath string
-	healthVerbose      bool
-)
-
-// AddHealthCommand adds the 'health' command to the given parent command.
-func AddHealthCommand(parent *cli.Command) {
-	healthCmd := &cli.Command{
-		Use:   "health",
-		Short: i18n.T("cmd.dev.health.short"),
-		Long:  i18n.T("cmd.dev.health.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runHealth(healthRegistryPath, healthVerbose))
+// AddHealthCommand adds the 'health' command under prefix (e.g. "dev" or "git").
+//
+//	c := core.New()
+//	if r := dev.AddHealthCommand(c, "dev"); !r.OK { return r }
+func AddHealthCommand(c *core.Core, prefix string) core.Result {
+	return c.Command(prefix+"/health", core.Command{
+		Description: i18n.T("cmd.dev.health.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "registry", Value: ""},
+			core.Option{Key: "verbose", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
+			return runHealth(o.String("registry"), o.Bool("verbose"))
 		},
-	}
-
-	healthCmd.Flags().StringVar(&healthRegistryPath, "registry", "", i18n.T("common.flag.registry"))
-	healthCmd.Flags().BoolVarP(&healthVerbose, "verbose", "v", false, i18n.T("cmd.dev.health.flag.verbose"))
-
-	parent.AddCommand(healthCmd)
+	})
 }
 
 func runHealth(registryPath string, verbose bool) (_ core.Result) {

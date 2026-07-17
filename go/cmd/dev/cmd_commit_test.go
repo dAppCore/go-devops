@@ -1,32 +1,30 @@
 package dev
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func TestCmdCommit_AddCommitCommand_Good(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddCommitCommand(root)
-	cmd := testCommand(root, "commit")
+	c := core.New()
+	r := AddCommitCommand(c, "dev")
+	core.AssertTrue(t, r.OK)
 
-	core.AssertNotNil(t, cmd)
-	core.AssertNotNil(t, cmd.Flag("all"))
+	cmd := c.Command("dev/commit")
+	core.AssertTrue(t, cmd.OK)
+	core.AssertNotNil(t, cmd.Value.(*core.Command).Action)
 }
 
 func TestCmdCommit_AddCommitCommand_Bad(t *core.T) {
-	var root *cli.Command
+	var c *core.Core
 	core.AssertPanics(t, func() {
-		AddCommitCommand(root)
+		AddCommitCommand(c, "dev")
 	})
-	core.AssertNil(t, root)
+	core.AssertNil(t, c)
 }
 
 func TestCmdCommit_AddCommitCommand_Ugly(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	root.AddCommand(&cli.Command{Use: "existing"})
-	AddCommitCommand(root)
+	c := core.New()
+	core.AssertTrue(t, AddCommitCommand(c, "dev").OK)
 
-	core.AssertLen(t, root.Commands(), 2)
-	core.AssertNotNil(t, testCommand(root, "commit"))
+	r := AddCommitCommand(c, "git")
+	core.AssertTrue(t, r.OK)
+	core.AssertTrue(t, c.Command("git/commit").OK)
 }

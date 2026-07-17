@@ -8,26 +8,24 @@ import (
 	"dappco.re/go/scm/repos"
 )
 
-// Flag variables for sync command
-var (
-	docsSyncRegistryPath string
-	docsSyncDryRun       bool
-	docsSyncOutputDir    string
-	docsSyncTarget       string
-)
-
-var docsSyncCmd = &cli.Command{
-	Use: "sync",
-	RunE: func(cmd *cli.Command, args []string) error {
-		return resultError(runDocsSync(docsSyncRegistryPath, docsSyncOutputDir, docsSyncDryRun, docsSyncTarget))
-	},
-}
-
-func init() {
-	docsSyncCmd.Flags().StringVar(&docsSyncRegistryPath, "registry", "", i18n.T("common.flag.registry"))
-	docsSyncCmd.Flags().BoolVar(&docsSyncDryRun, "dry-run", false, i18n.T("cmd.docs.sync.flag.dry_run"))
-	docsSyncCmd.Flags().StringVar(&docsSyncOutputDir, "output", "", i18n.T("cmd.docs.sync.flag.output"))
-	docsSyncCmd.Flags().StringVar(&docsSyncTarget, "target", "php", "Target format: php (default), zensical, or gohelp")
+// addDocsSyncCommand adds the 'docs sync' command.
+func addDocsSyncCommand(c *core.Core) core.Result {
+	return c.Command("docs/sync", core.Command{
+		Description: i18n.T("cmd.docs.sync.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "registry", Value: ""},
+			core.Option{Key: "dry-run", Value: false},
+			core.Option{Key: "output", Value: ""},
+			core.Option{Key: "target", Value: "php"},
+		),
+		Action: func(o core.Options) core.Result {
+			target := o.String("target")
+			if target == "" {
+				target = "php"
+			}
+			return runDocsSync(o.String("registry"), o.String("output"), o.Bool("dry-run"), target)
+		},
+	})
 }
 
 // packageOutputName maps repo name to output folder name

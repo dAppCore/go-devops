@@ -1,32 +1,32 @@
 package devkit
 
 import (
-	. "dappco.re/go"
+	core "dappco.re/go"
 )
 
-func TestSecret_ScanDir_Good(t *T) {
+func TestSecret_ScanDir_Good(t *core.T) {
 	dir := t.TempDir()
-	RequireTrue(t, WriteFile(Path(dir, "config.env"), []byte("API_KEY=abcdefghijk\n"), 0o600).OK)
+	core.RequireTrue(t, core.WriteFile(core.Path(dir, "config.env"), []byte("API_KEY=abcdefghijk\n"), 0o600).OK)
 	findings, r := ScanDir(dir)
 
-	AssertTrue(t, r.OK)
-	AssertEqual(t, "generic-secret-assignment", findings[0].Rule)
+	core.AssertTrue(t, r.OK)
+	core.AssertEqual(t, "generic-secret-assignment", findings[0].Rule)
 }
 
-func TestSecret_ScanDir_Bad(t *T) {
-	findings, r := ScanDir(Path(t.TempDir(), "missing"))
-	AssertFalse(t, r.OK)
+func TestSecret_ScanDir_Bad(t *core.T) {
+	findings, r := ScanDir(core.Path(t.TempDir(), "missing"))
+	core.AssertFalse(t, r.OK)
 
-	AssertNil(t, findings)
-	AssertContains(t, r.Error(), "no such file")
+	core.AssertNil(t, findings)
+	core.AssertContains(t, r.Error(), "no such file")
 }
 
-func TestSecret_ScanDir_Ugly(t *T) {
+func TestSecret_ScanDir_Ugly(t *core.T) {
 	dir := t.TempDir()
-	RequireTrue(t, MkdirAll(Path(dir, ".git"), 0o755).OK)
-	RequireTrue(t, WriteFile(Path(dir, ".git", "secret.env"), []byte("API_KEY=abcdefghijk\n"), 0o600).OK)
+	core.RequireTrue(t, core.MkdirAll(core.Path(dir, ".git"), 0o755).OK)
+	core.RequireTrue(t, core.WriteFile(core.Path(dir, ".git", "secret.env"), []byte("API_KEY=abcdefghijk\n"), 0o600).OK)
 
 	findings, r := ScanDir(dir)
-	AssertTrue(t, r.OK)
-	AssertEmpty(t, findings)
+	core.AssertTrue(t, r.OK)
+	core.AssertEmpty(t, findings)
 }

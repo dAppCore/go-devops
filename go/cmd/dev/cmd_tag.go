@@ -11,29 +11,22 @@ import (
 	coreexec "dappco.re/go/process/exec"
 )
 
-// Tag command flags
-var (
-	tagRegistryPath string
-	tagDryRun       bool
-	tagForce        bool
-)
-
-// AddTagCommand adds the 'tag' command to the given parent command.
-func AddTagCommand(parent *cli.Command) {
-	tagCmd := &cli.Command{
-		Use:   "tag",
-		Short: i18n.T("cmd.dev.tag.short"),
-		Long:  i18n.T("cmd.dev.tag.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runTag(tagRegistryPath, tagDryRun, tagForce))
+// AddTagCommand adds the 'tag' command under "dev".
+//
+//	c := core.New()
+//	if r := dev.AddTagCommand(c); !r.OK { return r }
+func AddTagCommand(c *core.Core) core.Result {
+	return c.Command("dev/tag", core.Command{
+		Description: i18n.T("cmd.dev.tag.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "registry", Value: ""},
+			core.Option{Key: "dry-run", Value: false},
+			core.Option{Key: "force", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
+			return runTag(o.String("registry"), o.Bool("dry-run"), o.Bool("force"))
 		},
-	}
-
-	tagCmd.Flags().StringVar(&tagRegistryPath, "registry", "", i18n.T("common.flag.registry"))
-	tagCmd.Flags().BoolVar(&tagDryRun, "dry-run", false, i18n.T("cmd.dev.tag.flag.dry_run"))
-	tagCmd.Flags().BoolVarP(&tagForce, "force", "f", false, i18n.T("cmd.dev.tag.flag.force"))
-
-	parent.AddCommand(tagCmd)
+	})
 }
 
 // tagPlan holds the version bump plan for a single repo.
@@ -57,7 +50,7 @@ func runTag(registryPath string, dryRun, force bool) (_ core.Result) {
 	// Get topological order (dependencies first)
 	ordered, err := reg.TopologicalOrder()
 	if err != nil {
-		return core.Fail(cli.Wrap(err, "failed to compute dependency order"))
+		return cli.Wrap(err, "failed to compute dependency order")
 	}
 
 	// Build version bump plan

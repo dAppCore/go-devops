@@ -33,33 +33,23 @@ type ForgeIssue struct {
 	RepoName  string
 }
 
-// Issues command flags
-var (
-	issuesRegistryPath string
-	issuesLimit        int
-	issuesAssignee     string
-)
-
-// addIssuesCommand adds the 'issues' command to the given parent command.
-func addIssuesCommand(parent *cli.Command) {
-	issuesCmd := &cli.Command{
-		Use:   "issues",
-		Short: i18n.T("cmd.dev.issues.short"),
-		Long:  i18n.T("cmd.dev.issues.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			limit := issuesLimit
+// addIssuesCommand adds the 'issues' command under "dev".
+func addIssuesCommand(c *core.Core) core.Result {
+	return c.Command("dev/issues", core.Command{
+		Description: i18n.T("cmd.dev.issues.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "registry", Value: ""},
+			core.Option{Key: "limit", Value: 10},
+			core.Option{Key: "assignee", Value: ""},
+		),
+		Action: func(o core.Options) core.Result {
+			limit := o.Int("limit")
 			if limit == 0 {
 				limit = 10
 			}
-			return resultToError(runIssues(issuesRegistryPath, limit, issuesAssignee))
+			return runIssues(o.String("registry"), limit, o.String("assignee"))
 		},
-	}
-
-	issuesCmd.Flags().StringVar(&issuesRegistryPath, "registry", "", i18n.T("common.flag.registry"))
-	issuesCmd.Flags().IntVarP(&issuesLimit, "limit", "l", 10, i18n.T("cmd.dev.issues.flag.limit"))
-	issuesCmd.Flags().StringVarP(&issuesAssignee, "assignee", "a", "", i18n.T("cmd.dev.issues.flag.assignee"))
-
-	parent.AddCommand(issuesCmd)
+	})
 }
 
 func runIssues(registryPath string, limit int, assignee string) (_ core.Result) {

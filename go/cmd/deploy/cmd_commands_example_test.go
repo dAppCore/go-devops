@@ -1,13 +1,11 @@
 package deploy
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func ExampleAddDeployCommands() {
-	root := &cli.Command{Use: "root"}
-	AddDeployCommands(root)
-	core.Println(root.Commands()[0].Use)
-	// Output: deploy
+	c := core.New()
+	AddDeployCommands(c)
+	r := c.Command("deploy/servers")
+	core.Println(r.OK)
+	// Output: true
 }

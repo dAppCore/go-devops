@@ -40,29 +40,45 @@ var (
 	ghVerbose    bool
 )
 
-// addGitHubCommand adds the 'github' subcommand to the setup command.
-func addGitHubCommand(parent *cli.Command) {
-	ghCmd := &cli.Command{
-		Use:     "github",
-		Aliases: []string{"gh"},
-		Short:   i18n.T("cmd.setup.github.short"),
-		Long:    i18n.T("cmd.setup.github.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultError(runGitHubSetup())
-		},
+// addGitHubCommand adds the 'setup github' command, plus a 'setup gh' alias
+// (core.Command has no native Aliases field — see cmd_vm.go's addVMStatusCommand
+// for the same multi-path-registration pattern).
+func addGitHubCommand(c *core.Core) core.Result {
+	flags := core.NewOptions(
+		core.Option{Key: "repo", Value: ""},
+		core.Option{Key: "all", Value: false},
+		core.Option{Key: "labels", Value: false},
+		core.Option{Key: "webhooks", Value: false},
+		core.Option{Key: "protection", Value: false},
+		core.Option{Key: "security", Value: false},
+		core.Option{Key: "check", Value: false},
+		core.Option{Key: "config", Value: ""},
+		core.Option{Key: "verbose", Value: false},
+	)
+	action := func(o core.Options) core.Result {
+		ghRepo = o.String("repo")
+		ghAll = o.Bool("all")
+		ghLabels = o.Bool("labels")
+		ghWebhooks = o.Bool("webhooks")
+		ghProtection = o.Bool("protection")
+		ghSecurity = o.Bool("security")
+		ghCheck = o.Bool("check")
+		ghConfigPath = o.String("config")
+		ghVerbose = o.Bool("verbose")
+		return runGitHubSetup()
 	}
-
-	ghCmd.Flags().StringVarP(&ghRepo, "repo", "r", "", i18n.T("cmd.setup.github.flag.repo"))
-	ghCmd.Flags().BoolVarP(&ghAll, "all", "a", false, i18n.T("cmd.setup.github.flag.all"))
-	ghCmd.Flags().BoolVarP(&ghLabels, "labels", "l", false, i18n.T("cmd.setup.github.flag.labels"))
-	ghCmd.Flags().BoolVarP(&ghWebhooks, "webhooks", "w", false, i18n.T("cmd.setup.github.flag.webhooks"))
-	ghCmd.Flags().BoolVarP(&ghProtection, "protection", "p", false, i18n.T("cmd.setup.github.flag.protection"))
-	ghCmd.Flags().BoolVarP(&ghSecurity, "security", "s", false, i18n.T("cmd.setup.github.flag.security"))
-	ghCmd.Flags().BoolVarP(&ghCheck, "check", "c", false, i18n.T("cmd.setup.github.flag.check"))
-	ghCmd.Flags().StringVar(&ghConfigPath, "config", "", i18n.T("cmd.setup.github.flag.config"))
-	ghCmd.Flags().BoolVarP(&ghVerbose, "verbose", "v", false, i18n.T("common.flag.verbose"))
-
-	parent.AddCommand(ghCmd)
+	if r := c.Command("setup/github", core.Command{
+		Description: i18n.T("cmd.setup.github.short"),
+		Flags:       flags,
+		Action:      action,
+	}); !r.OK {
+		return r
+	}
+	return c.Command("setup/gh", core.Command{
+		Description: i18n.T("cmd.setup.github.short"),
+		Flags:       flags,
+		Action:      action,
+	})
 }
 
 func runGitHubSetup() (_ core.Result) {

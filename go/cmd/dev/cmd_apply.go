@@ -35,29 +35,39 @@ var (
 	applyYes      bool // Skip confirmation prompt
 )
 
-// AddApplyCommand adds the 'apply' command to dev.
-func AddApplyCommand(parent *cli.Command) {
-	applyCmd := &cli.Command{
-		Use:   "apply",
-		Short: i18n.T("cmd.dev.apply.short"),
-		Long:  i18n.T("cmd.dev.apply.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runApply())
+// AddApplyCommand adds the 'apply' command under prefix (e.g. "dev" or "git").
+//
+//	c := core.New()
+//	if r := dev.AddApplyCommand(c, "dev"); !r.OK { return r }
+func AddApplyCommand(c *core.Core, prefix string) core.Result {
+	return c.Command(prefix+"/apply", core.Command{
+		Description: i18n.T("cmd.dev.apply.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "command", Value: ""},
+			core.Option{Key: "script", Value: ""},
+			core.Option{Key: "repos", Value: ""},
+			core.Option{Key: "commit", Value: false},
+			core.Option{Key: "message", Value: ""},
+			core.Option{Key: "co-author", Value: ""},
+			core.Option{Key: "dry-run", Value: false},
+			core.Option{Key: "push", Value: false},
+			core.Option{Key: "continue", Value: false},
+			core.Option{Key: "yes", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
+			applyCommand = o.String("command")
+			applyScript = o.String("script")
+			applyRepos = o.String("repos")
+			applyCommit = o.Bool("commit")
+			applyMessage = o.String("message")
+			applyCoAuthor = o.String("co-author")
+			applyDryRun = o.Bool("dry-run")
+			applyPush = o.Bool("push")
+			applyContinue = o.Bool("continue")
+			applyYes = o.Bool("yes")
+			return runApply()
 		},
-	}
-
-	applyCmd.Flags().StringVar(&applyCommand, "command", "", i18n.T("cmd.dev.apply.flag.command"))
-	applyCmd.Flags().StringVar(&applyScript, "script", "", i18n.T("cmd.dev.apply.flag.script"))
-	applyCmd.Flags().StringVar(&applyRepos, "repos", "", i18n.T("cmd.dev.apply.flag.repos"))
-	applyCmd.Flags().BoolVar(&applyCommit, "commit", false, i18n.T("cmd.dev.apply.flag.commit"))
-	applyCmd.Flags().StringVarP(&applyMessage, "message", "m", "", i18n.T("cmd.dev.apply.flag.message"))
-	applyCmd.Flags().StringVar(&applyCoAuthor, "co-author", "", i18n.T("cmd.dev.apply.flag.co_author"))
-	applyCmd.Flags().BoolVar(&applyDryRun, "dry-run", false, i18n.T("cmd.dev.apply.flag.dry_run"))
-	applyCmd.Flags().BoolVar(&applyPush, "push", false, i18n.T("cmd.dev.apply.flag.push"))
-	applyCmd.Flags().BoolVar(&applyContinue, "continue", false, i18n.T("cmd.dev.apply.flag.continue"))
-	applyCmd.Flags().BoolVarP(&applyYes, "yes", "y", false, i18n.T("cmd.dev.apply.flag.yes"))
-
-	parent.AddCommand(applyCmd)
+	})
 }
 
 func runApply() (_ core.Result) {
@@ -138,7 +148,7 @@ func runApply() (_ core.Result) {
 			cli.Print("  %s %s: %s\n", errorStyle.Render("x"), repoName, cmdResult.Error())
 			failed++
 			if !applyContinue {
-				return core.Fail(cli.Err("%s", i18n.T("cmd.dev.apply.error.command_failed")))
+				return cli.Err("%s", i18n.T("cmd.dev.apply.error.command_failed"))
 			}
 			continue
 		}

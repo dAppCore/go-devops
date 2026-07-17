@@ -30,33 +30,23 @@ type WorkflowRun struct {
 	RepoName   string
 }
 
-// CI command flags
-var (
-	ciRegistryPath string
-	ciBranch       string
-	ciFailedOnly   bool
-)
-
-// addCICommand adds the 'ci' command to the given parent command.
-func addCICommand(parent *cli.Command) {
-	ciCmd := &cli.Command{
-		Use:   "ci",
-		Short: i18n.T("cmd.dev.ci.short"),
-		Long:  i18n.T("cmd.dev.ci.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			branch := ciBranch
+// addCICommand adds the 'ci' command under "dev".
+func addCICommand(c *core.Core) core.Result {
+	return c.Command("dev/ci", core.Command{
+		Description: i18n.T("cmd.dev.ci.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "registry", Value: ""},
+			core.Option{Key: "branch", Value: "main"},
+			core.Option{Key: "failed", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
+			branch := o.String("branch")
 			if branch == "" {
 				branch = "main"
 			}
-			return resultToError(runCI(ciRegistryPath, branch, ciFailedOnly))
+			return runCI(o.String("registry"), branch, o.Bool("failed"))
 		},
-	}
-
-	ciCmd.Flags().StringVar(&ciRegistryPath, "registry", "", i18n.T("common.flag.registry"))
-	ciCmd.Flags().StringVarP(&ciBranch, "branch", "b", "main", i18n.T("cmd.dev.ci.flag.branch"))
-	ciCmd.Flags().BoolVar(&ciFailedOnly, "failed", false, i18n.T("cmd.dev.ci.flag.failed"))
-
-	parent.AddCommand(ciCmd)
+	})
 }
 
 func runCI(registryPath string, branch string, failedOnly bool) (_ core.Result) {

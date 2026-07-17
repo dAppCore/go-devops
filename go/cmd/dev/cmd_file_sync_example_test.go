@@ -1,13 +1,11 @@
 package dev
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func ExampleAddFileSyncCommand() {
-	root := &cli.Command{Use: "root"}
-	AddFileSyncCommand(root)
-	core.Println(root.Commands()[0].Use)
-	// Output: sync <file-or-dir>
+	c := core.New()
+	AddFileSyncCommand(c, "dev")
+	r := c.Command("dev/sync")
+	core.Println(r.OK)
+	// Output: true
 }

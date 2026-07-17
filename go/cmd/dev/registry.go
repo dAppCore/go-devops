@@ -18,7 +18,7 @@ func loadRegistryWithConfig(registryPath string) (*repos.Registry, string, core.
 	if registryPath != "" {
 		reg, err = repos.LoadRegistry(io.Local, registryPath)
 		if err != nil {
-			return nil, "", core.Fail(cli.Wrap(err, "failed to load registry"))
+			return nil, "", cli.Wrap(err, "failed to load registry")
 		}
 		cli.Print("%s %s\n\n", dimStyle.Render(i18n.Label("registry")), registryPath)
 		registryDir = core.PathDir(registryPath)
@@ -27,7 +27,7 @@ func loadRegistryWithConfig(registryPath string) (*repos.Registry, string, core.
 		if err == nil {
 			reg, err = repos.LoadRegistry(io.Local, registryPath)
 			if err != nil {
-				return nil, "", core.Fail(cli.Wrap(err, "failed to load registry"))
+				return nil, "", cli.Wrap(err, "failed to load registry")
 			}
 			cli.Print("%s %s\n\n", dimStyle.Render(i18n.Label("registry")), registryPath)
 			registryDir = core.PathDir(registryPath)
@@ -39,7 +39,7 @@ func loadRegistryWithConfig(registryPath string) (*repos.Registry, string, core.
 			}
 			reg, err = repos.ScanDirectory(io.Local, cwd)
 			if err != nil {
-				return nil, "", core.Fail(cli.Wrap(err, "failed to scan directory"))
+				return nil, "", cli.Wrap(err, "failed to scan directory")
 			}
 			cli.Print("%s %s\n\n", dimStyle.Render(i18n.T("cmd.dev.scanning_label")), cwd)
 			registryDir = cwd

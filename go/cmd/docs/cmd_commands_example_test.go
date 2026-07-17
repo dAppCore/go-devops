@@ -1,13 +1,11 @@
 package docs
 
-import (
-	. "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func ExampleAddDocsCommands() {
-	root := &cli.Command{Use: "root"}
-	AddDocsCommands(root)
-	Println(root.Commands()[0].Use)
-	// Output: docs
+	c := core.New()
+	AddDocsCommands(c)
+	r := c.Command("docs")
+	core.Println(r.OK)
+	// Output: true
 }

@@ -6,100 +6,18 @@ import (
 	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/devops/deploy/coolify"
-	"dappco.re/go/i18n"
 	log "dappco.re/go/log"
 )
 
-var (
-	coolifyURL   string
-	coolifyToken string
-	outputJSON   bool
-)
-
-var resultRunE = func(fn func(*cli.Command, []string) core.Result) func(*cli.Command, []string) error {
-	return func(cmd *cli.Command, args []string) error {
-		r := fn(cmd, args)
-		if !r.OK {
-			return r.Value.(error)
-		}
-		return nil
-	}
-}
-
-// Cmd is the root deploy command.
-var Cmd = &cli.Command{
-	Use: "deploy",
-}
-
-func setDeployI18n() {
-	Cmd.Short = i18n.T("cmd.deploy.short")
-	Cmd.Long = i18n.T("cmd.deploy.long")
-}
-
-var serversCmd = &cli.Command{
-	Use:   "servers",
-	Short: "List Coolify servers",
-	RunE:  resultRunE(runListServers),
-}
-
-var projectsCmd = &cli.Command{
-	Use:   "projects",
-	Short: "List Coolify projects",
-	RunE:  resultRunE(runListProjects),
-}
-
-var appsCmd = &cli.Command{
-	Use:   "apps",
-	Short: "List Coolify applications",
-	RunE:  resultRunE(runListApps),
-}
-
-var dbsCmd = &cli.Command{
-	Use:     "databases",
-	Short:   "List Coolify databases",
-	Aliases: []string{"dbs", "db"},
-	RunE:    resultRunE(runListDatabases),
-}
-
-var servicesCmd = &cli.Command{
-	Use:   "services",
-	Short: "List Coolify services",
-	RunE:  resultRunE(runListServices),
-}
-
-var teamCmd = &cli.Command{
-	Use:   "team",
-	Short: "Show current team info",
-	RunE:  resultRunE(runTeam),
-}
-
-var callCmd = &cli.Command{
-	Use:   "call <operation> [params-json]",
-	Short: "Call any Coolify API operation",
-	Args:  cli.RangeArgs(1, 2),
-	RunE:  resultRunE(runCall),
-}
-
-func init() {
-	// Global flags
-	Cmd.PersistentFlags().StringVar(&coolifyURL, "url", core.Getenv("COOLIFY_URL"), "Coolify API URL")
-	Cmd.PersistentFlags().StringVar(&coolifyToken, "token", core.Getenv("COOLIFY_TOKEN"), "Coolify API token")
-	Cmd.PersistentFlags().BoolVar(&outputJSON, "json", false, "Output as JSON")
-
-	// Add subcommands
-	Cmd.AddCommand(serversCmd)
-	Cmd.AddCommand(projectsCmd)
-	Cmd.AddCommand(appsCmd)
-	Cmd.AddCommand(dbsCmd)
-	Cmd.AddCommand(servicesCmd)
-	Cmd.AddCommand(teamCmd)
-	Cmd.AddCommand(callCmd)
-}
-
-func getClient() (*coolify.Client, core.Result) {
+// getClient builds a Coolify API client from the --url/--token flags,
+// falling back to COOLIFY_URL/COOLIFY_TOKEN when the flags are unset.
+//
+//	client, r := getClient(opts)
+//	if !r.OK { return r }
+func getClient(opts core.Options) (*coolify.Client, core.Result) {
 	cfg := coolify.Config{
-		BaseURL:   coolifyURL,
-		APIToken:  coolifyToken,
+		BaseURL:   opts.String("url"),
+		APIToken:  opts.String("token"),
 		Timeout:   30,
 		VerifySSL: true,
 	}
@@ -114,8 +32,11 @@ func getClient() (*coolify.Client, core.Result) {
 	return coolify.NewClient(cfg)
 }
 
-func outputResult(data any) (_ core.Result) {
-	if outputJSON {
+// outputResult renders data as JSON (--json) or a coloured summary line.
+//
+//	return outputResult(opts, servers)
+func outputResult(opts core.Options, data any) (_ core.Result) {
+	if opts.Bool("json") {
 		r := core.JSONMarshalIndent(data, "", "  ")
 		if !r.OK {
 			return r
@@ -164,8 +85,8 @@ func printItem(item map[string]any) {
 	core.Println()
 }
 
-func runListServers(cmd *cli.Command, args []string) (_ core.Result) {
-	client, r := getClient()
+func runListServers(opts core.Options) (_ core.Result) {
+	client, r := getClient(opts)
 	if !r.OK {
 		return r
 	}
@@ -180,11 +101,11 @@ func runListServers(cmd *cli.Command, args []string) (_ core.Result) {
 		return core.Ok(nil)
 	}
 
-	return outputResult(servers)
+	return outputResult(opts, servers)
 }
 
-func runListProjects(cmd *cli.Command, args []string) (_ core.Result) {
-	client, r := getClient()
+func runListProjects(opts core.Options) (_ core.Result) {
+	client, r := getClient(opts)
 	if !r.OK {
 		return r
 	}
@@ -199,11 +120,11 @@ func runListProjects(cmd *cli.Command, args []string) (_ core.Result) {
 		return core.Ok(nil)
 	}
 
-	return outputResult(projects)
+	return outputResult(opts, projects)
 }
 
-func runListApps(cmd *cli.Command, args []string) (_ core.Result) {
-	client, r := getClient()
+func runListApps(opts core.Options) (_ core.Result) {
+	client, r := getClient(opts)
 	if !r.OK {
 		return r
 	}
@@ -218,11 +139,11 @@ func runListApps(cmd *cli.Command, args []string) (_ core.Result) {
 		return core.Ok(nil)
 	}
 
-	return outputResult(apps)
+	return outputResult(opts, apps)
 }
 
-func runListDatabases(cmd *cli.Command, args []string) (_ core.Result) {
-	client, r := getClient()
+func runListDatabases(opts core.Options) (_ core.Result) {
+	client, r := getClient(opts)
 	if !r.OK {
 		return r
 	}
@@ -237,11 +158,11 @@ func runListDatabases(cmd *cli.Command, args []string) (_ core.Result) {
 		return core.Ok(nil)
 	}
 
-	return outputResult(dbs)
+	return outputResult(opts, dbs)
 }
 
-func runListServices(cmd *cli.Command, args []string) (_ core.Result) {
-	client, r := getClient()
+func runListServices(opts core.Options) (_ core.Result) {
+	client, r := getClient(opts)
 	if !r.OK {
 		return r
 	}
@@ -256,11 +177,11 @@ func runListServices(cmd *cli.Command, args []string) (_ core.Result) {
 		return core.Ok(nil)
 	}
 
-	return outputResult(services)
+	return outputResult(opts, services)
 }
 
-func runTeam(cmd *cli.Command, args []string) (_ core.Result) {
-	client, r := getClient()
+func runTeam(opts core.Options) (_ core.Result) {
+	client, r := getClient(opts)
 	if !r.OK {
 		return r
 	}
@@ -270,19 +191,28 @@ func runTeam(cmd *cli.Command, args []string) (_ core.Result) {
 		return r
 	}
 
-	return outputResult(team)
+	return outputResult(opts, team)
 }
 
-func runCall(cmd *cli.Command, args []string) (_ core.Result) {
-	client, r := getClient()
+// runCall dispatches an arbitrary Coolify API operation by name.
+// The operation is the command's sole positional argument; the optional
+// params-json payload moved to --params because core.Cli.Run only retains
+// the last positional under "_arg" (a second bare positional would silently
+// clobber the operation name). See migration notes in cmd_commands.go.
+func runCall(opts core.Options) (_ core.Result) {
+	client, r := getClient(opts)
 	if !r.OK {
-		return core.Fail(cli.WrapVerb(r.Value.(error), "initialize", "client"))
+		return cli.WrapVerb(r.Value.(error), "initialize", "client")
 	}
 
-	operation := args[0]
+	operation := opts.String("_arg")
+	if operation == "" {
+		return core.Fail(log.E("deploy.call", "operation is required: core deploy call <operation> [--params=<json>]", nil))
+	}
+
 	var params map[string]any
-	if len(args) > 1 {
-		if r := core.JSONUnmarshal([]byte(args[1]), &params); !r.OK {
+	if raw := opts.String("params"); raw != "" {
+		if r := core.JSONUnmarshal([]byte(raw), &params); !r.OK {
 			return core.Fail(log.E("deploy", "invalid JSON params", r.Value.(error)))
 		}
 	}
@@ -292,5 +222,5 @@ func runCall(cmd *cli.Command, args []string) (_ core.Result) {
 		return r
 	}
 
-	return outputResult(result)
+	return outputResult(opts, result)
 }
