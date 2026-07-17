@@ -95,11 +95,8 @@ func AddDevCommands(c *core.Core) core.Result {
 		return r
 	}
 
-	// GitHub integration, CI/workflow management, API tools, dev environment
+	// Workflow management, API tools, dev environment
 	for _, register := range []func(*core.Core) core.Result{
-		addIssuesCommand,
-		addReviewsCommand,
-		addCICommand,
 		addImpactCommand,
 		addWorkflowCommands,
 		addAPICommands,
