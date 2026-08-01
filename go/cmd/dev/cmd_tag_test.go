@@ -1,32 +1,30 @@
 package dev
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func TestCmdTag_AddTagCommand_Good(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddTagCommand(root)
-	cmd := testCommand(root, "tag")
+	c := core.New()
+	r := AddTagCommand(c)
+	core.AssertTrue(t, r.OK)
 
-	core.AssertNotNil(t, cmd)
-	core.AssertNotNil(t, cmd.Flag("dry-run"))
+	cmd := c.Command("dev/tag")
+	core.AssertTrue(t, cmd.OK)
+	core.AssertNotNil(t, cmd.Value.(*core.Command).Action)
 }
 
 func TestCmdTag_AddTagCommand_Bad(t *core.T) {
-	var root *cli.Command
+	var c *core.Core
 	core.AssertPanics(t, func() {
-		AddTagCommand(root)
+		AddTagCommand(c)
 	})
-	core.AssertNil(t, root)
+	core.AssertNil(t, c)
 }
 
 func TestCmdTag_AddTagCommand_Ugly(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	root.AddCommand(&cli.Command{Use: "existing"})
-	AddTagCommand(root)
+	c := core.New()
+	core.AssertTrue(t, AddTagCommand(c).OK)
 
-	core.AssertLen(t, root.Commands(), 2)
-	core.AssertNotNil(t, testCommand(root, "tag"))
+	// Re-registering onto the same Core hits the duplicate-executable guard.
+	r := AddTagCommand(c)
+	core.AssertFalse(t, r.OK)
 }

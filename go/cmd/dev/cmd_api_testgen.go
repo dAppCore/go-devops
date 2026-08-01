@@ -9,28 +9,24 @@ import (
 	coreio "dappco.re/go/io"
 )
 
-func addTestGenCommand(parent *cli.Command) {
-	testGenCmd := &cli.Command{
-		Use:   "test-gen",
-		Short: i18n.T("cmd.dev.api.test_gen.short"),
-		Long:  i18n.T("cmd.dev.api.test_gen.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
+func addTestGenCommand(c *core.Core) core.Result {
+	return c.Command("dev/api/test-gen", core.Command{
+		Description: i18n.T("cmd.dev.api.test_gen.short"),
+		Action: func(core.Options) core.Result {
 			if r := runTestGen(); !r.OK {
 				return cli.Wrap(r.Value.(error), i18n.Label("error"))
 			}
 			cli.Text(i18n.T("i18n.done.sync", "public API tests"))
-			return nil
+			return core.Ok(nil)
 		},
-	}
-
-	parent.AddCommand(testGenCmd)
+	})
 }
 
 func runTestGen() (_ core.Result) {
 	pkgDir := "pkg"
 	internalDirs, err := coreio.Local.List(pkgDir)
 	if err != nil {
-		return core.Fail(cli.Wrap(err, "failed to read pkg directory"))
+		return cli.Wrap(err, "failed to read pkg directory")
 	}
 
 	for _, dir := range internalDirs {
@@ -49,7 +45,7 @@ func runTestGen() (_ core.Result) {
 
 		symbols, r := getExportedSymbols(internalDir)
 		if !r.OK {
-			return core.Fail(cli.Wrap(r.Value.(error), cli.Sprintf("error getting symbols for service '%s'", serviceName)))
+			return cli.Wrap(r.Value.(error), cli.Sprintf("error getting symbols for service '%s'", serviceName))
 		}
 
 		if len(symbols) == 0 {
@@ -57,7 +53,7 @@ func runTestGen() (_ core.Result) {
 		}
 
 		if r := generatePublicAPITestFile(publicDir, publicTestFile, serviceName, symbols); !r.OK {
-			return core.Fail(cli.Wrap(r.Value.(error), cli.Sprintf("error generating public API test file for service '%s'", serviceName)))
+			return cli.Wrap(r.Value.(error), cli.Sprintf("error generating public API test file for service '%s'", serviceName))
 		}
 	}
 

@@ -4,7 +4,7 @@ go 1.26.2
 
 require (
 	code.gitea.io/sdk/gitea v0.25.1 // Note: Gitea SDK for repository and automation API integration; no core.* equivalent.
-	dappco.re/go/agent v0.28.0
+	dappco.re/go/agent v0.29.0
 	dappco.re/go/i18n v0.12.1
 	dappco.re/go/io v0.15.3
 	dappco.re/go/log v0.13.1
@@ -27,7 +27,7 @@ require (
 	github.com/gofrs/flock v0.13.0 // indirect
 	github.com/hashicorp/go-version v1.9.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
-	github.com/mattn/go-runewidth v0.0.21 // indirect
+	github.com/mattn/go-runewidth v0.0.27 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
 	golang.org/x/crypto v0.54.0 // indirect
@@ -46,7 +46,7 @@ require (
 	github.com/charmbracelet/x/term v0.2.2 // indirect
 	github.com/erikgeiser/coninput v0.0.0-20211004153227-1c3628e74d0f // indirect
 	github.com/inconshreveable/mousetrap v1.1.0 // indirect
-	github.com/mattn/go-isatty v0.0.20 // indirect
+	github.com/mattn/go-isatty v0.0.24 // indirect
 	github.com/mattn/go-localereader v0.0.1 // indirect
 	github.com/muesli/ansi v0.0.0-20230316100256-276c6243b2f6 // indirect
 	github.com/muesli/cancelreader v0.2.2 // indirect

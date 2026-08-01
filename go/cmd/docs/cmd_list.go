@@ -6,18 +6,17 @@ import (
 	"dappco.re/go/i18n"
 )
 
-// Flag variable for list command
-var docsListRegistryPath string
-
-var docsListCmd = &cli.Command{
-	Use: "list",
-	RunE: func(cmd *cli.Command, args []string) error {
-		return resultError(runDocsList(docsListRegistryPath))
-	},
-}
-
-func init() {
-	docsListCmd.Flags().StringVar(&docsListRegistryPath, "registry", "", i18n.T("common.flag.registry"))
+// addDocsListCommand adds the 'docs list' command.
+func addDocsListCommand(c *core.Core) core.Result {
+	return c.Command("docs/list", core.Command{
+		Description: i18n.T("cmd.docs.list.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "registry", Value: ""},
+		),
+		Action: func(o core.Options) core.Result {
+			return runDocsList(o.String("registry"))
+		},
+	})
 }
 
 func runDocsList(registryPath string) (_ core.Result) {

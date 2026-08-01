@@ -10,27 +10,21 @@ import (
 	"dappco.re/go/scm/git"
 )
 
-// Commit command flags
-var (
-	commitRegistryPath string
-	commitAll          bool
-)
-
-// AddCommitCommand adds the 'commit' command to the given parent command.
-func AddCommitCommand(parent *cli.Command) {
-	commitCmd := &cli.Command{
-		Use:   "commit",
-		Short: i18n.T("cmd.dev.commit.short"),
-		Long:  i18n.T("cmd.dev.commit.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runCommit(commitRegistryPath, commitAll))
+// AddCommitCommand adds the 'commit' command under prefix (e.g. "dev" or "git").
+//
+//	c := core.New()
+//	if r := dev.AddCommitCommand(c, "dev"); !r.OK { return r }
+func AddCommitCommand(c *core.Core, prefix string) core.Result {
+	return c.Command(prefix+"/commit", core.Command{
+		Description: i18n.T("cmd.dev.commit.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "registry", Value: ""},
+			core.Option{Key: "all", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
+			return runCommit(o.String("registry"), o.Bool("all"))
 		},
-	}
-
-	commitCmd.Flags().StringVar(&commitRegistryPath, "registry", "", i18n.T("common.flag.registry"))
-	commitCmd.Flags().BoolVar(&commitAll, "all", false, i18n.T("cmd.dev.commit.flag.all"))
-
-	parent.AddCommand(commitCmd)
+	})
 }
 
 func runCommit(registryPath string, all bool) (_ core.Result) {
@@ -160,7 +154,7 @@ func runCommitSingleRepo(ctx context.Context, repoPath string, all bool) (_ core
 		if len(statuses) > 0 && statuses[0].Error != nil {
 			return core.Fail(statuses[0].Error)
 		}
-		return core.Fail(cli.Err("failed to get repo status"))
+		return cli.Err("failed to get repo status")
 	}
 
 	s := statuses[0]

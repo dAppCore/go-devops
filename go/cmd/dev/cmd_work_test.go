@@ -1,32 +1,30 @@
 package dev
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func TestCmdWork_AddWorkCommand_Good(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddWorkCommand(root)
-	cmd := testCommand(root, "work")
+	c := core.New()
+	r := AddWorkCommand(c, "dev")
+	core.AssertTrue(t, r.OK)
 
-	core.AssertNotNil(t, cmd)
-	core.AssertNotNil(t, cmd.Flag("status"))
+	cmd := c.Command("dev/work")
+	core.AssertTrue(t, cmd.OK)
+	core.AssertNotNil(t, cmd.Value.(*core.Command).Action)
 }
 
 func TestCmdWork_AddWorkCommand_Bad(t *core.T) {
-	var root *cli.Command
+	var c *core.Core
 	core.AssertPanics(t, func() {
-		AddWorkCommand(root)
+		AddWorkCommand(c, "dev")
 	})
-	core.AssertNil(t, root)
+	core.AssertNil(t, c)
 }
 
 func TestCmdWork_AddWorkCommand_Ugly(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddWorkCommand(root)
-	AddWorkCommand(root)
+	c := core.New()
+	core.AssertTrue(t, AddWorkCommand(c, "dev").OK)
 
-	core.AssertLen(t, root.Commands(), 2)
-	core.AssertNotNil(t, testCommand(root, "work"))
+	r := AddWorkCommand(c, "git")
+	core.AssertTrue(t, r.OK)
+	core.AssertTrue(t, c.Command("git/work").OK)
 }

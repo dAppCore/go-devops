@@ -17,22 +17,18 @@ import (
 	"golang.org/x/text/language"
 )
 
-// addSyncCommand adds the 'sync' command to the given parent command.
-func addSyncCommand(parent *cli.Command) {
-	syncCmd := &cli.Command{
-		Use:   "sync",
-		Short: i18n.T("cmd.dev.sync.short"),
-		Long:  i18n.T("cmd.dev.sync.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
+// addSyncCommand adds the 'api sync' command under "dev".
+func addSyncCommand(c *core.Core) core.Result {
+	return c.Command("dev/api/sync", core.Command{
+		Description: i18n.T("cmd.dev.sync.short"),
+		Action: func(core.Options) core.Result {
 			if r := runSync(); !r.OK {
 				return cli.Wrap(r.Value.(error), i18n.Label("error"))
 			}
 			cli.Text(i18n.T("i18n.done.sync", "public APIs"))
-			return nil
+			return core.Ok(nil)
 		},
-	}
-
-	parent.AddCommand(syncCmd)
+	})
 }
 
 type symbolInfo struct {
@@ -44,7 +40,7 @@ func runSync() (_ core.Result) {
 	pkgDir := "pkg"
 	internalDirs, err := coreio.Local.List(pkgDir)
 	if err != nil {
-		return core.Fail(cli.Wrap(err, "failed to read pkg directory"))
+		return cli.Wrap(err, "failed to read pkg directory")
 	}
 
 	for _, dir := range internalDirs {
@@ -63,11 +59,11 @@ func runSync() (_ core.Result) {
 
 		symbols, r := getExportedSymbols(internalDir)
 		if !r.OK {
-			return core.Fail(cli.Wrap(r.Value.(error), cli.Sprintf("error getting symbols for service '%s'", serviceName)))
+			return cli.Wrap(r.Value.(error), cli.Sprintf("error getting symbols for service '%s'", serviceName))
 		}
 
 		if r := generatePublicAPIFile(publicDir, publicFile, serviceName, symbols); !r.OK {
-			return core.Fail(cli.Wrap(r.Value.(error), cli.Sprintf("error generating public API file for service '%s'", serviceName)))
+			return cli.Wrap(r.Value.(error), cli.Sprintf("error generating public API file for service '%s'", serviceName))
 		}
 	}
 

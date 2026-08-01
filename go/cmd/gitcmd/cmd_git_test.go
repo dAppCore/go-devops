@@ -1,39 +1,36 @@
 package gitcmd
 
-import (
-	. "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
-func TestCmdGit_AddGitCommands_Good(t *T) {
-	root := &cli.Command{Use: "root"}
-	AddGitCommands(root)
-	gitCmd := root.Commands()[0]
+func TestCmdGit_AddGitCommands_Good(t *core.T) {
+	c := core.New()
+	r := AddGitCommands(c)
+	core.AssertTrue(t, r.OK)
 
-	AssertEqual(t, "git", gitCmd.Use)
-	AssertGreaterOrEqual(t, len(gitCmd.Commands()), 7)
-}
+	core.AssertTrue(t, c.Command("git").OK)
 
-func TestCmdGit_AddGitCommands_Bad(t *T) {
-	var root *cli.Command
-	AssertPanics(t, func() {
-		AddGitCommands(root)
-	})
-	AssertNil(t, root)
-}
-
-func TestCmdGit_AddGitCommands_Ugly(t *T) {
-	root := &cli.Command{Use: "root"}
-	root.AddCommand(&cli.Command{Use: "existing"})
-	AddGitCommands(root)
-
-	foundExisting := false
-	foundGit := false
-	for _, cmd := range root.Commands() {
-		foundExisting = foundExisting || cmd.Use == "existing"
-		foundGit = foundGit || cmd.Use == "git"
+	gitSubcommands := 0
+	for _, path := range c.Commands() {
+		if core.HasPrefix(path, "git/") {
+			gitSubcommands++
+		}
 	}
-	AssertLen(t, root.Commands(), 2)
-	AssertTrue(t, foundExisting)
-	AssertTrue(t, foundGit)
+	core.AssertGreaterOrEqual(t, gitSubcommands, 7)
+}
+
+func TestCmdGit_AddGitCommands_Bad(t *core.T) {
+	var c *core.Core
+	core.AssertPanics(t, func() {
+		AddGitCommands(c)
+	})
+	core.AssertNil(t, c)
+}
+
+func TestCmdGit_AddGitCommands_Ugly(t *core.T) {
+	c := core.New()
+	core.AssertTrue(t, AddGitCommands(c).OK)
+
+	// Re-registering onto the same Core hits the duplicate-executable guard.
+	r := AddGitCommands(c)
+	core.AssertFalse(t, r.OK)
 }

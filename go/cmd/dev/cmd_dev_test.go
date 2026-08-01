@@ -1,41 +1,30 @@
 package dev
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
-
-func testCommand(root *cli.Command, use string) *cli.Command {
-	for _, cmd := range root.Commands() {
-		if cmd.Use == use || core.HasPrefix(cmd.Use, use+" ") {
-			return cmd
-		}
-	}
-	return nil
-}
+import core "dappco.re/go"
 
 func TestCmdDev_AddDevCommands_Good(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddDevCommands(root)
-	devCmd := testCommand(root, "dev")
+	c := core.New()
+	r := AddDevCommands(c)
+	core.AssertTrue(t, r.OK)
 
-	core.AssertNotNil(t, devCmd)
-	core.AssertGreaterOrEqual(t, len(devCmd.Commands()), 10)
+	devCmd := c.Command("dev")
+	core.AssertTrue(t, devCmd.OK)
+	core.AssertGreaterOrEqual(t, len(c.Commands()), 10)
 }
 
 func TestCmdDev_AddDevCommands_Bad(t *core.T) {
-	var root *cli.Command
+	var c *core.Core
 	core.AssertPanics(t, func() {
-		AddDevCommands(root)
+		AddDevCommands(c)
 	})
-	core.AssertNil(t, root)
+	core.AssertNil(t, c)
 }
 
 func TestCmdDev_AddDevCommands_Ugly(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	root.AddCommand(&cli.Command{Use: "existing"})
-	AddDevCommands(root)
+	c := core.New()
+	core.AssertTrue(t, AddDevCommands(c).OK)
 
-	core.AssertLen(t, root.Commands(), 2)
-	core.AssertNotNil(t, testCommand(root, "dev"))
+	// Re-registering onto the same Core hits the duplicate-executable guard.
+	r := AddDevCommands(c)
+	core.AssertFalse(t, r.OK)
 }

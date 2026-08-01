@@ -1,22 +1,26 @@
 package dev
 
 import (
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 )
 
-// addAPICommands adds the 'api' command and its subcommands to the given parent command.
-func addAPICommands(parent *cli.Command) {
-	// Create the 'api' command
-	apiCmd := &cli.Command{
-		Use:   "api",
-		Short: i18n.T("cmd.dev.api.short"),
+// addAPICommands adds the 'api' group and its 'sync'/'test-gen' subcommands.
+func addAPICommands(c *core.Core) core.Result {
+	// See cmd/deploy/cmd_commands.go's AddDeployCommands for why the group
+	// command needs its own Action (core.Cli.Run has no automatic group-help).
+	if r := c.Command("dev/api", core.Command{
+		Description: i18n.T("cmd.dev.api.short"),
+		Action: func(core.Options) core.Result {
+			cli.PrintHelp()
+			return core.Ok(nil)
+		},
+	}); !r.OK {
+		return r
 	}
-	parent.AddCommand(apiCmd)
-
-	// Add the 'sync' command to 'api'
-	addSyncCommand(apiCmd)
-
-	// Add the 'test-gen' command to 'api'
-	addTestGenCommand(apiCmd)
+	if r := addSyncCommand(c); !r.OK {
+		return r
+	}
+	return addTestGenCommand(c)
 }

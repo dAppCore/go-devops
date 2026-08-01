@@ -1,13 +1,11 @@
 package dev
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func ExampleAddCommitCommand() {
-	root := &cli.Command{Use: "root"}
-	AddCommitCommand(root)
-	core.Println(root.Commands()[0].Use)
-	// Output: commit
+	c := core.New()
+	AddCommitCommand(c, "dev")
+	r := c.Command("dev/commit")
+	core.Println(r.OK)
+	// Output: true
 }

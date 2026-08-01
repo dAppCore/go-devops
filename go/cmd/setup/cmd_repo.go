@@ -17,28 +17,21 @@ import (
 	coreexec "dappco.re/go/process/exec"
 )
 
-var repoDryRun bool
-
-// addRepoCommand adds the 'repo' subcommand to generate .core configuration.
-func addRepoCommand(parent *cli.Command) {
-	repoCmd := &cli.Command{
-		Use:   "repo",
-		Short: i18n.T("cmd.setup.repo.short"),
-		Long:  i18n.T("cmd.setup.repo.long"),
-		Args:  cli.ExactArgs(0),
-		RunE: func(cmd *cli.Command, args []string) error {
+// addRepoCommand adds the 'setup repo' command to generate .core configuration.
+func addRepoCommand(c *core.Core) core.Result {
+	return c.Command("setup/repo", core.Command{
+		Description: i18n.T("cmd.setup.repo.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "dry-run", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
 			cwdResult := core.Getwd()
 			if !cwdResult.OK {
 				return log.E("setup.repo", "failed to get working directory", cwdResult.Value.(error))
 			}
-
-			return resultError(runRepoSetup(cwdResult.Value.(string), repoDryRun))
+			return runRepoSetup(cwdResult.Value.(string), o.Bool("dry-run"))
 		},
-	}
-
-	repoCmd.Flags().BoolVar(&repoDryRun, "dry-run", false, i18n.T("cmd.setup.flag.dry_run"))
-
-	parent.AddCommand(repoCmd)
+	})
 }
 
 // runRepoSetup sets up the current repository with .core/ configuration.

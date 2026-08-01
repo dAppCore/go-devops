@@ -1,38 +1,33 @@
 package docs
 
-import (
-	. "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
-func TestCmdCommands_AddDocsCommands_Good(t *T) {
-	root := &cli.Command{Use: "root"}
-	AddDocsCommands(root)
-	commands := root.Commands()
+func TestCmdCommands_AddDocsCommands_Good(t *core.T) {
+	c := core.New()
+	r := AddDocsCommands(c)
+	core.AssertTrue(t, r.OK)
 
-	AssertLen(t, commands, 1)
-	AssertEqual(t, "docs", commands[0].Use)
+	root := c.Command("docs")
+	core.AssertTrue(t, root.OK)
+
+	list := c.Command("docs/list")
+	core.AssertTrue(t, list.OK)
+	core.AssertNotNil(t, list.Value.(*core.Command).Action)
 }
 
-func TestCmdCommands_AddDocsCommands_Bad(t *T) {
-	var root *cli.Command
-	AssertPanics(t, func() {
-		AddDocsCommands(root)
+func TestCmdCommands_AddDocsCommands_Bad(t *core.T) {
+	var c *core.Core
+	core.AssertPanics(t, func() {
+		AddDocsCommands(c)
 	})
-	AssertNil(t, root)
+	core.AssertNil(t, c)
 }
 
-func TestCmdCommands_AddDocsCommands_Ugly(t *T) {
-	root := &cli.Command{Use: "root"}
-	root.AddCommand(&cli.Command{Use: "existing"})
-	AddDocsCommands(root)
+func TestCmdCommands_AddDocsCommands_Ugly(t *core.T) {
+	c := core.New()
+	core.AssertTrue(t, AddDocsCommands(c).OK)
 
-	foundExisting := false
-	foundDocs := false
-	for _, cmd := range root.Commands() {
-		foundExisting = foundExisting || cmd.Use == "existing"
-		foundDocs = foundDocs || cmd.Use == "docs"
-	}
-	AssertTrue(t, foundExisting)
-	AssertTrue(t, foundDocs)
+	// Re-registering onto the same Core hits the duplicate-executable guard.
+	r := AddDocsCommands(c)
+	core.AssertFalse(t, r.OK)
 }

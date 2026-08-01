@@ -7,7 +7,6 @@ package main
 import (
 	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
-	deploycmd "dappco.re/go/devops/cmd/deploy"
 	devcmd "dappco.re/go/devops/cmd/dev"
 	docscmd "dappco.re/go/devops/cmd/docs"
 	gitcmd "dappco.re/go/devops/cmd/gitcmd"
@@ -17,44 +16,36 @@ import (
 )
 
 func main() {
-	root := cli.NewGroup("devops", "DevOps CLI artifact test driver", "")
-	devcmd.AddDevCommands(root)
-	deploycmd.AddDeployCommands(root)
-	docscmd.AddDocsCommands(root)
-	gitcmd.AddGitCommands(root)
-	setupcmd.AddSetupCommands(root)
-	root.AddCommand(playbookSmokeCommand())
-	root.SetArgs(core.Args()[1:])
-
-	if err := root.Execute(); err != nil {
-		core.Print(core.Stderr(), "%v", err)
-		core.Exit(1)
-	}
+	cli.WithAppName("devops")
+	cli.Main(
+		cli.WithCommands("dev", devcmd.AddDevCommands),
+		cli.WithCommands("docs", docscmd.AddDocsCommands),
+		cli.WithCommands("git", gitcmd.AddGitCommands),
+		cli.WithCommands("setup", setupcmd.AddSetupCommands),
+		addPlaybookSmokeCommand,
+	)
 }
 
-func playbookSmokeCommand() *cli.Command {
-	return &cli.Command{
-		Use:   "playbook-smoke [dir]",
-		Short: "Validate bundled playbook YAML can be decoded",
-		Args:  cli.RangeArgs(0, 1),
-		RunE: func(cmd *cli.Command, args []string) error {
-			r := runPlaybookSmoke(cmd, args)
-			if !r.OK {
-				return r.Value.(error)
-			}
-			return nil
+// addPlaybookSmokeCommand adds the 'playbook-smoke [dir]' command — not part
+// of any cmd/ package, previously a bespoke cobra command wired directly
+// into this test driver's root group.
+func addPlaybookSmokeCommand(c *core.Core) core.Result {
+	return c.Command("playbook-smoke", core.Command{
+		Description: "Validate bundled playbook YAML can be decoded",
+		Action: func(o core.Options) core.Result {
+			return runPlaybookSmoke(o.String("_arg"))
 		},
-	}
+	})
 }
 
-func runPlaybookSmoke(cmd *cli.Command, args []string) (_ core.Result) {
+func runPlaybookSmoke(dirArg string) (_ core.Result) {
 	dir := "playbooks"
-	if len(args) > 0 {
-		dir = args[0]
+	if dirArg != "" {
+		dir = dirArg
 	}
 
 	count := 0
-	err := core.PathWalkDir(dir, func(path string, entry core.FsDirEntry, err error) error {
+	walkResult := core.PathWalkDir(dir, func(path string, entry core.FsDirEntry, err error) error {
 		if err != nil {
 			return core.Errorf("%s: %w", path, err)
 		}
@@ -75,14 +66,14 @@ func runPlaybookSmoke(cmd *cli.Command, args []string) (_ core.Result) {
 		count++
 		return nil
 	})
-	if err != nil {
-		return core.Fail(core.Errorf("walk %s: %w", dir, err))
+	if !walkResult.OK {
+		return core.Fail(core.Errorf("walk %s: %w", dir, walkResult.Value.(error)))
 	}
 	if count == 0 {
 		return core.Fail(core.Errorf("no playbook YAML files found in %s", dir))
 	}
 
-	if result := core.WriteString(cmd.OutOrStdout(), core.Sprintf("playbook smoke passed: %d YAML files decoded\n", count)); !result.OK {
+	if result := core.WriteString(core.Stdout(), core.Sprintf("playbook smoke passed: %d YAML files decoded\n", count)); !result.OK {
 		return result
 	}
 	return core.Ok(nil)

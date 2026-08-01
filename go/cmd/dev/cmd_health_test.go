@@ -1,32 +1,32 @@
 package dev
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func TestCmdHealth_AddHealthCommand_Good(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddHealthCommand(root)
-	cmd := testCommand(root, "health")
+	c := core.New()
+	r := AddHealthCommand(c, "dev")
+	core.AssertTrue(t, r.OK)
 
-	core.AssertNotNil(t, cmd)
-	core.AssertNotNil(t, cmd.Flag("verbose"))
+	cmd := c.Command("dev/health")
+	core.AssertTrue(t, cmd.OK)
+	core.AssertNotNil(t, cmd.Value.(*core.Command).Action)
 }
 
 func TestCmdHealth_AddHealthCommand_Bad(t *core.T) {
-	var root *cli.Command
+	var c *core.Core
 	core.AssertPanics(t, func() {
-		AddHealthCommand(root)
+		AddHealthCommand(c, "dev")
 	})
-	core.AssertNil(t, root)
+	core.AssertNil(t, c)
 }
 
 func TestCmdHealth_AddHealthCommand_Ugly(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddHealthCommand(root)
-	AddHealthCommand(root)
+	c := core.New()
+	core.AssertTrue(t, AddHealthCommand(c, "dev").OK)
 
-	core.AssertLen(t, root.Commands(), 2)
-	core.AssertNotNil(t, testCommand(root, "health"))
+	// Same command, different prefix (mirrors AddGitCommands mounting it
+	// under "git" too) — registers cleanly at the new path.
+	r := AddHealthCommand(c, "git")
+	core.AssertTrue(t, r.OK)
+	core.AssertTrue(t, c.Command("git/health").OK)
 }

@@ -2,36 +2,34 @@ package dev
 
 import (
 	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
 	"slices"
 	"testing"
 )
 
 func TestAddFileSyncCommand_Good(t *testing.T) {
-	root := &cli.Command{Use: "core"}
-
-	AddDevCommands(root)
-
-	syncCmd, _, err := root.Find([]string{"dev", "sync"})
-	if err != nil {
-		t.Fatalf("find sync command: %v", err)
+	c := core.New()
+	if r := AddDevCommands(c); !r.OK {
+		t.Fatalf("AddDevCommands: %v", r.Error())
 	}
-	if syncCmd == nil {
+
+	r := c.Command("dev/sync")
+	if !r.OK {
 		t.Fatal("expected sync command")
 	}
+	syncCmd := r.Value.(*core.Command)
+	if syncCmd.Action == nil {
+		t.Fatal("expected sync command to be executable")
+	}
 
-	yesFlag := syncCmd.Flags().Lookup("yes")
-	if yesFlag == nil {
+	// core.Command.Flags carries declared keys + defaults only — cobra's
+	// shorthand ("-y" for "--yes") has no equivalent in the new model.
+	if !syncCmd.Flags.Has("yes") {
 		t.Fatal("expected yes flag")
 	}
-	if yesFlag.Shorthand != "y" {
-		t.Fatalf("yes shorthand = %q, want %q", yesFlag.Shorthand, "y")
-	}
-
-	if syncCmd.Flags().Lookup("dry-run") == nil {
+	if !syncCmd.Flags.Has("dry-run") {
 		t.Fatal("expected dry-run flag")
 	}
-	if syncCmd.Flags().Lookup("push") == nil {
+	if !syncCmd.Flags.Has("push") {
 		t.Fatal("expected push flag")
 	}
 }
@@ -75,27 +73,28 @@ func TestMatchGlob_Good(t *testing.T) {
 }
 
 func TestCmdFileSync_AddFileSyncCommand_Good(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddFileSyncCommand(root)
-	cmd := testCommand(root, "sync")
+	c := core.New()
+	r := AddFileSyncCommand(c, "dev")
+	core.AssertTrue(t, r.OK)
 
-	core.AssertNotNil(t, cmd)
-	core.AssertNotNil(t, cmd.Flag("to"))
+	cmd := c.Command("dev/sync")
+	core.AssertTrue(t, cmd.OK)
+	core.AssertTrue(t, cmd.Value.(*core.Command).Flags.Has("to"))
 }
 
 func TestCmdFileSync_AddFileSyncCommand_Bad(t *core.T) {
-	var root *cli.Command
+	var c *core.Core
 	core.AssertPanics(t, func() {
-		AddFileSyncCommand(root)
+		AddFileSyncCommand(c, "dev")
 	})
-	core.AssertNil(t, root)
+	core.AssertNil(t, c)
 }
 
 func TestCmdFileSync_AddFileSyncCommand_Ugly(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddFileSyncCommand(root)
-	AddFileSyncCommand(root)
+	c := core.New()
+	core.AssertTrue(t, AddFileSyncCommand(c, "dev").OK)
 
-	core.AssertLen(t, root.Commands(), 2)
-	core.AssertNotNil(t, testCommand(root, "sync"))
+	r := AddFileSyncCommand(c, "git")
+	core.AssertTrue(t, r.OK)
+	core.AssertTrue(t, c.Command("git/sync").OK)
 }

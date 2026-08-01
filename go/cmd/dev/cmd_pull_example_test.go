@@ -1,13 +1,11 @@
 package dev
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func ExampleAddPullCommand() {
-	root := &cli.Command{Use: "root"}
-	AddPullCommand(root)
-	core.Println(root.Commands()[0].Use)
-	// Output: pull
+	c := core.New()
+	AddPullCommand(c, "dev")
+	r := c.Command("dev/pull")
+	core.Println(r.OK)
+	// Output: true
 }

@@ -12,59 +12,54 @@ import (
 	"dappco.re/go/scm/repos"
 )
 
-// Workflow command flags
-var (
-	workflowRegistryPath string
-	workflowDryRun       bool
-)
-
-// addWorkflowCommands adds the 'workflow' subcommand and its subcommands.
-func addWorkflowCommands(parent *cli.Command) {
-	workflowCmd := &cli.Command{
-		Use:   "workflow",
-		Short: i18n.T("cmd.dev.workflow.short"),
-		Long:  i18n.T("cmd.dev.workflow.long"),
+// addWorkflowCommands adds the 'workflow' group and its 'list'/'sync' subcommands.
+func addWorkflowCommands(c *core.Core) core.Result {
+	// See cmd/deploy/cmd_commands.go's AddDeployCommands for why the group
+	// command needs its own Action (core.Cli.Run has no automatic group-help).
+	if r := c.Command("dev/workflow", core.Command{
+		Description: i18n.T("cmd.dev.workflow.short"),
+		Action: func(core.Options) core.Result {
+			cli.PrintHelp()
+			return core.Ok(nil)
+		},
+	}); !r.OK {
+		return r
 	}
-
-	// Shared flags
-	workflowCmd.PersistentFlags().StringVar(&workflowRegistryPath, "registry", "", i18n.T("common.flag.registry"))
-
-	// Subcommands
-	addWorkflowListCommand(workflowCmd)
-	addWorkflowSyncCommand(workflowCmd)
-
-	parent.AddCommand(workflowCmd)
+	if r := addWorkflowListCommand(c); !r.OK {
+		return r
+	}
+	return addWorkflowSyncCommand(c)
 }
 
 // addWorkflowListCommand adds the 'workflow list' subcommand.
-func addWorkflowListCommand(parent *cli.Command) {
-	listCmd := &cli.Command{
-		Use:   "list",
-		Short: i18n.T("cmd.dev.workflow.list.short"),
-		Long:  i18n.T("cmd.dev.workflow.list.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runWorkflowList(workflowRegistryPath))
+func addWorkflowListCommand(c *core.Core) core.Result {
+	return c.Command("dev/workflow/list", core.Command{
+		Description: i18n.T("cmd.dev.workflow.list.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "registry", Value: ""},
+		),
+		Action: func(o core.Options) core.Result {
+			return runWorkflowList(o.String("registry"))
 		},
-	}
-
-	parent.AddCommand(listCmd)
+	})
 }
 
-// addWorkflowSyncCommand adds the 'workflow sync' subcommand.
-func addWorkflowSyncCommand(parent *cli.Command) {
-	syncCmd := &cli.Command{
-		Use:   "sync <workflow>",
-		Short: i18n.T("cmd.dev.workflow.sync.short"),
-		Long:  i18n.T("cmd.dev.workflow.sync.long"),
-		Args:  cli.ExactArgs(1),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runWorkflowSync(workflowRegistryPath, args[0], workflowDryRun))
+// addWorkflowSyncCommand adds the 'workflow sync <workflow>' subcommand.
+func addWorkflowSyncCommand(c *core.Core) core.Result {
+	return c.Command("dev/workflow/sync", core.Command{
+		Description: i18n.T("cmd.dev.workflow.sync.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "registry", Value: ""},
+			core.Option{Key: "dry-run", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
+			workflowFile := o.String("_arg")
+			if workflowFile == "" {
+				return cli.Err("workflow is required: core dev workflow sync <workflow>")
+			}
+			return runWorkflowSync(o.String("registry"), workflowFile, o.Bool("dry-run"))
 		},
-	}
-
-	syncCmd.Flags().BoolVar(&workflowDryRun, "dry-run", false, i18n.T("cmd.dev.workflow.sync.flag.dry_run"))
-
-	parent.AddCommand(syncCmd)
+	})
 }
 
 // runWorkflowList shows a table of repos vs workflows.
@@ -154,13 +149,13 @@ func runWorkflowSync(registryPath string, workflowFile string, dryRun bool) (_ c
 	// Find the template workflow
 	templatePath := findTemplateWorkflow(registryDir, workflowFile)
 	if templatePath == "" {
-		return core.Fail(cli.Err("%s", i18n.T("cmd.dev.workflow.template_not_found", map[string]any{"File": workflowFile})))
+		return cli.Err("%s", i18n.T("cmd.dev.workflow.template_not_found", map[string]any{"File": workflowFile}))
 	}
 
 	// Read template content
 	templateContent, readErr := io.Local.Read(templatePath)
 	if readErr != nil {
-		return core.Fail(cli.Wrap(readErr, i18n.T("cmd.dev.workflow.read_template_error")))
+		return cli.Wrap(readErr, i18n.T("cmd.dev.workflow.read_template_error"))
 	}
 
 	repoList := reg.List()
