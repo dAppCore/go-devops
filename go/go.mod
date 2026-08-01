@@ -3,22 +3,21 @@ module dappco.re/go/devops
 go 1.26.2
 
 require (
-	code.gitea.io/sdk/gitea v0.24.1 // Note: Gitea SDK for repository and automation API integration; no core.* equivalent.
+	code.gitea.io/sdk/gitea v0.25.1 // Note: Gitea SDK for repository and automation API integration; no core.* equivalent.
 	dappco.re/go/agent v0.28.0
-	dappco.re/go/i18n v0.10.0
-	dappco.re/go/io v0.11.0
-	dappco.re/go/log v0.10.0
-	dappco.re/go/scm v0.17.0
-	github.com/kluctl/go-embed-python v0.0.0-3.13.1-20241219-1 // Note: CPython embedding for Ansible playbook execution; no go/* equivalent.
-	golang.org/x/term v0.42.0
-	golang.org/x/text v0.36.0
+	dappco.re/go/i18n v0.12.1
+	dappco.re/go/io v0.15.3
+	dappco.re/go/log v0.13.1
+	dappco.re/go/scm v0.22.0
+	github.com/kluctl/go-embed-python v0.0.0-3.13.14-20260610-1 // Note: CPython embedding for Ansible playbook execution; no go/* equivalent.
+	golang.org/x/term v0.45.0
+	golang.org/x/text v0.40.0
 	gopkg.in/yaml.v3 v3.0.1 // Note: YAML parser for Ansible inventory and playbook files; no core.* YAML equivalent.
 )
 
 require (
-	dappco.re/go v0.10.3
-	dappco.re/go/cli v0.10.0
-	dappco.re/go/inference v0.8.0-alpha.1 // indirect
+	dappco.re/go v0.12.0
+	dappco.re/go/cli v0.13.0
 	github.com/42wim/httpsig v1.2.4 // indirect
 	github.com/charmbracelet/x/ansi v0.11.6 // indirect
 	github.com/clipperhouse/displaywidth v0.11.0 // indirect
@@ -26,23 +25,19 @@ require (
 	github.com/davidmz/go-pageant v1.0.2 // indirect
 	github.com/go-fed/httpsig v1.1.0 // indirect
 	github.com/gofrs/flock v0.13.0 // indirect
-	github.com/hashicorp/go-version v1.8.0 // indirect
+	github.com/hashicorp/go-version v1.9.0 // indirect
 	github.com/lucasb-eyer/go-colorful v1.3.0 // indirect
 	github.com/mattn/go-runewidth v0.0.21 // indirect
 	github.com/sirupsen/logrus v1.9.4 // indirect
 	github.com/spf13/pflag v1.0.10 // indirect
-	golang.org/x/crypto v0.50.0 // indirect
-	golang.org/x/sync v0.20.0 // indirect
-	golang.org/x/sys v0.43.0 // indirect
+	golang.org/x/crypto v0.54.0 // indirect
+	golang.org/x/sync v0.22.0 // indirect
+	golang.org/x/sys v0.47.0 // indirect
 )
 
-require dappco.re/go/process v0.14.0
+require dappco.re/go/process v0.16.1
 
 require (
-	dappco.re/go/core v0.8.0-alpha.1 // indirect
-	dappco.re/go/core/i18n v0.2.3 // indirect
-	dappco.re/go/core/inference v0.2.1 // indirect
-	dappco.re/go/core/log v0.1.2 // indirect
 	github.com/aymanbagabas/go-osc52/v2 v2.0.1 // indirect
 	github.com/charmbracelet/bubbletea v1.3.10 // indirect
 	github.com/charmbracelet/colorprofile v0.4.3 // indirect
@@ -60,4 +55,3 @@ require (
 	github.com/spf13/cobra v1.10.2 // indirect
 	github.com/xo/terminfo v0.0.0-20220910002029-abceb7e1c41e // indirect
 )
-

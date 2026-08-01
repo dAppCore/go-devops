@@ -10,9 +10,9 @@ import (
 func TestFilterTargetRepos_Good(t *testing.T) {
 	registry := &repos.Registry{
 		Repos: map[string]*repos.Repo{
-			"core-api":  &repos.Repo{Name: "core-api", Path: "packages/core-api"},
-			"core-web":  &repos.Repo{Name: "core-web", Path: "packages/core-web"},
-			"docs-site": &repos.Repo{Name: "docs-site", Path: "sites/docs"},
+			"core-api":  {Name: "core-api", Path: "packages/core-api"},
+			"core-web":  {Name: "core-web", Path: "packages/core-web"},
+			"docs-site": {Name: "docs-site", Path: "sites/docs"},
 		},
 	}
 
