@@ -1,13 +1,11 @@
 package dev
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func ExampleAddWorkCommand() {
-	root := &cli.Command{Use: "root"}
-	AddWorkCommand(root)
-	core.Println(root.Commands()[0].Use)
-	// Output: work
+	c := core.New()
+	AddWorkCommand(c, "dev")
+	r := c.Command("dev/work")
+	core.Println(r.OK)
+	// Output: true
 }

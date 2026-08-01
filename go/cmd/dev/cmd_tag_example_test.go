@@ -1,13 +1,11 @@
 package dev
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func ExampleAddTagCommand() {
-	root := &cli.Command{Use: "root"}
-	AddTagCommand(root)
-	core.Println(root.Commands()[0].Use)
-	// Output: tag
+	c := core.New()
+	AddTagCommand(c)
+	r := c.Command("dev/tag")
+	core.Println(r.OK)
+	// Output: true
 }

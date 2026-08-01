@@ -18,24 +18,21 @@ var (
 	impactSafeStyle     = cli.SuccessStyle
 )
 
-// Impact command flags
-var impactRegistryPath string
-
-// addImpactCommand adds the 'impact' command to the given parent command.
-func addImpactCommand(parent *cli.Command) {
-	impactCmd := &cli.Command{
-		Use:   "impact <repo-name>",
-		Short: i18n.T("cmd.dev.impact.short"),
-		Long:  i18n.T("cmd.dev.impact.long"),
-		Args:  cli.ExactArgs(1),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runImpact(impactRegistryPath, args[0]))
+// addImpactCommand adds the 'impact <repo-name>' command under "dev".
+func addImpactCommand(c *core.Core) core.Result {
+	return c.Command("dev/impact", core.Command{
+		Description: i18n.T("cmd.dev.impact.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "registry", Value: ""},
+		),
+		Action: func(o core.Options) core.Result {
+			repoName := o.String("_arg")
+			if repoName == "" {
+				return cli.Err("repo-name is required: core dev impact <repo-name>")
+			}
+			return runImpact(o.String("registry"), repoName)
 		},
-	}
-
-	impactCmd.Flags().StringVar(&impactRegistryPath, "registry", "", i18n.T("common.flag.registry"))
-
-	parent.AddCommand(impactCmd)
+	})
 }
 
 func runImpact(registryPath string, repoName string) (_ core.Result) {
@@ -46,14 +43,14 @@ func runImpact(registryPath string, repoName string) (_ core.Result) {
 	if registryPath != "" {
 		reg, err = repos.LoadRegistry(io.Local, registryPath)
 		if err != nil {
-			return core.Fail(cli.Wrap(err, "failed to load registry"))
+			return cli.Wrap(err, "failed to load registry")
 		}
 	} else {
 		registryPath, err = repos.FindRegistry(io.Local)
 		if err == nil {
 			reg, err = repos.LoadRegistry(io.Local, registryPath)
 			if err != nil {
-				return core.Fail(cli.Wrap(err, "failed to load registry"))
+				return cli.Wrap(err, "failed to load registry")
 			}
 		} else {
 			return core.Fail(log.E("dev.impact", i18n.T("cmd.dev.impact.requires_registry"), nil))

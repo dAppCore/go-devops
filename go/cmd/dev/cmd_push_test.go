@@ -1,32 +1,30 @@
 package dev
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func TestCmdPush_AddPushCommand_Good(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddPushCommand(root)
-	cmd := testCommand(root, "push")
+	c := core.New()
+	r := AddPushCommand(c, "dev")
+	core.AssertTrue(t, r.OK)
 
-	core.AssertNotNil(t, cmd)
-	core.AssertNotNil(t, cmd.Flag("force"))
+	cmd := c.Command("dev/push")
+	core.AssertTrue(t, cmd.OK)
+	core.AssertNotNil(t, cmd.Value.(*core.Command).Action)
 }
 
 func TestCmdPush_AddPushCommand_Bad(t *core.T) {
-	var root *cli.Command
+	var c *core.Core
 	core.AssertPanics(t, func() {
-		AddPushCommand(root)
+		AddPushCommand(c, "dev")
 	})
-	core.AssertNil(t, root)
+	core.AssertNil(t, c)
 }
 
 func TestCmdPush_AddPushCommand_Ugly(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	root.AddCommand(&cli.Command{Use: "existing"})
-	AddPushCommand(root)
+	c := core.New()
+	core.AssertTrue(t, AddPushCommand(c, "dev").OK)
 
-	core.AssertLen(t, root.Commands(), 2)
-	core.AssertNotNil(t, testCommand(root, "push"))
+	r := AddPushCommand(c, "git")
+	core.AssertTrue(t, r.OK)
+	core.AssertTrue(t, c.Command("git/push").OK)
 }

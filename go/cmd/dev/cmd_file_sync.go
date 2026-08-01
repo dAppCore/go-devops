@@ -14,13 +14,15 @@ import (
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/i18n"
 	coreio "dappco.re/go/io"
-	"dappco.re/go/log"
+	log "dappco.re/go/log"
 	coreexec "dappco.re/go/process/exec"
 	"dappco.re/go/scm/git"
 	"dappco.re/go/scm/repos"
 )
 
-// File sync command flags
+// File sync command flags — package vars carry the current invocation's
+// values into the (cmd, args)-free business logic below, matching the
+// pre-migration cobra Flags().*Var binding style.
 var (
 	fileSyncTo       string
 	fileSyncMessage  string
@@ -30,30 +32,40 @@ var (
 	fileSyncYes      bool
 )
 
-// AddFileSyncCommand adds the 'sync' command to dev for file syncing.
-func AddFileSyncCommand(parent *cli.Command) {
-	syncCmd := &cli.Command{
-		Use:   "sync <file-or-dir>",
-		Short: i18n.T("cmd.dev.file_sync.short"),
-		Long:  i18n.T("cmd.dev.file_sync.long"),
-		Args:  cli.MinimumNArgs(1),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runFileSync(args[0]))
+// AddFileSyncCommand adds the 'sync <file-or-dir>' command under prefix
+// (e.g. "dev" or "git"). --to is required (cobra's MarkFlagRequired has no
+// core.Command equivalent, so this is enforced at the top of the Action).
+//
+//	c := core.New()
+//	if r := dev.AddFileSyncCommand(c, "dev"); !r.OK { return r }
+func AddFileSyncCommand(c *core.Core, prefix string) core.Result {
+	return c.Command(prefix+"/sync", core.Command{
+		Description: i18n.T("cmd.dev.file_sync.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "to", Value: ""},
+			core.Option{Key: "message", Value: ""},
+			core.Option{Key: "co-author", Value: ""},
+			core.Option{Key: "dry-run", Value: false},
+			core.Option{Key: "push", Value: false},
+			core.Option{Key: "yes", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
+			source := o.String("_arg")
+			if source == "" {
+				return cli.Err("%s", i18n.T("cmd.dev.file_sync.long"))
+			}
+			fileSyncTo = o.String("to")
+			if fileSyncTo == "" {
+				return cli.Err("--to is required: core %s sync <file-or-dir> --to=<pattern>", prefix)
+			}
+			fileSyncMessage = o.String("message")
+			fileSyncCoAuthor = o.String("co-author")
+			fileSyncDryRun = o.Bool("dry-run")
+			fileSyncPush = o.Bool("push")
+			fileSyncYes = o.Bool("yes")
+			return runFileSync(source)
 		},
-	}
-
-	syncCmd.Flags().StringVar(&fileSyncTo, "to", "", i18n.T("cmd.dev.file_sync.flag.to"))
-	syncCmd.Flags().StringVarP(&fileSyncMessage, "message", "m", "", i18n.T("cmd.dev.file_sync.flag.message"))
-	syncCmd.Flags().StringVar(&fileSyncCoAuthor, "co-author", "", i18n.T("cmd.dev.file_sync.flag.co_author"))
-	syncCmd.Flags().BoolVar(&fileSyncDryRun, "dry-run", false, i18n.T("cmd.dev.file_sync.flag.dry_run"))
-	syncCmd.Flags().BoolVar(&fileSyncPush, "push", false, i18n.T("cmd.dev.file_sync.flag.push"))
-	syncCmd.Flags().BoolVarP(&fileSyncYes, "yes", "y", false, i18n.T("cmd.dev.file_sync.flag.yes"))
-
-	if err := syncCmd.MarkFlagRequired("to"); err != nil {
-		panic(err)
-	}
-
-	parent.AddCommand(syncCmd)
+	})
 }
 
 func runFileSync(source string) (_ core.Result) {
@@ -78,7 +90,7 @@ func runFileSync(source string) (_ core.Result) {
 	}
 
 	if len(targetRepos) == 0 {
-		return core.Fail(cli.Err("%s", i18n.T("cmd.dev.file_sync.error.no_targets")))
+		return cli.Err("%s", i18n.T("cmd.dev.file_sync.error.no_targets"))
 	}
 
 	// Show plan
@@ -326,7 +338,7 @@ func gitCommandQuiet(ctx context.Context, dir string, args ...string) (string, c
 
 	r := cmd.CombinedOutput()
 	if !r.OK {
-		return "", core.Fail(cli.Err("%s", r.Value.(error).Error()))
+		return "", cli.Err("%s", r.Value.(error).Error())
 	}
 	return string(r.Value.([]byte)), core.Ok(nil)
 }

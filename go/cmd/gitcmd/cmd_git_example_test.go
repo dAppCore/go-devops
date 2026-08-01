@@ -1,13 +1,11 @@
 package gitcmd
 
-import (
-	. "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func ExampleAddGitCommands() {
-	root := &cli.Command{Use: "root"}
-	AddGitCommands(root)
-	Println(root.Commands()[0].Use)
-	// Output: git
+	c := core.New()
+	AddGitCommands(c)
+	r := c.Command("git")
+	core.Println(r.OK)
+	// Output: true
 }

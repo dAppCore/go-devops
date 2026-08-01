@@ -10,27 +10,21 @@ import (
 	"dappco.re/go/scm/git"
 )
 
-// Pull command flags
-var (
-	pullRegistryPath string
-	pullAll          bool
-)
-
-// AddPullCommand adds the 'pull' command to the given parent command.
-func AddPullCommand(parent *cli.Command) {
-	pullCmd := &cli.Command{
-		Use:   "pull",
-		Short: i18n.T("cmd.dev.pull.short"),
-		Long:  i18n.T("cmd.dev.pull.long"),
-		RunE: func(cmd *cli.Command, args []string) error {
-			return resultToError(runPull(pullRegistryPath, pullAll))
+// AddPullCommand adds the 'pull' command under prefix (e.g. "dev" or "git").
+//
+//	c := core.New()
+//	if r := dev.AddPullCommand(c, "dev"); !r.OK { return r }
+func AddPullCommand(c *core.Core, prefix string) core.Result {
+	return c.Command(prefix+"/pull", core.Command{
+		Description: i18n.T("cmd.dev.pull.short"),
+		Flags: core.NewOptions(
+			core.Option{Key: "registry", Value: ""},
+			core.Option{Key: "all", Value: false},
+		),
+		Action: func(o core.Options) core.Result {
+			return runPull(o.String("registry"), o.Bool("all"))
 		},
-	}
-
-	pullCmd.Flags().StringVar(&pullRegistryPath, "registry", "", i18n.T("common.flag.registry"))
-	pullCmd.Flags().BoolVar(&pullAll, "all", false, i18n.T("cmd.dev.pull.flag.all"))
-
-	parent.AddCommand(pullCmd)
+	})
 }
 
 func runPull(registryPath string, all bool) (_ core.Result) {
@@ -124,7 +118,7 @@ func gitPull(ctx context.Context, path string) (_ core.Result) {
 	cmd := coreexec.Command(ctx, "git", "pull", "--ff-only").WithDir(path)
 	r := cmd.CombinedOutput()
 	if !r.OK {
-		return core.Fail(cli.Err("%s", r.Value.(error).Error()))
+		return cli.Err("%s", r.Value.(error).Error())
 	}
 	return core.Ok(nil)
 }

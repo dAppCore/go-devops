@@ -2,10 +2,7 @@ package dev
 
 import (
 	core "dappco.re/go"
-	"slices"
 	"testing"
-
-	"dappco.re/go/cli/pkg/cli"
 )
 
 func newCmdVMTestDevEnv(t *testing.T, installed bool) *DevEnv {
@@ -41,33 +38,29 @@ func requireVMResultFailure(t *testing.T, operation string, r core.Result) strin
 }
 
 func TestAddVMStatusCommand_Good(t *testing.T) {
-	root := &cli.Command{Use: "core"}
-
-	AddDevCommands(root)
-
-	statusCmd, _, err := root.Find([]string{"dev", "status"})
-	if err != nil {
-		t.Fatalf("find status command: %v", err)
+	c := core.New()
+	if r := AddDevCommands(c); !r.OK {
+		t.Fatalf("AddDevCommands: %v", r.Error())
 	}
-	if statusCmd == nil {
+
+	statusResult := c.Command("dev/status")
+	if !statusResult.OK {
 		t.Fatal("expected status command")
 	}
-	if statusCmd.Use != "status" {
-		t.Fatalf("status command use = %q, want %q", statusCmd.Use, "status")
-	}
-	if !slices.Contains(statusCmd.Aliases, "vm-status") {
-		t.Fatalf("status aliases = %v, want vm-status", statusCmd.Aliases)
+	statusCmd := statusResult.Value.(*core.Command)
+	if statusCmd.Action == nil {
+		t.Fatal("expected status command to be executable")
 	}
 
-	aliasCmd, _, err := root.Find([]string{"dev", "vm-status"})
-	if err != nil {
-		t.Fatalf("find vm-status alias: %v", err)
-	}
-	if aliasCmd == nil {
+	// core.Command has no native Aliases field — "vm-status" is a second
+	// registration of the same Action (see addVMStatusCommand's comment).
+	aliasResult := c.Command("dev/vm-status")
+	if !aliasResult.OK {
 		t.Fatal("expected vm-status alias command")
 	}
-	if statusCmd != aliasCmd {
-		t.Fatal("expected vm-status alias to resolve to status command")
+	aliasCmd := aliasResult.Value.(*core.Command)
+	if aliasCmd.Action == nil {
+		t.Fatal("expected vm-status alias to be executable")
 	}
 }
 

@@ -2,9 +2,7 @@
 package docs
 
 import (
-	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/i18n"
 )
 
 // Style and utility aliases from shared
@@ -18,28 +16,3 @@ var (
 	docsFoundStyle = cli.SuccessStyle
 	docsFileStyle  = cli.InfoStyle
 )
-
-var resultError = func(r core.Result) error {
-	if !r.OK {
-		return r.Value.(error)
-	}
-	return nil
-}
-
-var docsCmd = &cli.Command{
-	Use: "docs",
-}
-
-func setDocsI18n() {
-	docsCmd.Short = i18n.T("cmd.docs.short")
-	docsCmd.Long = i18n.T("cmd.docs.long")
-	docsListCmd.Short = i18n.T("cmd.docs.list.short")
-	docsListCmd.Long = i18n.T("cmd.docs.list.long")
-	docsSyncCmd.Short = i18n.T("cmd.docs.sync.short")
-	docsSyncCmd.Long = i18n.T("cmd.docs.sync.long")
-}
-
-func init() {
-	docsCmd.AddCommand(docsSyncCmd)
-	docsCmd.AddCommand(docsListCmd)
-}

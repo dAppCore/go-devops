@@ -1,38 +1,38 @@
 package devkit
 
 import (
-	. "dappco.re/go"
+	core "dappco.re/go"
 )
 
-func TestScanSecrets_ScanSecrets_Good(t *T) {
+func TestScanSecrets_ScanSecrets_Good(t *core.T) {
 	original := scanSecretsRunner
 	t.Cleanup(func() { scanSecretsRunner = original })
-	scanSecretsRunner = func(string) ([]byte, Result) {
+	scanSecretsRunner = func(string) ([]byte, core.Result) {
 		output := []byte("RuleID,File,StartLine,StartColumn,Match\ngithub-token,config.yml,2,3,ghp_exampletoken1234567890\n")
-		return output, Ok(output)
+		return output, core.Ok(output)
 	}
 
 	findings, r := ScanSecrets("/tmp/project")
-	AssertTrue(t, r.OK)
-	AssertEqual(t, "github-token", findings[0].Rule)
+	core.AssertTrue(t, r.OK)
+	core.AssertEqual(t, "github-token", findings[0].Rule)
 }
 
-func TestScanSecrets_ScanSecrets_Bad(t *T) {
+func TestScanSecrets_ScanSecrets_Bad(t *core.T) {
 	original := scanSecretsRunner
 	t.Cleanup(func() { scanSecretsRunner = original })
-	scanSecretsRunner = func(string) ([]byte, Result) { return nil, Fail(AnError) }
+	scanSecretsRunner = func(string) ([]byte, core.Result) { return nil, core.Fail(core.AnError) }
 
 	findings, r := ScanSecrets("/tmp/project")
-	AssertFalse(t, r.OK)
-	AssertNil(t, findings)
+	core.AssertFalse(t, r.OK)
+	core.AssertNil(t, findings)
 }
 
-func TestScanSecrets_ScanSecrets_Ugly(t *T) {
+func TestScanSecrets_ScanSecrets_Ugly(t *core.T) {
 	original := scanSecretsRunner
 	t.Cleanup(func() { scanSecretsRunner = original })
-	scanSecretsRunner = func(string) ([]byte, Result) { return nil, Ok(nil) }
+	scanSecretsRunner = func(string) ([]byte, core.Result) { return nil, core.Ok(nil) }
 
 	findings, r := ScanSecrets("/tmp/project")
-	AssertTrue(t, r.OK)
-	AssertNil(t, findings)
+	core.AssertTrue(t, r.OK)
+	core.AssertNil(t, findings)
 }

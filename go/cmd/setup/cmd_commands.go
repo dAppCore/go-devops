@@ -24,19 +24,15 @@
 package setup
 
 import (
-	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/i18n"
+	core "dappco.re/go"
 
 	_ "dappco.re/go/devops/locales"
 )
 
-func init() {
-	cli.RegisterCommands(AddSetupCommands)
-}
-
 // AddSetupCommands registers the 'setup' command and all subcommands.
-func AddSetupCommands(root *cli.Command) {
-	setupCmd.Short = i18n.T("cmd.setup.short")
-	setupCmd.Long = i18n.T("cmd.setup.long")
-	AddSetupCommand(root)
+//
+//	c := core.New()
+//	if r := setup.AddSetupCommands(c); !r.OK { return r }
+func AddSetupCommands(c *core.Core) core.Result {
+	return AddSetupCommand(c)
 }

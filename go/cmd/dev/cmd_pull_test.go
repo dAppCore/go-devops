@@ -1,32 +1,30 @@
 package dev
 
-import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-)
+import core "dappco.re/go"
 
 func TestCmdPull_AddPullCommand_Good(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddPullCommand(root)
-	cmd := testCommand(root, "pull")
+	c := core.New()
+	r := AddPullCommand(c, "dev")
+	core.AssertTrue(t, r.OK)
 
-	core.AssertNotNil(t, cmd)
-	core.AssertNotNil(t, cmd.Flag("all"))
+	cmd := c.Command("dev/pull")
+	core.AssertTrue(t, cmd.OK)
+	core.AssertNotNil(t, cmd.Value.(*core.Command).Action)
 }
 
 func TestCmdPull_AddPullCommand_Bad(t *core.T) {
-	var root *cli.Command
+	var c *core.Core
 	core.AssertPanics(t, func() {
-		AddPullCommand(root)
+		AddPullCommand(c, "dev")
 	})
-	core.AssertNil(t, root)
+	core.AssertNil(t, c)
 }
 
 func TestCmdPull_AddPullCommand_Ugly(t *core.T) {
-	root := &cli.Command{Use: "root"}
-	AddPullCommand(root)
-	AddPullCommand(root)
+	c := core.New()
+	core.AssertTrue(t, AddPullCommand(c, "dev").OK)
 
-	core.AssertLen(t, root.Commands(), 2)
-	core.AssertNotNil(t, testCommand(root, "pull"))
+	r := AddPullCommand(c, "git")
+	core.AssertTrue(t, r.OK)
+	core.AssertTrue(t, c.Command("git/pull").OK)
 }

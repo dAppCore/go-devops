@@ -13,32 +13,45 @@
 package gitcmd
 
 import (
+	core "dappco.re/go"
 	"dappco.re/go/cli/pkg/cli"
 	"dappco.re/go/devops/cmd/dev"
 	"dappco.re/go/i18n"
 )
 
-func init() {
-	cli.RegisterCommands(AddGitCommands)
-}
-
-// AddGitCommands registers the 'git' command and all subcommands.
-func AddGitCommands(root *cli.Command) {
-	gitCmd := &cli.Command{
-		Use:   "git",
-		Short: i18n.T("cmd.git.short"),
-		Long:  i18n.T("cmd.git.long"),
+// AddGitCommands registers the 'git' command and all subcommands — the same
+// dev-package commands mounted under "dev", remounted under "git".
+//
+//	c := core.New()
+//	if r := gitcmd.AddGitCommands(c); !r.OK { return r }
+func AddGitCommands(c *core.Core) core.Result {
+	// See cmd/deploy/cmd_commands.go's AddDeployCommands for why the group
+	// command needs its own Action (core.Cli.Run has no automatic group-help).
+	if r := c.Command("git", core.Command{
+		Description: i18n.T("cmd.git.short"),
+		Action: func(core.Options) core.Result {
+			cli.PrintHelp()
+			return core.Ok(nil)
+		},
+	}); !r.OK {
+		return r
 	}
-	root.AddCommand(gitCmd)
 
-	// Import git commands from dev package
-	dev.AddHealthCommand(gitCmd) // Shows repo status
-	dev.AddCommitCommand(gitCmd)
-	dev.AddPushCommand(gitCmd)
-	dev.AddPullCommand(gitCmd)
-	dev.AddWorkCommand(gitCmd)
+	for _, register := range []func(*core.Core, string) core.Result{
+		// Shows repo status
+		dev.AddHealthCommand,
+		dev.AddCommitCommand,
+		dev.AddPushCommand,
+		dev.AddPullCommand,
+		dev.AddWorkCommand,
+		// Safe operations for AI agents
+		dev.AddFileSyncCommand,
+		dev.AddApplyCommand,
+	} {
+		if r := register(c, "git"); !r.OK {
+			return r
+		}
+	}
 
-	// Safe operations for AI agents
-	dev.AddFileSyncCommand(gitCmd)
-	dev.AddApplyCommand(gitCmd)
+	return core.Ok(nil)
 }

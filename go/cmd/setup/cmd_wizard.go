@@ -23,18 +23,21 @@ func promptSetupChoice() (string, core.Result) {
 	cli.Text(cli.TitleStyle.Render(i18n.T("cmd.setup.wizard.git_repo_title")))
 	cli.Text(i18n.T("cmd.setup.wizard.what_to_do"))
 
-	choice, err := cli.Select("Choose action", []string{"setup", "package"})
-	if err != nil {
-		return "", core.Fail(err)
+	r := cli.Select("Choose action", []string{"setup", "package"})
+	if !r.OK {
+		return "", r
 	}
-	return choice, core.Ok(nil)
+	return r.Value.(string), core.Ok(nil)
 }
 
 // promptProjectName asks the user for a project directory name.
 func promptProjectName(defaultName string) (string, core.Result) {
 	cli.Text(cli.TitleStyle.Render(i18n.T("cmd.setup.wizard.project_name_title")))
-	value, err := cli.Prompt(i18n.T("cmd.setup.wizard.project_name_desc"), defaultName)
-	return value, core.ResultOf(value, err)
+	r := cli.Prompt(i18n.T("cmd.setup.wizard.project_name_desc"), defaultName)
+	if !r.OK {
+		return "", r
+	}
+	return r.Value.(string), core.Ok(nil)
 }
 
 // runPackageWizard presents an interactive multi-select UI for package selection.
@@ -68,10 +71,11 @@ func runPackageWizard(reg *repos.Registry, preselectedTypes []string) ([]string,
 	cli.Text(cli.TitleStyle.Render(i18n.T("cmd.setup.wizard.package_selection")))
 	cli.Text(i18n.T("cmd.setup.wizard.selection_hint"))
 
-	selectedLabels, err := cli.MultiSelect(i18n.T("cmd.setup.wizard.select_packages"), options)
-	if err != nil {
-		return nil, core.Fail(err)
+	multiResult := cli.MultiSelect(i18n.T("cmd.setup.wizard.select_packages"), options)
+	if !multiResult.OK {
+		return nil, multiResult
 	}
+	selectedLabels := multiResult.Value.([]string)
 
 	// Extract names from labels
 	var selected []string

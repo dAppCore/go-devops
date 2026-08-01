@@ -29,7 +29,7 @@ func loadRegistry(registryPath string) (*repos.Registry, string, core.Result) {
 	if registryPath != "" {
 		reg, err = repos.LoadRegistry(io.Local, registryPath)
 		if err != nil {
-			return nil, "", core.Fail(cli.Wrap(err, i18n.T("i18n.fail.load", "registry")))
+			return nil, "", cli.Wrap(err, i18n.T("i18n.fail.load", "registry"))
 		}
 		registryDir = core.PathDir(registryPath)
 	} else {
@@ -37,7 +37,7 @@ func loadRegistry(registryPath string) (*repos.Registry, string, core.Result) {
 		if err == nil {
 			reg, err = repos.LoadRegistry(io.Local, registryPath)
 			if err != nil {
-				return nil, "", core.Fail(cli.Wrap(err, i18n.T("i18n.fail.load", "registry")))
+				return nil, "", cli.Wrap(err, i18n.T("i18n.fail.load", "registry"))
 			}
 			registryDir = core.PathDir(registryPath)
 		} else {
@@ -47,7 +47,7 @@ func loadRegistry(registryPath string) (*repos.Registry, string, core.Result) {
 			}
 			reg, err = repos.ScanDirectory(io.Local, cwd)
 			if err != nil {
-				return nil, "", core.Fail(cli.Wrap(err, i18n.T("i18n.fail.scan", "directory")))
+				return nil, "", cli.Wrap(err, i18n.T("i18n.fail.scan", "directory"))
 			}
 			registryDir = cwd
 		}
@@ -56,7 +56,7 @@ func loadRegistry(registryPath string) (*repos.Registry, string, core.Result) {
 	// Load workspace config to respect packages_dir
 	wsConfig, r := workspace.LoadConfig(registryDir)
 	if !r.OK {
-		return nil, "", core.Fail(cli.Wrap(r.Value.(error), i18n.T("i18n.fail.load", "workspace config")))
+		return nil, "", cli.Wrap(r.Value.(error), i18n.T("i18n.fail.load", "workspace config"))
 	}
 
 	basePath := registryDir
@@ -118,7 +118,7 @@ func scanRepoDocs(repo *repos.Repo) RepoDocInfo {
 	docsDir := core.PathJoin(repo.Path, "docs")
 	// Check if directory exists by listing it
 	if _, err := io.Local.List(docsDir); err == nil {
-		if err := core.PathWalkDir(docsDir, func(path string, d core.FsDirEntry, err error) error {
+		if r := core.PathWalkDir(docsDir, func(path string, d core.FsDirEntry, err error) error {
 			if err != nil {
 				return nil
 			}
@@ -138,7 +138,7 @@ func scanRepoDocs(repo *repos.Repo) RepoDocInfo {
 			info.DocsFiles = append(info.DocsFiles, relResult.Value.(string))
 			info.HasDocs = true
 			return nil
-		}); err != nil {
+		}); !r.OK {
 			return info
 		}
 	}
@@ -146,7 +146,7 @@ func scanRepoDocs(repo *repos.Repo) RepoDocInfo {
 	// Recursively scan KB/ directory for .md files
 	kbDir := core.PathJoin(repo.Path, "KB")
 	if _, err := io.Local.List(kbDir); err == nil {
-		if err := core.PathWalkDir(kbDir, func(path string, d core.FsDirEntry, err error) error {
+		if r := core.PathWalkDir(kbDir, func(path string, d core.FsDirEntry, err error) error {
 			if err != nil {
 				return nil
 			}
@@ -160,7 +160,7 @@ func scanRepoDocs(repo *repos.Repo) RepoDocInfo {
 			info.KBFiles = append(info.KBFiles, relResult.Value.(string))
 			info.HasDocs = true
 			return nil
-		}); err != nil {
+		}); !r.OK {
 			return info
 		}
 	}
