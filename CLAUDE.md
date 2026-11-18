@@ -26,7 +26,6 @@ Most implementation code (ansible engine, build system, infra clients, release p
 - **`cmd/docs/`** — `core docs sync` — Documentation sync across the multi-repo workspace.
 - **`cmd/setup/`** — `core setup repo` — Generate `.core` configuration for a project.
 - **`cmd/gitcmd/`** — Git helper commands (mirrors dev commands under `core git`).
-- **`cmd/vanity-import/`** — Vanity import path server (the default build target in `.core/build.yaml`).
 - **`cmd/community/`** — Community landing page assets.
 - **`deploy/coolify/`** — Coolify PaaS API HTTP client.
 - **`deploy/python/`** — Embedded Python 3.13 runtime wrapper (adds ~50 MB to binary).
