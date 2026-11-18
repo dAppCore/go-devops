@@ -5,12 +5,12 @@
 package main
 
 import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-	devcmd "dappco.re/go/devops/cmd/dev"
-	docscmd "dappco.re/go/devops/cmd/docs"
-	gitcmd "dappco.re/go/devops/cmd/gitcmd"
-	setupcmd "dappco.re/go/devops/cmd/setup"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
+	devcmd "github.com/dappcore/go-devops/go/cmd/dev"
+	docscmd "github.com/dappcore/go-devops/go/cmd/docs"
+	gitcmd "github.com/dappcore/go-devops/go/cmd/gitcmd"
+	setupcmd "github.com/dappcore/go-devops/go/cmd/setup"
 
 	"gopkg.in/yaml.v3"
 )

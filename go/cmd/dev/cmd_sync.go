@@ -7,11 +7,11 @@ import (
 	"sort"
 	"text/template"
 
-	core "dappco.re/go"
-	"dappco.re/go/i18n"
-	coreio "dappco.re/go/io"
+	core "github.com/dappcore/go"
+	"github.com/dappcore/go-i18n/go"
+	coreio "github.com/dappcore/go-io/go"
 
-	"dappco.re/go/cli/pkg/cli"
+	"github.com/dappcore/cli/go/pkg/cli"
 
 	"golang.org/x/text/cases"
 	"golang.org/x/text/language"
@@ -163,10 +163,10 @@ package {{.ServiceName}}
 
 import (
 	// Import the internal implementation with an alias.
-	impl "dappco.re/go/cli/{{.ServiceName}}"
+	impl "github.com/dappcore/cli/go/{{.ServiceName}}"
 
 	// Import the core contracts to re-export the interface.
-	"dappco.re/go/cli/core"
+	"github.com/dappcore/cli/go/core"
 )
 
 {{range .Symbols}}

@@ -1,12 +1,12 @@
 package dev
 
 import (
-	core "dappco.re/go"
+	core "github.com/dappcore/go"
 	"maps"
 	"slices"
 	"testing"
 
-	"dappco.re/go/io"
+	"github.com/dappcore/go-io/go"
 )
 
 func TestFindWorkflows_Good(t *testing.T) {

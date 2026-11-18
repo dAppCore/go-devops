@@ -1,6 +1,6 @@
 package setup
 
-import . "dappco.re/go"
+import . "github.com/dappcore/go"
 
 func protectionExampleFakeGH(body string) func() {
 	dir := MustCast[string](MkdirTemp("", "protection-gh-*"))

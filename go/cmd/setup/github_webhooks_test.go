@@ -1,7 +1,7 @@
 package setup
 
 import (
-	core "dappco.re/go"
+	core "github.com/dappcore/go"
 )
 
 func TestGithubWebhooks_ListWebhooks_Good(t *core.T) {

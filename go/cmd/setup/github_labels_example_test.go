@@ -1,6 +1,6 @@
 package setup
 
-import . "dappco.re/go"
+import . "github.com/dappcore/go"
 
 func labelsExampleFakeGH(body string) func() {
 	dir := MustCast[string](MkdirTemp("", "labels-gh-*"))

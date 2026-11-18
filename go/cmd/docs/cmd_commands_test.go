@@ -1,6 +1,6 @@
 package docs
 
-import core "dappco.re/go"
+import core "github.com/dappcore/go"
 
 func TestCmdCommands_AddDocsCommands_Good(t *core.T) {
 	c := core.New()

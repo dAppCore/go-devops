@@ -1,9 +1,9 @@
 package docs
 
 import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/i18n"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
+	"github.com/dappcore/go-i18n/go"
 )
 
 // addDocsListCommand adds the 'docs list' command.

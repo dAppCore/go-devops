@@ -4,10 +4,10 @@ package snapshot
 import (
 	"time"
 
-	core "dappco.re/go"
-	log "dappco.re/go/log"
+	core "github.com/dappcore/go"
+	log "github.com/dappcore/go-log/go"
 
-	"dappco.re/go/scm/manifest"
+	"github.com/dappcore/go-scm/go/manifest"
 )
 
 // Snapshot is the frozen release manifest written as core.json.

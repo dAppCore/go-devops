@@ -1,8 +1,8 @@
 package snapshot
 
 import (
-	. "dappco.re/go"
-	"dappco.re/go/scm/manifest"
+	. "github.com/dappcore/go"
+	"github.com/dappcore/go-scm/go/manifest"
 )
 
 // TestSnapshot_GenerateAt_PermissionsWrite covers the Write arm of the

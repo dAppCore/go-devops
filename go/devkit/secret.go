@@ -5,7 +5,7 @@ import (
 	"io/fs"
 	"regexp"
 
-	core "dappco.re/go"
+	core "github.com/dappcore/go"
 )
 
 // Finding describes a secret-like match discovered while scanning source files.

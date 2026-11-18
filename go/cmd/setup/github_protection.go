@@ -7,10 +7,10 @@
 package setup
 
 import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-	log "dappco.re/go/log"
-	coreexec "dappco.re/go/process/exec"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
+	log "github.com/dappcore/go-log/go"
+	coreexec "github.com/dappcore/go-process/go/exec"
 )
 
 // GitHubBranchProtection represents branch protection rules from the GitHub API.

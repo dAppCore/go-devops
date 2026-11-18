@@ -1,6 +1,6 @@
 package docs
 
-import . "dappco.re/go"
+import . "github.com/dappcore/go"
 
 func TestCmdScan_RepoDocInfo_Good(t *T) {
 	info := RepoDocInfo{Name: "go-devops", HasDocs: true, DocsFiles: []string{"docs/index.md"}}

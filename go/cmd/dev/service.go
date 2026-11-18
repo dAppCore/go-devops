@@ -3,9 +3,9 @@ package dev
 import (
 	"context"
 
-	core "dappco.re/go"
-	"dappco.re/go/agent/pkg/lib"
-	coreexec "dappco.re/go/process/exec"
+	"github.com/dappcore/agent/go/pkg/lib"
+	core "github.com/dappcore/go"
+	coreexec "github.com/dappcore/go-process/go/exec"
 )
 
 // ServiceOptions for configuring the dev service.

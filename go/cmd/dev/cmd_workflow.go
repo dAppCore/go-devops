@@ -5,11 +5,11 @@ import (
 	"maps"
 	"slices"
 
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/i18n"
-	"dappco.re/go/io"
-	"dappco.re/go/scm/repos"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
+	"github.com/dappcore/go-i18n/go"
+	"github.com/dappcore/go-io/go"
+	"github.com/dappcore/go-scm/go/repos"
 )
 
 // addWorkflowCommands adds the 'workflow' group and its 'list'/'sync' subcommands.

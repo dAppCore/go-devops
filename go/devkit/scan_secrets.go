@@ -4,8 +4,8 @@ import (
 	"encoding/csv"
 	"strconv"
 
-	core "dappco.re/go"
-	coreexec "dappco.re/go/process/exec"
+	core "github.com/dappcore/go"
+	coreexec "github.com/dappcore/go-process/go/exec"
 )
 
 var scanSecretsRunner = runGitleaksDetect

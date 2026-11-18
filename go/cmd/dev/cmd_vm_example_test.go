@@ -1,6 +1,6 @@
 package dev
 
-import c "dappco.re/go"
+import c "github.com/dappcore/go"
 
 func prepareExampleDevEnv(installed bool) func() {
 	old := c.Getenv("CORE_IMAGES_DIR")

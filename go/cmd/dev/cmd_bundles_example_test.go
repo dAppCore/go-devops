@@ -1,6 +1,6 @@
 package dev
 
-import core "dappco.re/go"
+import core "github.com/dappcore/go"
 
 func ExampleNewWorkBundle() {
 	bundle, r := NewWorkBundle(WorkBundleOptions{RegistryPath: "registry.yaml"})

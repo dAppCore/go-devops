@@ -1,6 +1,6 @@
 package devkit
 
-import core "dappco.re/go"
+import core "github.com/dappcore/go"
 
 func ExampleNewCoverageStore() {
 	store := NewCoverageStore("coverage.json")

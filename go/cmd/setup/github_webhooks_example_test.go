@@ -1,6 +1,6 @@
 package setup
 
-import . "dappco.re/go"
+import . "github.com/dappcore/go"
 
 func webhooksExampleFakeGH(body string) func() {
 	dir := MustCast[string](MkdirTemp("", "webhooks-gh-*"))

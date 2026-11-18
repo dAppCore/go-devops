@@ -3,9 +3,9 @@ package setup
 import (
 	"runtime"
 
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-	coreio "dappco.re/go/io"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
+	coreio "github.com/dappcore/go-io/go"
 	"gopkg.in/yaml.v3"
 )
 

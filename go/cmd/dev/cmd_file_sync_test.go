@@ -1,7 +1,7 @@
 package dev
 
 import (
-	core "dappco.re/go"
+	core "github.com/dappcore/go"
 	"slices"
 	"testing"
 )

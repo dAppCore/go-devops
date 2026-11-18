@@ -9,13 +9,13 @@ package setup
 import (
 	"context"
 
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/devops/cmd/workspace"
-	"dappco.re/go/i18n"
-	coreio "dappco.re/go/io"
-	log "dappco.re/go/log"
-	"dappco.re/go/scm/repos"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
+	"github.com/dappcore/go-devops/go/cmd/workspace"
+	"github.com/dappcore/go-i18n/go"
+	coreio "github.com/dappcore/go-io/go"
+	log "github.com/dappcore/go-log/go"
+	"github.com/dappcore/go-scm/go/repos"
 )
 
 // runSetupOrchestrator decides between registry mode and bootstrap mode.

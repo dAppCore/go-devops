@@ -24,9 +24,9 @@
 package setup
 
 import (
-	core "dappco.re/go"
+	core "github.com/dappcore/go"
 
-	_ "dappco.re/go/devops/locales"
+	_ "github.com/dappcore/go-devops/go/locales"
 )
 
 // AddSetupCommands registers the 'setup' command and all subcommands.

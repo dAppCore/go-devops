@@ -9,12 +9,12 @@ package setup
 import (
 	"net/url"
 
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/i18n"
-	coreio "dappco.re/go/io"
-	log "dappco.re/go/log"
-	coreexec "dappco.re/go/process/exec"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
+	"github.com/dappcore/go-i18n/go"
+	coreio "github.com/dappcore/go-io/go"
+	log "github.com/dappcore/go-log/go"
+	coreexec "github.com/dappcore/go-process/go/exec"
 )
 
 // addRepoCommand adds the 'setup repo' command to generate .core configuration.

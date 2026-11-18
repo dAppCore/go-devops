@@ -4,11 +4,11 @@ import (
 	"context"
 	"strconv"
 
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/i18n"
-	log "dappco.re/go/log"
-	coreexec "dappco.re/go/process/exec"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
+	"github.com/dappcore/go-i18n/go"
+	log "github.com/dappcore/go-log/go"
+	coreexec "github.com/dappcore/go-process/go/exec"
 )
 
 // AddTagCommand adds the 'tag' command under "dev".

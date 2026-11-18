@@ -2,7 +2,7 @@
 package docs
 
 import (
-	"dappco.re/go/cli/pkg/cli"
+	"github.com/dappcore/cli/go/pkg/cli"
 )
 
 // Style and utility aliases from shared

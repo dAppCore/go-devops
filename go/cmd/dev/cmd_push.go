@@ -3,10 +3,10 @@ package dev
 import (
 	"context"
 
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/i18n"
-	"dappco.re/go/scm/git"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
+	"github.com/dappcore/go-i18n/go"
+	"github.com/dappcore/go-scm/go/git"
 )
 
 // AddPushCommand adds the 'push' command under prefix (e.g. "dev" or "git").
