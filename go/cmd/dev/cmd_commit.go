@@ -3,11 +3,11 @@ package dev
 import (
 	"context"
 
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/i18n"
-	coreio "dappco.re/go/io"
-	"dappco.re/go/scm/git"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
+	"github.com/dappcore/go-i18n/go"
+	coreio "github.com/dappcore/go-io/go"
+	"github.com/dappcore/go-scm/go/git"
 )
 
 // AddCommitCommand adds the 'commit' command under prefix (e.g. "dev" or "git").

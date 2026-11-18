@@ -10,14 +10,14 @@ package dev
 import (
 	"context"
 
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/i18n"
-	coreio "dappco.re/go/io"
-	log "dappco.re/go/log"
-	coreexec "dappco.re/go/process/exec"
-	"dappco.re/go/scm/git"
-	"dappco.re/go/scm/repos"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
+	"github.com/dappcore/go-i18n/go"
+	coreio "github.com/dappcore/go-io/go"
+	log "github.com/dappcore/go-log/go"
+	coreexec "github.com/dappcore/go-process/go/exec"
+	"github.com/dappcore/go-scm/go/git"
+	"github.com/dappcore/go-scm/go/repos"
 )
 
 // File sync command flags — package vars carry the current invocation's

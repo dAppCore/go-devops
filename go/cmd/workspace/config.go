@@ -9,9 +9,9 @@
 package workspace
 
 import (
-	core "dappco.re/go"
-	coreio "dappco.re/go/io"
-	log "dappco.re/go/log"
+	core "github.com/dappcore/go"
+	coreio "github.com/dappcore/go-io/go"
+	log "github.com/dappcore/go-log/go"
 	"gopkg.in/yaml.v3"
 )
 

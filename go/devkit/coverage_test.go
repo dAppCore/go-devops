@@ -1,7 +1,7 @@
 package devkit
 
 import (
-	core "dappco.re/go"
+	core "github.com/dappcore/go"
 )
 
 func TestCoverage_NewCoverageStore_Good(t *core.T) {

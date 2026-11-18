@@ -1,6 +1,6 @@
 package workspace
 
-import . "dappco.re/go"
+import . "github.com/dappcore/go"
 
 func ExampleDefaultConfig() {
 	cfg := DefaultConfig()

@@ -1,8 +1,8 @@
 package setup
 
 import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
 )
 
 func captureStdout(t *core.T, fn func() error) (string, error) {

@@ -5,10 +5,10 @@ import (
 	"runtime"
 	"time"
 
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/i18n"
-	log "dappco.re/go/log"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
+	"github.com/dappcore/go-i18n/go"
+	log "github.com/dappcore/go-log/go"
 )
 
 const vmDefaultSSHPort = 2222
@@ -304,7 +304,7 @@ func runVMStop() (_ core.Result) {
 
 // addVMStatusCommand adds the 'dev status' command, plus a 'dev vm-status'
 // alias — core.Command has no native Aliases field, so the alias is a
-// second registration of the same Action (mirrors dappco.re/go/agent's
+// second registration of the same Action (mirrors github.com/dappcore/agent/go's
 // multi-path registration pattern for command aliases).
 func addVMStatusCommand(c *core.Core) core.Result {
 	action := func(core.Options) core.Result { return runVMStatus() }

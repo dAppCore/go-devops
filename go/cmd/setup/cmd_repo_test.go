@@ -1,7 +1,7 @@
 package setup
 
 import (
-	. "dappco.re/go"
+	. "github.com/dappcore/go"
 	"testing"
 )
 

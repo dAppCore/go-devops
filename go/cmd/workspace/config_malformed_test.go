@@ -1,7 +1,7 @@
 package workspace
 
 import (
-	. "dappco.re/go"
+	. "github.com/dappcore/go"
 )
 
 // TestConfig_LoadConfig_Malformed covers the YAML parse-error path of

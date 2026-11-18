@@ -1,6 +1,6 @@
 package setup
 
-import core "dappco.re/go"
+import core "github.com/dappcore/go"
 
 func TestCmdCommands_AddSetupCommands_Good(t *core.T) {
 	c := core.New()

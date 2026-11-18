@@ -13,10 +13,10 @@
 package gitcmd
 
 import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-	"dappco.re/go/devops/cmd/dev"
-	"dappco.re/go/i18n"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
+	"github.com/dappcore/go-devops/go/cmd/dev"
+	"github.com/dappcore/go-i18n/go"
 )
 
 // AddGitCommands registers the 'git' command and all subcommands — the same

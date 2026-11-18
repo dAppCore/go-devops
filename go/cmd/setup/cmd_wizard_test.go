@@ -4,7 +4,7 @@ import (
 	"slices"
 	"testing"
 
-	"dappco.re/go/scm/repos"
+	"github.com/dappcore/go-scm/go/repos"
 )
 
 func TestFilterReposByTypes_Good(t *testing.T) {

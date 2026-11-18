@@ -1,6 +1,6 @@
 package setup
 
-import . "dappco.re/go"
+import . "github.com/dappcore/go"
 
 func ExampleLoadGitHubConfig() {
 	dir := MustCast[string](MkdirTemp("", "github-config-*"))

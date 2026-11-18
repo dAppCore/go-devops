@@ -1,8 +1,8 @@
 package setup
 
 import (
-	core "dappco.re/go"
-	coreexec "dappco.re/go/process/exec"
+	core "github.com/dappcore/go"
+	coreexec "github.com/dappcore/go-process/go/exec"
 )
 
 func commandCombinedOutput(cmd *coreexec.Cmd) ([]byte, core.Result) {

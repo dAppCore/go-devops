@@ -1,7 +1,7 @@
 package dev
 
 import (
-	core "dappco.re/go"
+	core "github.com/dappcore/go"
 )
 
 func TestCmdBundles_NewWorkBundle_Good(t *core.T) {

@@ -8,9 +8,9 @@
 package setup
 
 import (
-	core "dappco.re/go"
-	"dappco.re/go/cli/pkg/cli"
-	coreexec "dappco.re/go/process/exec"
+	"github.com/dappcore/cli/go/pkg/cli"
+	core "github.com/dappcore/go"
+	coreexec "github.com/dappcore/go-process/go/exec"
 )
 
 // GitHubLabel represents a label as returned by the GitHub API.

@@ -20,7 +20,7 @@
 package devkit
 
 import (
-	core "dappco.re/go"
+	core "github.com/dappcore/go"
 )
 
 // ServiceOptions configures the devkit service. Empty CoverageStorePath

@@ -1,8 +1,8 @@
 package dev
 
 import (
-	core "dappco.re/go"
-	"dappco.re/go/scm/repos"
+	core "github.com/dappcore/go"
+	"github.com/dappcore/go-scm/go/repos"
 	"testing"
 )
 

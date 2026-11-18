@@ -7,7 +7,7 @@ automation. The supporting packages under `deploy/`, `devkit/`, and `snapshot/`
 hold integration code that those commands call.
 
 Work in this repository should follow the Core v0.9 conventions. Import
-`dappco.re/go` as `core` or dot-import it in tests when a Core wrapper exists,
+`github.com/dappcore/go` as `core` or dot-import it in tests when a Core wrapper exists,
 including filesystem, path, JSON, formatting, environment, and string helpers.
 Do not add direct standard library imports for those wrapper-covered areas in
 new Go files or tests. Command execution should use the Core process wrapper so

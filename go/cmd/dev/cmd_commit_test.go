@@ -1,6 +1,6 @@
 package dev
 
-import core "dappco.re/go"
+import core "github.com/dappcore/go"
 
 func TestCmdCommit_AddCommitCommand_Good(t *core.T) {
 	c := core.New()

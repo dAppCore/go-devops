@@ -1,6 +1,6 @@
 package setup
 
-import . "dappco.re/go"
+import . "github.com/dappcore/go"
 
 func ExampleNewChangeSet() {
 	cs := NewChangeSet("owner/repo")

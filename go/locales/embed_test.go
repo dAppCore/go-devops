@@ -1,10 +1,10 @@
 package locales
 
 import (
-	core "dappco.re/go"
+	core "github.com/dappcore/go"
 )
 
-// Named import rather than the house `. "dappco.re/go"` dot-import: this
+// Named import rather than the house `. "github.com/dappcore/go"` dot-import: this
 // package declares a package-level `FS` symbol that collides with the
 // core.FS type re-exported by the dot-import. A named import keeps the
 // embedded FS reachable while still using the core test DSL.

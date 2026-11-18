@@ -1,7 +1,7 @@
 package devkit
 
 import (
-	core "dappco.re/go"
+	core "github.com/dappcore/go"
 )
 
 func TestScanSecrets_ScanSecrets_Good(t *core.T) {

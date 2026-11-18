@@ -6,7 +6,7 @@ import (
 	"strconv"
 	"time"
 
-	core "dappco.re/go"
+	core "github.com/dappcore/go"
 )
 
 // CoveragePackage describes coverage for a single package or directory.

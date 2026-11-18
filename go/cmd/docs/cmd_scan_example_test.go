@@ -1,6 +1,6 @@
 package docs
 
-import . "dappco.re/go"
+import . "github.com/dappcore/go"
 
 func ExampleRepoDocInfo() {
 	info := RepoDocInfo{Name: "go-devops", HasDocs: true}
